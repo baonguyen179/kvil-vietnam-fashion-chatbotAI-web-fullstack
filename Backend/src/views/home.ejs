@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/style.css">
+  <title>Home Page</title>
+</head>
+<body>
+  <div class="topnav">
+        <a class="active" href="/">Home</a>
+        <a href="create">Create User</a>
+  </div>
+  <div class="table-container">
+    <div class="title"><h2><strong>List Users</strong></h2></div><br>
+   <table>
+    <tr>
+      <th>ID</th>
+      <th>Email</th>
+      <th>Name</th>
+      <th>City</th>
+      <th>Action</th>
+    </tr>
+    <% data.forEach(function(user) { %>
+    <tr>
+      <td><%= user.id %></td>
+      <td><%= user.email %></td>
+      <td><%= user.name %></td>
+      <td><%= user.city %></td>
+      <td>
+          <a class="button" href="/update/<%= user.id %>"">Edit</a>
+          <a class="button" href="/delete/<%= user.id %>">Delete</a>
+       
+      </td>
+    </tr>
+    <% }); %>
+    
+   </table>
+  </div>
+
+</body>
+</html>
