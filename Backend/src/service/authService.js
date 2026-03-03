@@ -259,5 +259,6 @@ module.exports = {
     registerNewUser,
     userLogin,
     logoutUser,
-    refreshUserToken
+    refreshUserToken,
+    changePassword
 }

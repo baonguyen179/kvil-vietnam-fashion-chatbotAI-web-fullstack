@@ -190,7 +190,6 @@ const handleChangePassword = async (req, res) => {
         const oldPassword = req.body.oldPassword;
         const newPassword = req.body.newPassword;
 
-        // 1. Validate: Check rỗng
         if (!oldPassword || !newPassword) {
             return res.status(200).json({
                 EM: "Vui lòng nhập đầy đủ mật khẩu cũ và mật khẩu mới!",
