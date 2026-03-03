@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mysql-db:
+    image: mysql:8.0 # Sử dụng image MySQL phiên bản 8.0 ổn định
+    container_name: kvil_mysql_db # Tên của container cho dễ nhận diện
+    restart: always # Tự động khởi động lại database nếu bị lỗi hoặc khi bật máy
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456 # Trùng với DB_PASSWORD trong .env
+      MYSQL_DATABASE: kvil_fashion # Tự động tạo sẵn database này cho bạn
+    ports:
+      - "3306:3306" # Map cổng 3307 (máy bạn) vào cổng 3306 (mặc định của MySQL trong Docker)
+    volumes:
+      - mysql_data:/var/lib/mysql # Lưu trữ dữ liệu ra ổ cứng thật, tránh mất data khi xóa container
+
+volumes:
+  mysql_data: # Khai báo volume lưu trữ

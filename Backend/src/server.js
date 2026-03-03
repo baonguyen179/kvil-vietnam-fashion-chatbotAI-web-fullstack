@@ -20,7 +20,7 @@ app.use(cookieParser())
 
 
 //khai báo route
-app.use('/api/v1/', apiRouter)
+app.use('/api/v1', apiRouter)
 
 //test sequelize db
 connection();

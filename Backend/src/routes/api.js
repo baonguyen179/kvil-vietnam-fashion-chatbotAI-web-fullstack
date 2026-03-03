@@ -1,10 +1,18 @@
 const express = require('express')
 const router = express.Router()
-const apiController = require('../controllers/apiController')
+const authController = require('../controllers/authController');
+const JWTAction = require('../middleware/JWTAction')
 
-router.get('/', apiController.getHomePage)
-router.post('/user',apiController.createNewUser)
-router.patch('/user/:id',apiController.updateUser)
-router.delete('/user/:id',apiController.deleteUser)
+router.post('/auth/register', authController.handleRegister);
+router.post('/auth/login', authController.handleLogin);
+
+router.use(JWTAction.checkUserJWT);
+
+
+
+// router.use(JWTAction.checkUserPermission)
+
+
+
 
 module.exports = router
