@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const authController = require('../controllers/authController');
+const userController = require('../controllers/userController');
 const JWTAction = require('../middleware/JWTAction')
 
 router.post('/auth/register', authController.handleRegister);
@@ -11,8 +12,13 @@ router.post('/auth/refresh', authController.handleRefreshToken);
 router.use(JWTAction.checkUserJWT);
 
 router.patch('/auth/change-password', authController.handleChangePassword);
+router.get('/user/profile', userController.handleGetUserProfile);
+router.put('/user/profile', userController.handleUpdateUserProfile);
+router.get('/user/addresses', userController.handleGetUserAddresses);
 
-// router.use(JWTAction.checkUserPermission)
+router.use(JWTAction.checkUserPermission)
+
+
 
 
 

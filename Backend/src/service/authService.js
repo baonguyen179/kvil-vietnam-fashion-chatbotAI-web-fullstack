@@ -76,10 +76,8 @@ const userLogin = async (rawUserData) => {
             if (isCorrectPassword === true) {
                 let payload = {
                     id: user.id,
-                    email: user.email,
                     fullName: user.fullName,
-                    role: user.role,
-                    gender: user.gender
+                    role: user.role
                 }
                 let accessToken = createAccessJWT(payload);
                 let refreshToken = createRefreshJWT(payload);
@@ -173,10 +171,8 @@ const refreshUserToken = async (oldRefreshToken) => {
 
         const payload = {
             id: user.id,
-            email: user.email,
             fullName: user.fullName,
-            role: user.role,
-            gender: user.gender
+            role: user.role
         };
 
         const newAccessToken = createAccessJWT(payload);
