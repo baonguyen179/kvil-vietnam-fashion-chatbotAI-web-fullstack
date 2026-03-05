@@ -16,6 +16,7 @@ module.exports = (sequelize, DataTypes) => {
 
       // Một User có nhiều Đơn hàng
       User.hasMany(models.Order, { foreignKey: 'userId', as: 'orders' });
+      User.hasOne(models.Cart, { foreignKey: 'userId', as: 'cart' });
     }
   }
   User.init({

@@ -14,8 +14,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   CollectionProduct.init({
-    collectionId: DataTypes.STRING,
-    productId: DataTypes.STRING
+    collectionId: DataTypes.INTEGER,
+    productId: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'CollectionProduct',

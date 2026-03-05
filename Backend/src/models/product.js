@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Product.init({
-    categoryId: DataTypes.STRING,
+    categoryId: DataTypes.INTEGER,
     name: DataTypes.STRING,
     description: DataTypes.TEXT,
     basePrice: DataTypes.DECIMAL,
@@ -37,6 +37,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Product',
+    paranoid: true,
   });
   return Product;
 };
