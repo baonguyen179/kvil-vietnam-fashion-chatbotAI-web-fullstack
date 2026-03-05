@@ -4,6 +4,8 @@ const authController = require('../controllers/authController');
 const userController = require('../controllers/userController');
 const categoryController = require('../controllers/categoryController')
 const productController = require('../controllers/productController')
+const cartController = require('../controllers/cartController');
+
 const JWTAction = require('../middleware/JWTAction')
 const uploadCloud = require('../config/cloudinary.config');
 
@@ -30,6 +32,10 @@ router.put('/user/addresses/:id', userController.handleUpdateUserAddress);
 router.delete('/user/addresses/:id', userController.handleDeleteUserAddress);
 router.patch('/user/addresses/:id/default', userController.handleSetDefaultAddress);
 
+router.get('/user/carts', cartController.handleGetCart);
+router.post('/user/carts', cartController.handleAddToCart);
+router.put('/user/carts/:id', cartController.handleUpdateCartItem);
+router.delete('/user/carts/:id', cartController.handleDeleteCartItem);
 
 
 //=====================================
