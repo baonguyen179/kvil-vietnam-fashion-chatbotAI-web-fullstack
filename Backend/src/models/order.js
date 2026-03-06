@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     couponId: DataTypes.INTEGER,
     totalBeforeDiscount: DataTypes.DECIMAL,
     discountAmount: DataTypes.DECIMAL,
+    shippingFee: DataTypes.DECIMAL,
     finalAmount: DataTypes.DECIMAL,
     paymentMethod: DataTypes.STRING,
     paymentStatus: DataTypes.BOOLEAN,
