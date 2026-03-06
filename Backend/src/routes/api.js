@@ -5,6 +5,7 @@ const userController = require('../controllers/userController');
 const categoryController = require('../controllers/categoryController')
 const productController = require('../controllers/productController')
 const cartController = require('../controllers/cartController');
+const collectionController = require('../controllers/collectionController')
 
 const JWTAction = require('../middleware/JWTAction')
 const uploadCloud = require('../config/cloudinary.config');
@@ -18,6 +19,8 @@ router.get('/categories', categoryController.handleGetAllCategories);
 router.get('/products', productController.handleGetAllProducts);
 router.get('/products/search', productController.handleSearchProducts);
 router.get('/products/:id', productController.handleGetProductById);
+router.get('/collections', collectionController.handleGetPublicCollections);
+router.get('/collections/:slug', collectionController.handleGetCollectionBySlug);
 //=====================================
 router.use(JWTAction.checkUserJWT);
 
@@ -51,5 +54,10 @@ router.delete('/admin/products/:id', productController.handleDeleteProduct);
 router.post('/admin/products/:id/variants', productController.handleAddProductVariant);
 router.post('/admin/products/:id/images', uploadCloud.array('images', 10), productController.handleAddProductImages);
 router.delete('/admin/products/images/:imageId', productController.handleDeleteProductImage);
+
+router.post('/admin/collections', uploadCloud.single('banner'), collectionController.handleCreateCollection);
+router.put('/admin/collections/:id', uploadCloud.single('banner'), collectionController.handleUpdateCollection);
+router.post('/admin/collections/:id/products', collectionController.handleAddProductsToCollection);
+router.delete('/admin/collections/:id/products', collectionController.handleRemoveProductsFromCollection);
 
 module.exports = router
