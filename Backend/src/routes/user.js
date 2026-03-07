@@ -32,5 +32,7 @@ router.delete('/user/carts/:id', cartController.handleDeleteCartItem);
 // [ORDERS]
 router.post('/user/orders', orderController.handleCreateOrder);
 router.put('/user/orders/:id/cancel', orderController.handleCancelOrder);
+router.get('/user/orders', orderController.handleGetUserOrders);
+router.get('/user/orders/:id', orderController.handleGetUserOrderDetail);
 
 module.exports = router;

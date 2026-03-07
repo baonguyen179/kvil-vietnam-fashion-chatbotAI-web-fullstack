@@ -31,6 +31,7 @@ module.exports = (sequelize, DataTypes) => {
     paymentMethod: DataTypes.STRING,
     paymentStatus: DataTypes.BOOLEAN,
     shippingAddress: DataTypes.TEXT,
+    deliveryMethod: DataTypes.TEXT,
     status: DataTypes.STRING
   }, {
     sequelize,

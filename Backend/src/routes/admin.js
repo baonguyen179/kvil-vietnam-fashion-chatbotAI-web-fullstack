@@ -4,6 +4,7 @@ const router = express.Router();
 const categoryController = require('../controllers/categoryController');
 const productController = require('../controllers/productController');
 const collectionController = require('../controllers/collectionController');
+const orderController = require('../controllers/orderController')
 
 const JWTAction = require('../middleware/JWTAction');
 const uploadCloud = require('../config/cloudinary.config');
@@ -30,5 +31,10 @@ router.post('/admin/collections', uploadCloud.single('banner'), collectionContro
 router.put('/admin/collections/:id', uploadCloud.single('banner'), collectionController.handleUpdateCollection);
 router.post('/admin/collections/:id/products', collectionController.handleAddProductsToCollection);
 router.delete('/admin/collections/:id/products', collectionController.handleRemoveProductsFromCollection);
+
+// [ADMIN - ORDERS]
+router.get('/admin/orders', orderController.handleGetAdminOrders);
+router.patch('/admin/orders/:id/status', orderController.handleUpdateOrderStatus);
+router.patch('/admin/orders/:id/payment', orderController.handleUpdatePaymentStatus);
 
 module.exports = router;
