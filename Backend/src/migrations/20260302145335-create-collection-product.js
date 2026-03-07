@@ -10,10 +10,10 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       collectionId: {
-        type: Sequelize.STRING
+        type: Sequelize.INTEGER
       },
       productId: {
-        type: Sequelize.STRING
+        type: Sequelize.INTEGER
       },
       createdAt: {
         allowNull: false,

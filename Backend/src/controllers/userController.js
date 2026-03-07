@@ -1,4 +1,5 @@
 const userService = require('../service/userService');
+const userValidation = require('../validations/userValidation');
 const errorCode = require('../config/errorCodes');
 
 const handleGetUserProfile = async (req, res) => {
@@ -26,23 +27,18 @@ const handleUpdateUserProfile = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const rawData = req.body;
+        const { error, value } = userValidation.updateUserProfileSchema.validate(req.body);
+        if (error) {
+            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
 
-        const data = await userService.updateUserProfile(userId, rawData);
+        const data = await userService.updateUserProfile(userId, value);
 
-        return res.status(200).json({
-            EM: data.EM,
-            EC: data.EC,
-            DT: data.DT
-        });
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
 
     } catch (error) {
         console.error(">>> Lỗi tại userController (handleUpdateUserProfile):", error);
-        return res.status(500).json({
-            EM: 'Lỗi server nội bộ',
-            EC: errorCode.OTHER_ERROR,
-            DT: ''
-        });
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
 const handleGetUserAddresses = async (req, res) => {
@@ -70,17 +66,16 @@ const handleCreateUserAddress = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const { receiverName, phoneNumber, province, ward, detailAddress } = req.body;
+        const { error, value } = userValidation.createUserAddressSchema.validate(req.body);
 
-        if (!receiverName || !phoneNumber || !province || !ward || !detailAddress) {
+        if (error) {
             return res.status(200).json({
-                EM: "Vui lòng điền đầy đủ thông tin nhận hàng!",
+                EM: error.details[0].message,
                 EC: errorCode.VALIDATION_ERROR,
                 DT: ""
             });
         }
-
-        const data = await userService.createNewAddress(userId, req.body);
+        const data = await userService.createNewAddress(userId, value);
 
         return res.status(200).json({
             EM: data.EM,
@@ -100,27 +95,19 @@ const handleCreateUserAddress = async (req, res) => {
 const handleUpdateUserAddress = async (req, res) => {
     try {
         const userId = req.user.id;
-
         const addressId = req.params.id;
 
-        if (!addressId) {
-            return res.status(200).json({
-                EM: "Thiếu ID địa chỉ cần sửa!",
-                EC: errorCode.VALIDATION_ERROR,
-                DT: ""
-            });
+        const { error: idError } = userValidation.addressIdSchema.validate({ id: addressId });
+        if (idError) {
+            return res.status(200).json({ EM: idError.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: "" });
         }
 
-        const { receiverName, phoneNumber, province, ward, detailAddress } = req.body;
-        if (!receiverName || !phoneNumber || !province || !ward || !detailAddress) {
-            return res.status(200).json({
-                EM: "Vui lòng điền đầy đủ thông tin nhận hàng!",
-                EC: errorCode.VALIDATION_ERROR,
-                DT: ""
-            });
+        const { error: bodyError, value } = userValidation.createUserAddressSchema.validate(req.body);
+        if (bodyError) {
+            return res.status(200).json({ EM: bodyError.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: "" });
         }
 
-        const data = await userService.updateUserAddress(userId, addressId, req.body);
+        const data = await userService.updateUserAddress(userId, addressId, value);
 
         return res.status(200).json({
             EM: data.EM,
@@ -130,25 +117,17 @@ const handleUpdateUserAddress = async (req, res) => {
 
     } catch (error) {
         console.error(">>> Lỗi tại userController (handleUpdateUserAddress):", error);
-        return res.status(500).json({
-            EM: 'Lỗi server nội bộ',
-            EC: errorCode.OTHER_ERROR,
-            DT: ''
-        });
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
 const handleDeleteUserAddress = async (req, res) => {
     try {
         const userId = req.user.id;
-
         const addressId = req.params.id;
 
-        if (!addressId) {
-            return res.status(200).json({
-                EM: "Thiếu ID địa chỉ cần xóa!",
-                EC: errorCode.VALIDATION_ERROR,
-                DT: ""
-            });
+        const { error } = userValidation.addressIdSchema.validate({ id: addressId });
+        if (error) {
+            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: "" });
         }
 
         const data = await userService.deleteUserAddress(userId, addressId);
@@ -161,11 +140,7 @@ const handleDeleteUserAddress = async (req, res) => {
 
     } catch (error) {
         console.error(">>> Lỗi tại userController (handleDeleteUserAddress):", error);
-        return res.status(500).json({
-            EM: 'Lỗi server nội bộ',
-            EC: errorCode.OTHER_ERROR,
-            DT: ''
-        });
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
 const handleSetDefaultAddress = async (req, res) => {
@@ -173,10 +148,12 @@ const handleSetDefaultAddress = async (req, res) => {
         const userId = req.user.id;
         const addressId = req.params.id;
 
-        if (!addressId) {
+        const { error } = userValidation.addressIdSchema.validate({ id: addressId });
+        if (error) {
             return res.status(200).json({
-                EM: "Thiếu ID địa chỉ!",
-                EC: errorCode.VALIDATION_ERROR, DT: ""
+                EM: error.details[0].message,
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ""
             });
         }
 
@@ -184,12 +161,45 @@ const handleSetDefaultAddress = async (req, res) => {
         return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
 
     } catch (error) {
-        console.error(">>> Lỗi controller:", error);
-        return res.status(500).json({ EM: 'Lỗi server', EC: errorCode.OTHER_ERROR, DT: '' });
+        console.error(">>> Lỗi controller (handleSetDefaultAddress):", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+}
+const handleGetAdminUsers = async (req, res) => {
+    try {
+        const { error, value } = userValidation.getAdminUserListSchema.validate(req.query);
+        if (error) {
+            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const data = await userService.getAdminUsers(value);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error(">>> Lỗi controller (handleGetAdminUsers):", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+}
+const handleUpdateUserRole = async (req, res) => {
+    try {
+        const adminId = req.user.id;
+        const targetUserId = req.params.id;
+
+        const { error: idError } = userValidation.userIdSchema.validate({ id: targetUserId });
+        if (idError) return res.status(200).json({ EM: idError.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+
+        const { error: bodyError, value } = userValidation.updateUserRoleSchema.validate(req.body);
+        if (bodyError) return res.status(200).json({ EM: bodyError.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+
+        const data = await userService.updateUserRole(adminId, targetUserId, value.role);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error(">>> Lỗi controller (handleUpdateUserRole):", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
 
 module.exports = {
     handleGetUserProfile, handleUpdateUserProfile,
-    handleGetUserAddresses, handleCreateUserAddress, handleUpdateUserAddress, handleDeleteUserAddress, handleSetDefaultAddress
+    handleGetUserAddresses, handleCreateUserAddress, handleUpdateUserAddress, handleDeleteUserAddress, handleSetDefaultAddress,
+    handleGetAdminUsers, handleUpdateUserRole
 }

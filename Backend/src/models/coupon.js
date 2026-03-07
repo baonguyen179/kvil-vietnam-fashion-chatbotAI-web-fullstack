@@ -25,10 +25,16 @@ module.exports = (sequelize, DataTypes) => {
     endDate: DataTypes.DATE,
     usageLimit: DataTypes.INTEGER,
     usedCount: DataTypes.INTEGER,
-    isActive: DataTypes.BOOLEAN
+    isActive: DataTypes.BOOLEAN,
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    }
   }, {
     sequelize,
     modelName: 'Coupon',
+    timestamps: true,
+    paranoid: true
   });
   return Coupon;
 };

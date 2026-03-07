@@ -10,10 +10,10 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       userId: {
-        type: Sequelize.STRING
+        type: Sequelize.INTEGER
       },
       couponId: {
-        type: Sequelize.STRING
+        type: Sequelize.INTEGER
       },
       totalBeforeDiscount: {
         type: Sequelize.DECIMAL

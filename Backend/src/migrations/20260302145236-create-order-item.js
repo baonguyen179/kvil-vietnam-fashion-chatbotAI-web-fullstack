@@ -10,10 +10,10 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       orderId: {
-        type: Sequelize.STRING
+        type: Sequelize.INTEGER
       },
       variantId: {
-        type: Sequelize.STRING
+        type: Sequelize.INTEGER
       },
       quantity: {
         type: Sequelize.INTEGER

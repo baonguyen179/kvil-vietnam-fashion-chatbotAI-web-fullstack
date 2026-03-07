@@ -33,11 +33,16 @@ module.exports = (sequelize, DataTypes) => {
     name: DataTypes.STRING,
     description: DataTypes.TEXT,
     basePrice: DataTypes.DECIMAL,
-    discountPercent: DataTypes.INTEGER
+    discountPercent: DataTypes.INTEGER,
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    }
   }, {
     sequelize,
     modelName: 'Product',
     paranoid: true,
+    timestamps: true,
   });
   return Product;
 };
