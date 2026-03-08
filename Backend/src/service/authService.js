@@ -91,8 +91,7 @@ const userLogin = async (rawUserData) => {
                         access_token: accessToken,
                         refresh_token: refreshToken, // Trả thêm cái này cho Controller cất vào Cookie
                         user: {
-                            email: user.email,
-                            phone: user.phone,
+                            id: user.id,
                             role: user.role,
                             fullName: user.fullName
                         }

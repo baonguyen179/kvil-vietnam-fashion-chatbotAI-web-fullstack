@@ -6,6 +6,7 @@ const authController = require('../controllers/authController');
 const categoryController = require('../controllers/categoryController');
 const productController = require('../controllers/productController');
 const collectionController = require('../controllers/collectionController');
+const chatbotController = require('../controllers/chatbotController');
 
 // [AUTH]
 router.post('/auth/register', authController.handleRegister);
@@ -22,5 +23,9 @@ router.get('/products/:id', productController.handleGetProductById);
 // [COLLECTIONS]
 router.get('/collections', collectionController.handleGetPublicCollections);
 router.get('/collections/:slug', collectionController.handleGetCollectionBySlug);
+
+// [PUBLIC - CHATBOT AI]
+router.post('/chatbot/message', chatbotController.handleChatbotMessage);
+router.get('/chatbot/history', chatbotController.handleGetChatHistory);
 
 module.exports = router;

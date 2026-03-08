@@ -2,6 +2,7 @@ require('dotenv').config();
 const authService = require('../service/authService');
 const errorCode = require('../config/errorCodes');
 const authValidation = require('../validations/authValidation');
+const db = require('../models/index');
 const handleRegister = async (req, res) => {
     try {
         const { error, value } = authValidation.registerSchema.validate(req.body);
@@ -35,6 +36,20 @@ const handleLogin = async (req, res) => {
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
             delete data.DT.refresh_token;
+            const guestSessionId = req.cookies.guest_session_id;
+            const loggedInUserId = data.DT.user?.id;
+
+            if (guestSessionId && loggedInUserId) {
+                await db.ChatLog.update(
+                    { userId: loggedInUserId },
+                    {
+                        where: {
+                            sessionId: guestSessionId,
+                            userId: null
+                        }
+                    }
+                );
+            }
         }
 
         return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
