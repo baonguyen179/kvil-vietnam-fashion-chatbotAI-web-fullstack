@@ -10,6 +10,12 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
         min: 2,       // Lúc nào cũng giữ sẵn 2 kết nối chạy ngầm để request đầu tiên không bị chậm.
         acquire: 30000, // Thời gian tối đa (ms) xếp hàng chờ. Quá 30s mà chưa tới lượt lấy xe -> ném lỗi Timeout.
         idle: 10000     // Rảnh rỗi quá 10s (không có request) thì tự động hủy kết nối để giải phóng RAM cho MySQL.
+    },
+    dialectOptions: {
+        ssl: {
+            require: true,
+            rejectUnauthorized: false // Bỏ qua xác thực chứng chỉ tự ký
+        }
     }
 });
 

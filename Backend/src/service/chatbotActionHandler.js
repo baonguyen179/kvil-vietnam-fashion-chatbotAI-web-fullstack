@@ -1,4 +1,5 @@
 const productService = require('./productService');
+const collectionService = require('./collectionService');
 
 const executeAiAction = async (functionName, functionArgs) => {
     let finalReply = "";
@@ -25,6 +26,19 @@ const executeAiAction = async (functionName, functionArgs) => {
                 finalReply = functionArgs.replyMessage || "Dạ, gửi bạn danh sách các sản phẩm đang hot bên mình nhé!";
             } else {
                 finalReply = "Dạ, hiện tại cửa hàng chưa có sản phẩm nào để hiển thị ạ.";
+            }
+            break;
+
+        case "suggestCollections":
+            const collectionRes = await collectionService.getPublicCollections();
+            const collections = collectionRes.DT || [];
+
+            if (collections.length > 0) {
+                const collectionNames = collections.map(c => `- ${c.name}`).join('\n');
+
+                finalReply = `${functionArgs.replyMessage || "Dạ, hiện shop đang có các bộ sưu tập rất đẹp đây ạ:"}\n\n${collectionNames}\n\nBạn ưng bộ nào để mình gửi chi tiết sản phẩm nhé?`;
+            } else {
+                finalReply = "Dạ, hiện tại các bộ sưu tập mới đang được shop cập nhật, bạn tham khảo tạm các sản phẩm lẻ giúp mình nhé!";
             }
             break;
 

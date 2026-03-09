@@ -31,16 +31,22 @@ const aiFunctionDeclarations = [
                 }
             }
         }
+    },
+    {
+        name: "suggestCollections",
+        description: "Dùng để giới thiệu cho khách hàng các BỘ SƯU TẬP (Collection) hoặc CHỦ ĐỀ theo mùa đang có của shop. Gọi hàm này khi khách muốn mua đồ theo sự kiện, đi du lịch, đồ theo mùa (xuân, hạ, thu, đông), hoặc khi khách không biết mặc gì.",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                replyMessage: {
+                    type: "STRING",
+                    description: "Câu giới thiệu các bộ sưu tập một cách hấp dẫn. Kèm theo câu hỏi xem khách muốn xem chi tiết bộ sưu tập nào."
+                }
+            },
+            required: ["replyMessage"]
+        }
     }
-    // 👇 SAU NÀY BẠN MUỐN THÊM HÀM MỚI, CHỈ CẦN COPY & PASTE XUỐNG ĐÂY 👇
-    // {
-    //     name: "checkOrderStatus",
-    //     description: "Kiểm tra tình trạng đơn hàng bằng mã đơn hàng.",
-    //     parameters: { 
-    //         type: "OBJECT", 
-    //         properties: { orderCode: { type: "STRING" } } 
-    //     }
-    // }
+
 ];
 
 module.exports = {
