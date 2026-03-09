@@ -35,7 +35,7 @@ app.use(notFoundHandler);
     try {
         // await connectDB(); // Kết nối DB trước
         app.listen(port, () => {
-            console.log(`>>> Server chạy tại: http://${hostname}:${port}`);
+            console.log(`>>> Server chạy.`);
         });
     } catch (error) {
         console.error('>>> App hỏng:', error);
