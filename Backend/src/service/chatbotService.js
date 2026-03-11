@@ -12,10 +12,22 @@ const processChatbotMessage = async (userId, sessionId, message) => {
     await db.ChatLog.create({
         userId, sessionId, sender: 'USER', message, metadata: null
     });
+    let whereCondition = userId ? { userId } : { sessionId };
+    const recentLogs = await db.ChatLog.findAll({
+        where: whereCondition,
+        order: [['createdAt', 'DESC']],
+        limit: 10
+    });
+
+    recentLogs.reverse();
+    const chatContents = recentLogs.map(log => ({
+        role: log.sender === 'USER' ? 'user' : 'model',
+        parts: [{ text: log.message || "Bạn đang kiểm tra thông tin" }]
+    }));
 
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: message,
+        contents: chatContents,
         config: {
             systemInstruction: "Bạn là nhân viên tư vấn nhiệt tình của shop Kvil. Luôn xưng là 'Dạ/Mình' và gọi khách là 'Bạn'. Trả lời ngắn gọn, thân thiện.",
             tools: [{
