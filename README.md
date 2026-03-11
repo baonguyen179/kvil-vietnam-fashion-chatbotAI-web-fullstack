@@ -27,3 +27,13 @@ Dự án xây dựng một nền tảng Web Fullstack cho thương hiệu thời
 1. **Clone dự án:**
    ```bash
    git clone [https://github.com/baonguyen179/kvil-vietnam-fashion-chatbotAI-web-fullstack.git](https://github.com/baonguyen179/kvil-vietnam-fashion-chatbotAI-web-fullstack.git)
+2. **Cài đặt backend**
+   cd backend
+   npm install
+3. **Cài đặt fontend**
+   cd frontend
+   npm install
+4. **Cấu hình biến môi trường (.env)**
+   Tạo file .env và thêm vào các thông tin như API_KEY, DATABASE_URL...
+🏃‍♂️ Khởi chạy
+Chạy Backend: npm start (hoặc node server.js)
