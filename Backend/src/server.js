@@ -18,7 +18,12 @@ app.use(express.urlencoded({ extended: true }))
 //config cookies-pa
 app.use(cookieParser())
 
-
+app.get('/', (req, res) => {
+    res.status(200).json({
+        message: "Server is awake!",
+        timestamp: new Date().toLocaleString()
+    });
+});
 //khai báo route
 app.use('/api/v1', apiRouter)
 
