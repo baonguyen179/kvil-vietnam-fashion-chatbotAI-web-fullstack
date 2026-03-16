@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 
 const getAllProducts = async (queryParams) => {
     try {
+        // 1. Xử lý Phân trang
         const page = parseInt(queryParams.page) || 1;
         const limit = parseInt(queryParams.limit) || 10;
         const offset = (page - 1) * limit;
@@ -12,23 +13,22 @@ const getAllProducts = async (queryParams) => {
         const categoryId = queryParams.categoryId;
         const sort = queryParams.sort;
 
+        // 2. Xử lý Điều kiện lọc (Where)
         let whereCondition = {};
-
         if (categoryId) {
             whereCondition.categoryId = categoryId;
         }
 
-        let orderCondition = [['createdAt', 'DESC']];
-        if (sort === 'price_asc') {
-            orderCondition = [['basePrice', 'ASC']];
-        } else if (sort === 'price_desc') {
-            orderCondition = [['basePrice', 'DESC']];
-        } else if (sort === 'newest') {
-            orderCondition = [['createdAt', 'DESC']];
-        } else if (sort === 'oldest') {
-            orderCondition = [['createdAt', 'ASC']];
-        }
+        // 3. Xử lý Sắp xếp (Dùng Object Map thay cho if/else) - O(1)
+        const sortOptions = {
+            'price_asc': [['basePrice', 'ASC']],
+            'price_desc': [['basePrice', 'DESC']],
+            'newest': [['createdAt', 'DESC']],
+            'oldest': [['createdAt', 'ASC']]
+        };
+        const orderCondition = sortOptions[sort] || [['createdAt', 'DESC']];
 
+        // 4. Truy vấn Database
         const { count, rows } = await db.Product.findAndCountAll({
             where: whereCondition,
             order: orderCondition,
@@ -51,16 +51,35 @@ const getAllProducts = async (queryParams) => {
             distinct: true
         });
 
-        // Sắp xếp và chỉ lấy tối đa 2 ảnh cho mỗi sản phẩm
+        // 5. Thuật toán lọc ảnh: Lấy 1 ảnh chính + 1 ảnh phụ (Tối ưu O(M))
         rows.forEach(product => {
             if (product.images && product.images.length > 0) {
-                // Sắp xếp để ảnh isMain=true lên đầu
-                product.images.sort((a, b) => b.isMain - a.isMain);
-                // Chỉ giữ lại 2 ảnh đầu tiên
-                product.dataValues.images = product.images.slice(0, 2);
+                let mainImg = null;
+                let secondImg = null;
+
+                for (const img of product.images) {
+                    // Ưu tiên lấy ảnh chính
+                    if (img.isMain && !mainImg) {
+                        mainImg = img;
+                    }
+                    // Nếu đã có ảnh chính hoặc gặp ảnh thường, lấy làm ảnh phụ
+                    else if (!secondImg) {
+                        secondImg = img;
+                    }
+
+                    // Nếu đã tìm đủ 2 ảnh (1 chính, 1 phụ) thì dừng vòng lặp ngay
+                    if (mainImg && secondImg) break;
+                }
+
+                // Sắp xếp lại mảng trả về: [Ảnh chính, Ảnh phụ]
+                const finalImages = [];
+                if (mainImg) finalImages.push(mainImg);
+                if (secondImg) finalImages.push(secondImg);
+
+                // Gán lại dữ liệu sạch cho Frontend
+                product.dataValues.images = finalImages;
             }
         });
-
 
         const totalPages = Math.ceil(count / limit);
 
@@ -77,7 +96,11 @@ const getAllProducts = async (queryParams) => {
 
     } catch (error) {
         console.error(">>> Lỗi tại productService (getAllProducts):", error);
-        return { EM: 'Lỗi server khi lấy sản phẩm', EC: errorCode.OTHER_ERROR, DT: '' };
+        return {
+            EM: 'Lỗi server khi lấy sản phẩm',
+            EC: errorCode.OTHER_ERROR,
+            DT: ''
+        };
     }
 }
 const createProduct = async (productData) => {
@@ -389,7 +412,7 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
         const { count, rows } = await db.Product.findAndCountAll({
             where: {
                 name: {
-                    [Op.substring]: keyword // Tìm kiếm chuỗi con (Giống LIKE '%keyword%' trong SQL)
+                    [Op.substring]: keyword // Tìm kiếm chuỗi con
                 }
             },
             attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],
@@ -403,16 +426,35 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
             ],
             limit: +limit,
             offset: +offset,
-            order: [['createdAt', 'DESC']] // Ưu tiên hiển thị sản phẩm mới tạo lên đầu
+            order: [['createdAt', 'DESC']],
+            distinct: true // (LƯU Ý QUAN TRỌNG) Bắt buộc phải có để count chính xác
         });
 
-        // Sắp xếp và chỉ lấy tối đa 2 ảnh cho mỗi sản phẩm
+        // TỐI ƯU ĐỘ PHỨC TẠP: O(N * M) 
         rows.forEach(product => {
             if (product.images && product.images.length > 0) {
-                // Sắp xếp để ảnh isMain=true lên đầu
-                product.images.sort((a, b) => b.isMain - a.isMain);
-                // Chỉ giữ lại 2 ảnh đầu tiên
-                product.dataValues.images = product.images.slice(0, 2);
+                let mainImg = null;
+                let secondImg = null;
+
+                // Duyệt mảng một lần duy nhất
+                for (const img of product.images) {
+                    if (img.isMain && !mainImg) {
+                        mainImg = img;
+                    } else if (!secondImg) {
+                        secondImg = img;
+                    }
+
+                    // Dừng ngay khi tìm đủ 2 ảnh (Tiết kiệm vòng lặp)
+                    if (mainImg && secondImg) break;
+                }
+
+                // Ghép mảng kết quả
+                const finalImages = [];
+                if (mainImg) finalImages.push(mainImg);
+                if (secondImg) finalImages.push(secondImg);
+
+                // Gán lại cho kết quả trả về
+                product.dataValues.images = finalImages;
             }
         });
 
