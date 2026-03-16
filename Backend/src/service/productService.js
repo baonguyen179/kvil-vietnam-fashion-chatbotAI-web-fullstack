@@ -44,13 +44,23 @@ const getAllProducts = async (queryParams) => {
                 {
                     model: db.ProductImage,
                     as: 'images',
-                    where: { isMain: true },
-                    attributes: ['imageUrl'],
+                    attributes: ['imageUrl', 'isMain'],
                     required: false
                 }
             ],
             distinct: true
         });
+
+        // Sắp xếp và chỉ lấy tối đa 2 ảnh cho mỗi sản phẩm
+        rows.forEach(product => {
+            if (product.images && product.images.length > 0) {
+                // Sắp xếp để ảnh isMain=true lên đầu
+                product.images.sort((a, b) => b.isMain - a.isMain);
+                // Chỉ giữ lại 2 ảnh đầu tiên
+                product.dataValues.images = product.images.slice(0, 2);
+            }
+        });
+
 
         const totalPages = Math.ceil(count / limit);
 
@@ -388,13 +398,22 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
                     model: db.ProductImage,
                     as: 'images',
                     attributes: ['id', 'imageUrl', 'isMain'],
-                    where: { isMain: true },
                     required: false
                 }
             ],
             limit: +limit,
             offset: +offset,
             order: [['createdAt', 'DESC']] // Ưu tiên hiển thị sản phẩm mới tạo lên đầu
+        });
+
+        // Sắp xếp và chỉ lấy tối đa 2 ảnh cho mỗi sản phẩm
+        rows.forEach(product => {
+            if (product.images && product.images.length > 0) {
+                // Sắp xếp để ảnh isMain=true lên đầu
+                product.images.sort((a, b) => b.isMain - a.isMain);
+                // Chỉ giữ lại 2 ảnh đầu tiên
+                product.dataValues.images = product.images.slice(0, 2);
+            }
         });
 
         const totalPages = Math.ceil(count / limit);
