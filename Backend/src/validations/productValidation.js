@@ -20,6 +20,21 @@ const productBodySchema = Joi.object({
     categoryId: Joi.number().integer().allow('', null)
 }).unknown(true);
 
+const getAllProductsSchema = Joi.object({
+    page: Joi.number().integer().min(1).allow('', null).messages({
+        'number.base': 'Số trang phải là số nguyên!',
+        'number.min': 'Số trang tối thiểu là 1!'
+    }),
+    limit: Joi.number().integer().min(1).allow('', null).messages({
+        'number.base': 'Giới hạn hiển thị phải là số nguyên!',
+        'number.min': 'Giới hạn tối thiểu là 1!'
+    }),
+    categoryId: Joi.number().integer().allow('', null),
+    sort: Joi.string().valid('price_asc', 'price_desc', 'newest', 'oldest').allow('', null).messages({
+        'any.only': 'Kiểu sắp xếp không hợp lệ! (Hỗ trợ: price_asc, price_desc, newest, oldest)'
+    })
+});
+
 const searchSchema = Joi.object({
     keyword: Joi.string().allow('', null),
     page: Joi.number().integer().min(1).allow('', null),
@@ -30,5 +45,6 @@ module.exports = {
     productIdSchema,
     imageIdSchema,
     productBodySchema,
+    getAllProductsSchema,
     searchSchema
 };

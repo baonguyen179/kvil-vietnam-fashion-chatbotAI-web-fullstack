@@ -6,8 +6,8 @@ const { Op } = require('sequelize');
 const getAllProducts = async (queryParams) => {
     try {
         // 1. Xử lý Phân trang
-        const page = parseInt(queryParams.page) || 1;
-        const limit = parseInt(queryParams.limit) || 10;
+        const page = +queryParams.page || 1;
+        const limit = +queryParams.limit || 10;
         const offset = (page - 1) * limit;
 
         const categoryId = queryParams.categoryId;

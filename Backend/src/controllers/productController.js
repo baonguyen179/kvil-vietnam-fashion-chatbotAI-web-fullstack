@@ -1,11 +1,20 @@
 const productService = require('../service/productService');
 const errorCode = require('../config/errorCodes');
+const productValidation = require('../validations/productValidation');
 
 const handleGetAllProducts = async (req, res) => {
     try {
-        const queryParams = req.query;
+        const { error, value } = productValidation.getAllProductsSchema.validate(req.query);
 
-        const data = await productService.getAllProducts(queryParams);
+        if (error) {
+            return res.status(200).json({
+                EM: error.details[0].message,
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ''
+            });
+        }
+
+        const data = await productService.getAllProducts(value);
 
         return res.status(200).json({
             EM: data.EM,
