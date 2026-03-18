@@ -27,22 +27,24 @@ app.get('/', (req, res) => {
 //khai báo route
 app.use('/api/v1', apiRouter)
 
-//test sequelize db
-connection();
-//Khai bao middware
+
+//-Khai bao middware
 
 //handle 404 not found
 app.use(notFoundHandler);
 // Add headers before the routes are defined
 
 
-; (async () => {
-    try {
-        // await connectDB(); // Kết nối DB trước
-        app.listen(port, () => {
-            console.log(`>>> Server chạy.`);
-        });
-    } catch (error) {
-        console.error('>>> App hỏng:', error);
-    }
-})();
+if (process.env.NODE_ENV !== 'test') {
+    ; (async () => {
+        try {
+            connection();
+            app.listen(port, () => {
+                console.log(`>>> Server chạy trên port ${port}.`);
+            });
+        } catch (error) {
+            console.error('>>> App hỏng:', error);
+        }
+    })();
+}
+module.exports = app;

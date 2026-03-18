@@ -5,8 +5,8 @@ const errorCode = require('../config/errorCodes');
 const { createAccessJWT, createRefreshJWT, verifyRefreshToken } = require('../middleware/JWTAction');
 
 const salt = bcrypt.genSaltSync(10);
-const hashUserPassword = (userPassword) => {
-    return bcrypt.hashSync(userPassword, salt);
+const hashUserPassword = async (userPassword) => {
+    return await bcrypt.hash(userPassword, salt);
 }
 const checkPassword = async (inputPassword, hashPasswordInDB) => {
     const isMatch = await bcrypt.compare(inputPassword, hashPasswordInDB);
@@ -41,7 +41,7 @@ const registerNewUser = async (rawUserData) => {
             };
         }
 
-        let hashPassword = hashUserPassword(rawUserData.password);
+        let hashPassword = await hashUserPassword(rawUserData.password);
 
         await db.User.create({
             email: rawUserData.email,
@@ -59,7 +59,7 @@ const registerNewUser = async (rawUserData) => {
         return { EM: 'Lỗi hệ thống khi đăng ký', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 }
-const userLogin = async (rawUserData) => {
+const userLogin = async (rawUserData, guestSessionId = null) => {
     try {
         const user = await db.User.findOne({
             where: {
@@ -84,6 +84,20 @@ const userLogin = async (rawUserData) => {
                 await user.update({
                     refresh_token: refreshToken
                 });
+
+                // Liên kết lịch sử chat của khách vào User vừa đăng nhập
+                if (guestSessionId) {
+                    await db.ChatLog.update(
+                        { userId: user.id },
+                        {
+                            where: {
+                                sessionId: guestSessionId,
+                                userId: null
+                            }
+                        }
+                    );
+                }
+
                 return {
                     EM: 'Success!',
                     EC: errorCode.SUCCESS,
@@ -229,7 +243,7 @@ const changePassword = async (userId, oldPassword, newPassword) => {
             };
         }
 
-        const hashNewPassword = hashUserPassword(newPassword);
+        const hashNewPassword = await hashUserPassword(newPassword);
 
         await user.update({
             password: hashNewPassword

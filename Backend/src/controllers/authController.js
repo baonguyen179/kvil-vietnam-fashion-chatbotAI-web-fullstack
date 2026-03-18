@@ -2,7 +2,6 @@ require('dotenv').config();
 const authService = require('../service/authService');
 const errorCode = require('../config/errorCodes');
 const authValidation = require('../validations/authValidation');
-const db = require('../models/index');
 const handleRegister = async (req, res) => {
     try {
         const { error, value } = authValidation.registerSchema.validate(req.body);
@@ -26,7 +25,9 @@ const handleLogin = async (req, res) => {
             return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: "" });
         }
 
-        const data = await authService.userLogin(value);
+        const guestSessionId = req.cookies.guest_session_id;
+
+        const data = await authService.userLogin(value, guestSessionId);
 
         if (data && data.DT && data.DT.refresh_token) {
             res.cookie("refresh_token", data.DT.refresh_token, {
@@ -36,20 +37,6 @@ const handleLogin = async (req, res) => {
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
             delete data.DT.refresh_token;
-            const guestSessionId = req.cookies.guest_session_id;
-            const loggedInUserId = data.DT.user?.id;
-
-            if (guestSessionId && loggedInUserId) {
-                await db.ChatLog.update(
-                    { userId: loggedInUserId },
-                    {
-                        where: {
-                            sessionId: guestSessionId,
-                            userId: null
-                        }
-                    }
-                );
-            }
         }
 
         return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
