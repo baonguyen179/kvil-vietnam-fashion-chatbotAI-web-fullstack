@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../src/server'); // 👈 NHÚNG APP THẬT CHỨA FULL MIDDLEWARE VÀO ĐÂY
+const app = require('../../src/server'); // NHÚNG APP CHỨA FULL MIDDLEWARE 
 const authService = require('../../src/service/authService');
 const errorCode = require('../../src/config/errorCodes');
 
@@ -11,7 +11,7 @@ describe('🚀 API Authentication & Middleware', () => {
         jest.clearAllMocks();
     });
 
-    // 🟢 TEST LUÔN MIDDLEWARE 404 CỦA BẠN
+    // 🟢 TEST MIDDLEWARE 404 
     it('Phải bắt được lỗi 404 Not Found nếu người dùng gọi sai đường dẫn', async () => {
         const response = await request(app).get('/api/duong-dan-nay-khong-ton-tai');
 
@@ -20,7 +20,7 @@ describe('🚀 API Authentication & Middleware', () => {
         // (Tùy thuộc vào nội dung file notFond.js của bạn trả về gì, bạn expect cái đó)
     });
 
-    // 🟢 TEST API ĐĂNG KÝ (Đi qua toàn bộ CORS, BodyParser...)
+    // 🟢 TEST API ĐĂNG KÝ ( CORS, BodyParser...)
     it('Phải gọi sang authService và trả về SUCCESS khi dữ liệu hợp lệ', async () => {
         authService.registerNewUser.mockResolvedValue({
             EM: 'Tạo tài khoản thành công',
