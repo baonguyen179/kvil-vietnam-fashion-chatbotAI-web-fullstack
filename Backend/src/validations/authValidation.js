@@ -46,9 +46,29 @@ const changePasswordSchema = Joi.object({
         'any.invalid': 'Mật khẩu mới không được trùng với mật khẩu cũ!' // Tự động check trùng PW cũ!
     })
 });
+const sendOtpSchema = Joi.object({
+    email: Joi.string().trim().pattern(/^\S+@\S+\.\S+$/).required().messages({
+        'any.required': 'Vui lòng cung cấp email!',
+        'string.empty': 'Vui lòng cung cấp email!',
+        'string.pattern.base': 'Email không đúng định dạng!'
+    })
+});
 
+const resetPasswordOtpSchema = Joi.object({
+    email: Joi.string().trim().email().required(),
+    otp: Joi.string().length(6).required().messages({
+        'string.length': 'Mã OTP phải có đúng 6 chữ số!',
+        'any.required': 'Vui lòng nhập mã OTP!'
+    }),
+    newPassword: Joi.string().min(6).required().messages({
+        'string.min': 'Mật khẩu mới phải có ít nhất 6 ký tự!',
+        'any.required': 'Vui lòng nhập mật khẩu mới!'
+    })
+});
 module.exports = {
     registerSchema,
     loginSchema,
-    changePasswordSchema
+    changePasswordSchema,
+    sendOtpSchema,
+    resetPasswordOtpSchema
 };

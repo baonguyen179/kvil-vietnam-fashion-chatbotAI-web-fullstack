@@ -1,8 +1,11 @@
+require('dotenv').config();
 const db = require('../models/index');
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const errorCode = require('../config/errorCodes');
 const { createAccessJWT, createRefreshJWT, verifyRefreshToken } = require('../middleware/JWTAction');
+const emailService = require('./emailService');
+const jwt = require('jsonwebtoken');
 
 const salt = bcrypt.genSaltSync(10);
 const hashUserPassword = async (userPassword) => {
@@ -264,10 +267,74 @@ const changePassword = async (userId, oldPassword, newPassword) => {
         };
     }
 }
+const handleSendOtp = async (email) => {
+    try {
+        const user = await db.User.findOne({ where: { email: email } });
+        if (!user) {
+            return { EM: 'Email không tồn tại trong hệ thống!', EC: errorCode.NOT_FOUND, DT: '' };
+        }
+
+        // Tạo OTP 6 số ngẫu nhiên
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Kỹ thuật Stateless: Nhét OTP và Email vào 1 cái Token có hạn 5 phút
+        const verifyToken = jwt.sign(
+            { email: user.email, otp: otpCode },
+            process.env.JWT_SECRET,
+            { expiresIn: '5m' }
+        );
+
+        emailService.sendOtpEmail(user.email, otpCode).catch(err => {
+            console.error(">>> Lỗi gửi email chạy ngầm:", err);
+        });
+
+        return {
+            EM: 'Mã OTP đã được gửi đến email của bạn!',
+            EC: errorCode.SUCCESS,
+            DT: { verifyToken }
+        };
+    } catch (error) {
+        console.error(">>> Lỗi service handleSendOtp:", error);
+        return { EM: 'Lỗi khi gửi OTP', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+const handleResetPasswordWithOtp = async (email, otp, newPassword, verifyToken) => {
+    try {
+        // 1. Giải mã Token xem có hợp lệ/hết hạn chưa
+        let decoded;
+        try {
+            decoded = jwt.verify(verifyToken, process.env.JWT_SECRET);
+        } catch (err) {
+            return { EM: 'Mã OTP đã hết hạn hoặc không hợp lệ, vui lòng lấy mã mới!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        // 2. Đối chiếu dữ liệu (Chống IDOR: Kẻ gian dùng email này nhưng token của người khác)
+        if (decoded.email !== email || decoded.otp !== otp) {
+            return { EM: 'Mã OTP không chính xác!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        // 3. Cập nhật mật khẩu mới
+        const user = await db.User.findOne({ where: { email: email } });
+        if (!user) return { EM: 'Không tìm thấy tài khoản!', EC: errorCode.NOT_FOUND, DT: '' };
+
+        const salt = bcrypt.genSaltSync(10);
+        const hashPassword = bcrypt.hashSync(newPassword, salt);
+
+        await user.update({ password: hashPassword });
+
+        return { EM: 'Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay.', EC: errorCode.SUCCESS, DT: '' };
+
+    } catch (error) {
+        console.error(">>> Lỗi service handleResetPasswordWithOtp:", error);
+        return { EM: 'Lỗi khi đặt lại mật khẩu', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
 module.exports = {
     registerNewUser,
     userLogin,
     logoutUser,
     refreshUserToken,
-    changePassword
+    changePassword,
+    handleSendOtp,
+    handleResetPasswordWithOtp
 }

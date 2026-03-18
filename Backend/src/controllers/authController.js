@@ -101,11 +101,57 @@ const handleChangePassword = async (req, res) => {
         return res.status(500).json({ EM: "Lỗi server khi đổi mật khẩu", EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
+const handleSendOtp = async (req, res) => {
+    try {
+        const { error, value } = authValidation.sendOtpSchema.validate(req.body);
+        if (error) return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: "" });
 
+        const data = await authService.handleSendOtp(value.email);
+
+        if (data.EC === errorCode.SUCCESS) {
+            res.cookie('verifyToken', data.DT.verifyToken, {
+                httpOnly: true,
+                maxAge: 5 * 60 * 1000,
+                sameSite: 'strict',
+                // secure: true // Bật dòng này lên nếu chạy HTTPS (domain thật)
+            });
+            return res.status(200).json({ EM: data.EM, EC: data.EC, DT: "" });
+        }
+
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (e) {
+        return res.status(500).json({ EM: "Lỗi server nội bộ", EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+const handleResetPasswordOtp = async (req, res) => {
+    try {
+        const { error, value } = authValidation.resetPasswordOtpSchema.validate(req.body);
+        if (error) return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: "" });
+
+        const verifyToken = req.cookies.verifyToken;
+
+        if (!verifyToken) {
+            return res.status(200).json({ EM: "Mã OTP đã hết hạn hoặc bạn chưa yêu cầu gửi mã!", EC: errorCode.VALIDATION_ERROR, DT: "" });
+        }
+
+        const data = await authService.handleResetPasswordWithOtp(value.email, value.otp, value.newPassword, verifyToken);
+
+        if (data.EC === errorCode.SUCCESS) {
+            res.clearCookie('verifyToken');
+        }
+
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (e) {
+        return res.status(500).json({ EM: "Lỗi server nội bộ", EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
 module.exports = {
     handleRegister,
     handleLogin,
     handleLogout,
     handleRefreshToken,
-    handleChangePassword
+    handleChangePassword,
+    handleSendOtp,
+    handleResetPasswordOtp
 }

@@ -28,4 +28,9 @@ router.get('/collections/:slug', collectionController.handleGetCollectionBySlug)
 router.post('/chatbot/message', chatbotController.handleChatbotMessage);
 router.get('/chatbot/history', chatbotController.handleGetChatHistory);
 
+//  Yêu cầu gửi mã OTP
+router.post('/auth/forgot-password/send-otp', authController.handleSendOtp);
+
+//  Xác nhận OTP và đặt lại pass
+router.post('/auth/forgot-password/reset', authController.handleResetPasswordOtp);
 module.exports = router;
