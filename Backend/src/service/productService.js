@@ -78,7 +78,7 @@ const getAllProducts = async (queryParams) => {
                 },
                 {
                     model: db.ProductVariant, // Bổ sung Join vào bảng Variant để lọc màu sắc/kích thước
-                    as: 'variants', 
+                    as: 'variants',
                     attributes: [], // Không cần in ra dữ liệu của variant, chỉ dùng để lọc (tiết kiệm băng thông)
                     where: Object.keys(variantWhere).length > 0 ? variantWhere : undefined,
                     required: Object.keys(variantWhere).length > 0 // Nếu có lọc màu/size thì bắt buộc phải INNER JOIN
@@ -499,8 +499,181 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
         };
     }
 }
+const getBestDiscountProducts = async (keyword, limit = 5) => {
+
+    let whereCondition = {
+        discountPercent: {
+            [Op.gt]: 0
+        }
+    };
+
+    if (keyword) {
+        whereCondition.name = {
+            [Op.like]: `%${keyword}%`
+        };
+    }
+
+    const products = await db.Product.findAll({
+        where: whereCondition,
+        order: [['discountPercent', 'DESC']],
+        limit: limit
+    });
+
+    return {
+        EM: "Lấy sản phẩm ưu đãi cao nhất thành công",
+        EC: 0,
+        DT: {
+            products
+        }
+    };
+};
+const getBestSellerProducts = async (keyword, limit = 5) => {
+    try {
+        const productIds = await orderService.getBestSellerProductIds(limit);
+
+        if (!productIds.length) {
+            return {
+                EM: "Không có bestseller",
+                EC: 0,
+                DT: { products: [] }
+            };
+        }
+
+        let whereCondition = {
+            id: {
+                [Op.in]: productIds
+            }
+        };
+
+        if (keyword) {
+            whereCondition.name = {
+                [Op.like]: `%${keyword}%`
+            };
+        }
+
+        const products = await db.Product.findAll({
+            where: whereCondition
+        });
+
+        return {
+            EM: "OK",
+            EC: 0,
+            DT: { products }
+        };
+
+    } catch (e) {
+        console.error(e);
+        return {
+            EM: "Lỗi bestseller",
+            EC: -1,
+            DT: { products: [] }
+        };
+    }
+};
+const checkProductAvailability = async (keyword, size, color) => {
+    try {
+        const variants = await db.ProductVariant.findAll({
+            include: [
+                {
+                    model: db.Product,
+                    as: "product",
+                    where: {
+                        name: {
+                            [Op.like]: `%${keyword}%`
+                        }
+                    }
+                }
+            ],
+            where: {
+                ...(size && { size }),
+                ...(color && { color })
+            }
+        });
+
+        if (!variants.length) {
+            return {
+                DT: { available: false, message: "Không tìm thấy sản phẩm" }
+            };
+        }
+
+        const available = variants.some(v => v.stock > 0);
+
+        return {
+            DT: {
+                available,
+                variants
+            }
+        };
+
+    } catch (e) {
+        console.error(e);
+        return {
+            DT: { available: false }
+        };
+    }
+};
+const filterProductsAdvanced = async (keyword, minPrice, maxPrice, limit = 5) => {
+    try {
+        const productWhere = {};
+        const variantWhere = {};
+
+        // lọc theo tên
+        if (keyword) {
+            productWhere.name = {
+                [Op.like]: `%${keyword}%`
+            };
+        }
+
+        // lọc theo giá
+        if (minPrice && maxPrice) {
+            variantWhere.price = {
+                [Op.between]: [minPrice, maxPrice]
+            };
+        } else if (minPrice) {
+            variantWhere.price = {
+                [Op.gte]: minPrice
+            };
+        } else if (maxPrice) {
+            variantWhere.price = {
+                [Op.lte]: maxPrice
+            };
+        }
+
+        // chỉ lấy còn hàng
+        variantWhere.stock = {
+            [Op.gt]: 0
+        };
+
+        const products = await db.Product.findAll({
+            where: productWhere,
+            include: [
+                {
+                    model: db.ProductVariant,
+                    as: "variants",
+                    where: variantWhere
+                }
+            ],
+            limit: limit
+        });
+
+        return {
+            EM: "OK",
+            EC: 0,
+            DT: { products }
+        };
+
+    } catch (e) {
+        console.error(e);
+        return {
+            EM: "Lỗi filter advanced",
+            EC: -1,
+            DT: { products: [] }
+        };
+    }
+};
 module.exports = {
     getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, searchProducts,
     addProductVariant,
-    addMultipleProductImages, deleteProductImage,
+    addMultipleProductImages, deleteProductImage, getBestDiscountProducts,
+    getBestSellerProducts, checkProductAvailability, filterProductsAdvanced
 }

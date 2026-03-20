@@ -499,7 +499,41 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
         return { EM: 'Lỗi server khi cập nhật trạng thái thanh toán', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 }
+const getBestSellerProductIds = async (limit = 5) => {
+    try {
+        const result = await db.OrderItem.findAll({
+            attributes: [
+                [db.sequelize.col("variant.product.id"), "productId"],
+                [db.sequelize.fn("SUM", db.sequelize.col("OrderItem.quantity")), "totalSold"]
+            ],
+            include: [
+                {
+                    model: db.ProductVariant,
+                    as: "variant",
+                    attributes: [],
+                    include: [
+                        {
+                            model: db.Product,
+                            as: "product",
+                            attributes: []
+                        }
+                    ]
+                }
+            ],
+            group: ["variant.product.id"],
+            order: [[db.sequelize.literal("totalSold"), "DESC"]],
+            limit: limit,
+            raw: true
+        });
+
+        return result.map(item => item.productId);
+
+    } catch (e) {
+        console.error("Lỗi getBestSellerProductIds:", e);
+        return [];
+    }
+};
 module.exports = {
     createOrder, cancelOrder, getUserOrders, getUserOrderDetail,
-    getAdminOrders, updateOrderStatus, updatePaymentStatus
+    getAdminOrders, updateOrderStatus, updatePaymentStatus, getBestSellerProductIds
 };

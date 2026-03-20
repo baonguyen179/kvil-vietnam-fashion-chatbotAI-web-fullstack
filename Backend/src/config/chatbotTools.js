@@ -45,6 +45,84 @@ const aiFunctionDeclarations = [
             },
             required: ["replyMessage"]
         }
+    },
+    {
+        name: "getBestDiscountProducts",
+        description: "Lấy sản phẩm có ưu đãi cao nhất, có thể lọc theo loại sản phẩm.",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                keyword: {
+                    type: "STRING",
+                    description: "Loại sản phẩm như quần, áo, váy"
+                },
+                limit: {
+                    type: "NUMBER"
+                },
+                replyMessage: {
+                    type: "STRING"
+                }
+            }
+        }
+    },
+    {
+        name: "getBestSellerProducts",
+        description: "Lấy danh sách sản phẩm bán chạy nhất dựa trên số lượng đơn hàng (order). Có thể lọc theo loại sản phẩm.",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                keyword: {
+                    type: "STRING",
+                    description: "Loại sản phẩm (ví dụ: áo, quần, váy). Có thể bỏ trống nếu muốn lấy tất cả bestseller."
+                },
+                limit: {
+                    type: "NUMBER",
+                    description: "Số lượng sản phẩm muốn lấy (ví dụ: 5, 10)."
+                },
+                replyMessage: {
+                    type: "STRING",
+                    description: "Câu trả lời hấp dẫn giới thiệu sản phẩm bán chạy và kích thích khách mua hàng."
+                }
+            },
+            required: ["replyMessage"]
+        }
+    },
+    {
+        name: "checkProductAvailability",
+        description: "Kiểm tra sản phẩm còn hàng hay không theo tên, size, màu",
+        parameters: {
+            type: "object",
+            properties: {
+                keyword: {
+                    type: "string",
+                    description: "Tên sản phẩm hoặc từ khóa"
+                },
+                size: {
+                    type: "string"
+                },
+                color: {
+                    type: "string"
+                }
+            }
+        }
+    },
+    {
+        name: "filterProductsAdvanced",
+        description: "Lọc sản phẩm theo tên, giá và các tiêu chí khác",
+        parameters: {
+            type: "object",
+            properties: {
+                keyword: {
+                    type: "string"
+                },
+                minPrice: {
+                    type: "number"
+                },
+                maxPrice: {
+                    type: "number"
+                }
+            }
+        }
     }
 
 ];

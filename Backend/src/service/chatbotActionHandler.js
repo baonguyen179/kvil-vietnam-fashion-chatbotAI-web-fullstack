@@ -41,7 +41,98 @@ const executeAiAction = async (functionName, functionArgs) => {
                 finalReply = "Dạ, hiện tại các bộ sưu tập mới đang được shop cập nhật, bạn tham khảo tạm các sản phẩm lẻ giúp mình nhé!";
             }
             break;
+        case "getBestDiscountProducts":
 
+            const limit = functionArgs.limit || 5;
+
+            const discountRes = await productService.getBestDiscountProducts(
+                functionArgs.keyword,
+                limit
+            );
+
+            finalProducts = discountRes.DT?.products || [];
+
+            if (finalProducts.length > 0) {
+
+                finalReply =
+                    functionArgs.replyMessage ||
+                    "Dạ, đây là những sản phẩm đang có ưu đãi cao nhất bên shop ạ!";
+
+            } else {
+
+                finalReply = "Dạ hiện tại chưa có sản phẩm ưu đãi phù hợp ạ.";
+
+            }
+
+            break;
+        case "getBestSellerProducts":
+
+            const limitBest = functionArgs.limit || 5;
+
+            const bestSellerRes = await productService.getBestSellerProducts(
+                functionArgs.keyword,
+                limitBest
+            );
+
+            finalProducts = bestSellerRes.DT?.products || [];
+
+            if (finalProducts.length > 0) {
+                finalReply =
+                    functionArgs.replyMessage ||
+                    " Đây là các sản phẩm bán chạy nhất bên shop ạ!";
+            } else {
+                finalReply = "Dạ hiện chưa có dữ liệu bán chạy ạ.";
+            }
+
+            break;
+        case "checkProductAvailability":
+
+            const { keyword, size, color } = functionArgs;
+
+            const stockRes = await productService.checkProductAvailability(
+                keyword,
+                size,
+                color
+            );
+
+            const isAvailable = stockRes.DT?.available;
+
+            if (isAvailable) {
+                finalReply = `Dạ còn hàng${size ? ` size ${size}` : ""}${color ? ` màu ${color}` : ""} ạ!`;
+            } else {
+                finalReply = `Dạ hiện tại sản phẩm này đang hết hàng rồi ạ.`;
+            }
+
+            break;
+        case "filterProductsAdvanced": {
+
+            const { keyword, minPrice, maxPrice } = functionArgs;
+
+            const res = await productService.filterProductsAdvanced(
+                keyword,
+                minPrice,
+                maxPrice,
+                5
+            );
+
+            finalProducts = res.DT?.products || [];
+
+            if (finalProducts.length > 0) {
+
+                if (keyword && maxPrice) {
+                    finalReply = `Dạ, đây là các sản phẩm '${keyword}' dưới ${maxPrice.toLocaleString()}đ ạ!`;
+                } else if (keyword) {
+                    finalReply = `Dạ, đây là các sản phẩm '${keyword}' phù hợp với bạn ạ!`;
+                } else {
+                    finalReply = "Dạ, đây là các sản phẩm phù hợp ạ!";
+                }
+
+            } else {
+                finalReply = "Dạ chưa có sản phẩm phù hợp ạ.";
+            }
+
+            break;
+        }
         // BẠN CÓ THỂ THÊM CÁC CASE KHÁC Ở ĐÂY SAU NÀY
         // case "checkOrder": ...
 
