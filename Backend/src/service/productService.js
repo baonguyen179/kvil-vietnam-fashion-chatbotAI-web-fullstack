@@ -2,24 +2,53 @@ const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 const cloudinary = require('cloudinary').v2;
 const { Op } = require('sequelize');
+const aqp = require('api-query-params').default || require('api-query-params');
 
 const getAllProducts = async (queryParams) => {
     try {
-        // 1. Xử lý Phân trang
+        //  Tách các tham số cố định ra 
         const page = +queryParams.page || 1;
         const limit = +queryParams.limit || 10;
         const offset = (page - 1) * limit;
-
-        const categoryId = queryParams.categoryId;
         const sort = queryParams.sort;
 
-        // 2. Xử lý Điều kiện lọc (Where)
-        let whereCondition = {};
-        if (categoryId) {
-            whereCondition.categoryId = categoryId;
+        // Xóa các tham số khỏi query để  cho AQP xử lý lọc
+        const queryForAqp = { ...queryParams };
+        delete queryForAqp.page;
+        delete queryForAqp.limit;
+        delete queryForAqp.sort;
+
+        // AQP  parse các bộ lọc động (VD: basePrice>=100000&color=red)
+        const { filter } = aqp(queryForAqp);
+
+        let productWhere = {};
+        let variantWhere = {};
+
+        //  THUẬT TOÁN ADAPTER: Chuyển đổi cú pháp MongoDB của AQP sang Sequelize MySQL
+        for (const key in filter) {
+            let value = filter[key];
+
+            // Nếu là phép so sánh (>=, <=, >, <)
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                const seqValue = {};
+                for (const op in value) {
+                    const seqOp = op.replace('$', ''); // Đổi $gte thành gte
+                    if (Op[seqOp]) {
+                        seqValue[Op[seqOp]] = value[op];
+                    }
+                }
+                value = seqValue;
+            }
+
+            // Phân loại: Lọc theo Color/Size  Bảng ProductVariant, còn lại đẩy vào Bảng Product
+            if (key === 'color' || key === 'size') {
+                variantWhere[key] = value;
+            } else {
+                productWhere[key] = value;
+            }
         }
 
-        // 3. Xử lý Sắp xếp (Dùng Object Map thay cho if/else) - O(1)
+        //  Xử lý Sắp xếp 
         const sortOptions = {
             'price_asc': [['basePrice', 'ASC']],
             'price_desc': [['basePrice', 'DESC']],
@@ -28,9 +57,9 @@ const getAllProducts = async (queryParams) => {
         };
         const orderCondition = sortOptions[sort] || [['createdAt', 'DESC']];
 
-        // 4. Truy vấn Database
+        // Truy vấn Database (Đã gắn thêm ProductVariant để lọc màu/size)
         const { count, rows } = await db.Product.findAndCountAll({
-            where: whereCondition,
+            where: productWhere,
             order: orderCondition,
             limit: limit,
             offset: offset,
@@ -46,49 +75,43 @@ const getAllProducts = async (queryParams) => {
                     as: 'images',
                     attributes: ['imageUrl', 'isMain'],
                     required: false
+                },
+                {
+                    model: db.ProductVariant, // Bổ sung Join vào bảng Variant để lọc màu sắc/kích thước
+                    as: 'variants', 
+                    attributes: [], // Không cần in ra dữ liệu của variant, chỉ dùng để lọc (tiết kiệm băng thông)
+                    where: Object.keys(variantWhere).length > 0 ? variantWhere : undefined,
+                    required: Object.keys(variantWhere).length > 0 // Nếu có lọc màu/size thì bắt buộc phải INNER JOIN
                 }
             ],
-            distinct: true
+            distinct: true // Rất quan trọng khi dùng limit + include
         });
 
-        // 5. Thuật toán lọc ảnh: Lấy 1 ảnh chính + 1 ảnh phụ (Tối ưu O(M))
+        //  Thuật toán lọc ảnh (O(M)): Lấy 1 ảnh chính + 1 ảnh phụ 
         rows.forEach(product => {
             if (product.images && product.images.length > 0) {
                 let mainImg = null;
                 let secondImg = null;
 
                 for (const img of product.images) {
-                    // Ưu tiên lấy ảnh chính
-                    if (img.isMain && !mainImg) {
-                        mainImg = img;
-                    }
-                    // Nếu đã có ảnh chính hoặc gặp ảnh thường, lấy làm ảnh phụ
-                    else if (!secondImg) {
-                        secondImg = img;
-                    }
-
-                    // Nếu đã tìm đủ 2 ảnh (1 chính, 1 phụ) thì dừng vòng lặp ngay
+                    if (img.isMain && !mainImg) mainImg = img;
+                    else if (!secondImg) secondImg = img;
                     if (mainImg && secondImg) break;
                 }
 
-                // Sắp xếp lại mảng trả về: [Ảnh chính, Ảnh phụ]
                 const finalImages = [];
                 if (mainImg) finalImages.push(mainImg);
                 if (secondImg) finalImages.push(secondImg);
-
-                // Gán lại dữ liệu sạch cho Frontend
                 product.dataValues.images = finalImages;
             }
         });
-
-        const totalPages = Math.ceil(count / limit);
 
         return {
             EM: 'Lấy danh sách sản phẩm thành công!',
             EC: errorCode.SUCCESS,
             DT: {
                 totalItems: count,
-                totalPages: totalPages,
+                totalPages: Math.ceil(count / limit),
                 currentPage: page,
                 products: rows
             }
@@ -96,11 +119,7 @@ const getAllProducts = async (queryParams) => {
 
     } catch (error) {
         console.error(">>> Lỗi tại productService (getAllProducts):", error);
-        return {
-            EM: 'Lỗi server khi lấy sản phẩm',
-            EC: errorCode.OTHER_ERROR,
-            DT: ''
-        };
+        return { EM: 'Lỗi server khi lấy sản phẩm', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 }
 const createProduct = async (productData) => {
