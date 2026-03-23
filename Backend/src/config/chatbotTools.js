@@ -1,130 +1,132 @@
-
 const aiFunctionDeclarations = [
     {
-        name: "searchProducts",
-        description: "Tìm kiếm sản phẩm cụ thể bằng từ khóa (ví dụ: áo sơ mi, quần jean, váy).",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                keyword: { type: "STRING", description: "Từ khóa cần tìm" },
-                replyMessage: {
-                    type: "STRING",
-                    description: "Câu trả lời khéo léo của bạn gửi cho khách. Nếu thông tin chưa rõ, hãy GỢI Ý MỘT VÀI SẢN PHẨM và HỎI THÊM khách về giới tính, màu sắc, size, hoặc sở thích để tư vấn chuẩn xác hơn."
-                }
-            },
-            required: ["keyword"]
+        type: "function",
+        function: {
+            name: "searchProducts",
+            description: "Tìm kiếm sản phẩm theo tên hoặc loại. Dùng khi khách hỏi 'váy rẻ', 'áo thun mới' (không có số tiền cụ thể).",
+            parameters: {
+                type: "object",
+                properties: {
+                    keyword: {
+                        type: "string",
+                        description: "Từ khóa sản phẩm (ví dụ: áo, quần, váy)"
+                    },
+                    sort: {
+                        type: "string",
+                        enum: ["price_asc", "price_desc", "newest"],
+                        description: "Dùng 'price_asc' cho từ 'rẻ', 'price_desc' cho 'đắt/cao cấp', 'newest' cho 'mới nhất'."
+                    },
+                    limit: {
+                        type: "number",
+                        default: 5
+                    }
+                },
+                required: ["keyword"]
+            }
         }
     },
+
     {
-        name: "getAllProducts",
-        description: "Xem các sản phẩm theo tiêu chí chung (mới nhất, giá rẻ, đắt nhất).",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                sort: {
-                    type: "STRING",
-                    description: "BẮT BUỘC chọn 1 trong 4 giá trị: 'newest', 'price_asc', 'price_desc', 'oldest'"
-                },
-                replyMessage: {
-                    type: "STRING",
-                    description: "Câu nói thân thiện gửi kèm danh sách sản phẩm."
+        type: "function",
+        function: {
+            name: "getAllProducts",
+            description: "Xem toàn bộ sản phẩm của shop khi khách không nói rõ loại sản phẩm nào.",
+            parameters: {
+                type: "object",
+                properties: {
+                    sort: {
+                        type: "string",
+                        enum: ["newest", "price_asc", "price_desc", "oldest"],
+                        description: "Tiêu chí sắp xếp"
+                    },
+                    limit: { type: "number", default: 5 }
                 }
             }
         }
     },
+
     {
-        name: "suggestCollections",
-        description: "Dùng để giới thiệu cho khách hàng các BỘ SƯU TẬP (Collection) hoặc CHỦ ĐỀ theo mùa đang có của shop. Gọi hàm này khi khách muốn mua đồ theo sự kiện, đi du lịch, đồ theo mùa (xuân, hạ, thu, đông), hoặc khi khách không biết mặc gì.",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                replyMessage: {
-                    type: "STRING",
-                    description: "Câu giới thiệu các bộ sưu tập một cách hấp dẫn. Kèm theo câu hỏi xem khách muốn xem chi tiết bộ sưu tập nào."
-                }
-            },
-            required: ["replyMessage"]
+        type: "function",
+        function: {
+            name: "suggestCollections",
+            description: "Hiển thị danh sách các bộ sưu tập thời trang của shop.",
+            parameters: {
+                type: "object",
+                properties: {} // Không cần tham số
+            }
         }
     },
+
     {
-        name: "getBestDiscountProducts",
-        description: "Lấy sản phẩm có ưu đãi cao nhất, có thể lọc theo loại sản phẩm.",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                keyword: {
-                    type: "STRING",
-                    description: "Loại sản phẩm như quần, áo, váy"
-                },
-                limit: {
-                    type: "NUMBER"
-                },
-                replyMessage: {
-                    type: "STRING"
+        type: "function",
+        function: {
+            name: "getBestDiscountProducts",
+            description: "Tìm các sản phẩm đang có chương trình giảm giá, sale, ưu đãi.",
+            parameters: {
+                type: "object",
+                properties: {
+                    keyword: { type: "string", description: "Loại sản phẩm muốn tìm sale" },
+                    limit: { type: "number", default: 5 }
                 }
             }
         }
     },
+
     {
-        name: "getBestSellerProducts",
-        description: "Lấy danh sách sản phẩm bán chạy nhất dựa trên số lượng đơn hàng (order). Có thể lọc theo loại sản phẩm.",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                keyword: {
-                    type: "STRING",
-                    description: "Loại sản phẩm (ví dụ: áo, quần, váy). Có thể bỏ trống nếu muốn lấy tất cả bestseller."
-                },
-                limit: {
-                    type: "NUMBER",
-                    description: "Số lượng sản phẩm muốn lấy (ví dụ: 5, 10)."
-                },
-                replyMessage: {
-                    type: "STRING",
-                    description: "Câu trả lời hấp dẫn giới thiệu sản phẩm bán chạy và kích thích khách mua hàng."
-                }
-            },
-            required: ["replyMessage"]
-        }
-    },
-    {
-        name: "checkProductAvailability",
-        description: "Kiểm tra sản phẩm còn hàng hay không theo tên, size, màu",
-        parameters: {
-            type: "object",
-            properties: {
-                keyword: {
-                    type: "string",
-                    description: "Tên sản phẩm hoặc từ khóa"
-                },
-                size: {
-                    type: "string"
-                },
-                color: {
-                    type: "string"
+        type: "function",
+        function: {
+            name: "getBestSellerProducts",
+            description: "Tìm các sản phẩm bán chạy, hot trend, được mua nhiều nhất.",
+            parameters: {
+                type: "object",
+                properties: {
+                    keyword: { type: "string", description: "Loại sản phẩm bán chạy" },
+                    limit: { type: "number", default: 5 }
                 }
             }
         }
     },
+
     {
-        name: "filterProductsAdvanced",
-        description: "Lọc sản phẩm theo tên, giá và các tiêu chí khác",
-        parameters: {
-            type: "object",
-            properties: {
-                keyword: {
-                    type: "string"
+        type: "function",
+        function: {
+            name: "checkProductAvailability",
+            description: "Kiểm tra xem một mẫu cụ thể còn hàng, còn size hay màu đó không.",
+            parameters: {
+                type: "object",
+                properties: {
+                    keyword: { type: "string", description: "Tên sản phẩm cụ thể" },
+                    size: { type: "string", description: "Ví dụ: S, M, L, XL hoặc 39, 40..." },
+                    color: { type: "string", description: "Ví dụ: xanh, đen, trắng..." }
                 },
-                minPrice: {
-                    type: "number"
+                required: ["keyword"]
+            }
+        }
+    },
+
+    {
+        type: "function",
+        function: {
+            name: "filterProductsAdvanced",
+            description: "CHỈ dùng khi khách nhắc đến CON SỐ cụ thể (ví dụ: 'dưới 500k', 'từ 200k đến 300k').",
+            parameters: {
+                type: "object",
+                properties: {
+                    keyword: { type: "string", description: "Loại sản phẩm" },
+                    minPrice: {
+                        type: "number",
+                        description: "Giá tối thiểu. Ví dụ: khách nói 'trên 200k' thì minPrice là 200000."
+                    },
+                    maxPrice: {
+                        type: "number",
+                        description: "Giá tối đa. Ví dụ: khách nói 'dưới 500k' thì maxPrice là 500000."
+                    },
+                    limit: { type: "number", default: 5 }
                 },
-                maxPrice: {
-                    type: "number"
-                }
+                required: ["keyword"]
             }
         }
     }
-
 ];
 
 module.exports = {
