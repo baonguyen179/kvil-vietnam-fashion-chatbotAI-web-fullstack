@@ -13,14 +13,18 @@ const handleChatbotMessage = async (req, res) => {
         const { message } = value;
         const userId = req.user && req.user.id ? req.user.id : null;
 
-        let sessionId = req.cookies.guest_session_id;
+        // Nếu cookie hợp lệ, nó trả về giá trị ID gốc. Nếu bị giả mạo, nó trả về false.
+        let sessionId = req.signedCookies ? req.signedCookies.guest_session_id : null;
+
+        // Nếu người dùng cố tình sửa bậy cookie, sessionId sẽ thành false hoặc undefined -> Tạo mới luôn
         if (!sessionId) {
             sessionId = crypto.randomUUID();
             res.cookie('guest_session_id', sessionId, {
                 maxAge: 30 * 24 * 60 * 60 * 1000,
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict'
+                sameSite: 'strict',
+                signed: true //  Bật cờ chữ ký số 
             });
         }
 
@@ -45,9 +49,9 @@ const handleChatbotMessage = async (req, res) => {
         return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
+
 const handleGetChatHistory = async (req, res) => {
     try {
-        // Validate query (VD: ?limit=20&page=1)
         const { error, value } = chatbotValidation.getChatHistorySchema.validate(req.query);
         if (error) {
             return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: "" });
@@ -56,7 +60,9 @@ const handleGetChatHistory = async (req, res) => {
         const { limit, page } = value;
 
         const userId = req.user && req.user.id ? req.user.id : null;
-        const sessionId = req.cookies.guest_session_id;
+
+        // Đọc từ req.signedCookies để lấy đúng lịch sử
+        const sessionId = req.signedCookies ? req.signedCookies.guest_session_id : null;
 
         const data = await chatbotService.getChatHistory(userId, sessionId, limit, page);
 
@@ -67,6 +73,7 @@ const handleGetChatHistory = async (req, res) => {
         return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
+
 module.exports = {
     handleChatbotMessage, handleGetChatHistory
 }

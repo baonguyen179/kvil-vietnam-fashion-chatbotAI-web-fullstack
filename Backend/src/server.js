@@ -16,7 +16,7 @@ app.use(morgan('dev'))//read logging in console
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 //config cookies-pa
-app.use(cookieParser())
+app.use(cookieParser(process.env.COOKIE_SECRET_KEY));
 
 app.get('/', (req, res) => {
     res.status(200).json({
