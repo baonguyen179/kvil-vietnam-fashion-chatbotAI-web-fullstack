@@ -64,7 +64,7 @@ const processChatbotMessage = async (userId, sessionId, message) => {
     try {
         // 3. Gọi AI xử lý
         const response = await client.chat.completions.create({
-            model: "meta-llama/llama-3-8b-instruct", // Hoặc gpt-3.5-turbo/gpt-4o
+            model: "openai/gpt-4o-mini", // Hoặc gpt-3.5-turbo/gpt-4o
             messages: messages,
             tools: aiFunctionDeclarations,
             tool_choice: "auto"
