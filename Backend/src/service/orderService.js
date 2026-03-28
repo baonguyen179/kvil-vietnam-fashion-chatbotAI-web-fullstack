@@ -5,27 +5,44 @@ const createOrder = async (userId, data) => {
     const t = await db.sequelize.transaction();
     let currentStep = 'Khởi tạo hàm createOrder';
     try {
-        const { shippingAddress, paymentMethod, couponCode, deliveryMethod } = data;
-        currentStep = 'Query Giỏ hàng của User';
-        const cart = await db.Cart.findOne({
-            where: { userId: userId },
-            include: [{
-                model: db.CartItem,
-                as: 'cartItems'
-            }]
-        });
+        const { paymentMethod, couponCode, deliveryMethod } = data;
+        let cartItems = [];
+        let finalShippingAddress = data.shippingAddress; // Mặc định cho user đã login
+        let cartId = null;
 
-        if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
-            await t.rollback();
-            return { EM: 'Giỏ hàng trống, không thể đặt hàng!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        if (userId) {
+            // ================= USER ĐÃ LOGIN =================
+            currentStep = 'Query Giỏ hàng của User';
+            const cart = await db.Cart.findOne({
+                where: { userId: userId },
+                include: [{ model: db.CartItem, as: 'cartItems' }],
+                transaction: t
+            });
+
+            if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
+                await t.rollback();
+                return { EM: 'Giỏ hàng trống, không thể đặt hàng!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+            }
+            cartItems = cart.cartItems;
+            cartId = cart.id;
+        } else {
+            // ================= KHÁCH VÃNG LAI =================
+            currentStep = 'Lấy thông tin từ payload của khách';
+            if (!data.items || data.items.length === 0) {
+                await t.rollback();
+                return { EM: 'Giỏ hàng trống, không thể đặt hàng!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+            }
+            cartItems = data.items;
+            // Tạo địa chỉ giao hàng đầy đủ cho khách
+            const { fullName, phone, email } = data.guestInfo;
+            finalShippingAddress = `${fullName} - ${phone}\n${email}\n${data.shippingAddress}`;
         }
 
         let totalBeforeDiscount = 0;
         let orderItemsData = [];
 
         currentStep = 'Kiểm tra tồn kho và Khóa dòng';
-        for (let item of cart.cartItems) {
-            //  Tìm và khóa cứng (Lock) Variant này lại để chống Race Condition
+        for (let item of cartItems) {
             const lockedVariant = await db.ProductVariant.findOne({
                 where: { id: item.variantId },
                 transaction: t,
@@ -37,11 +54,10 @@ const createOrder = async (userId, data) => {
                 return { EM: `Sản phẩm (Variant ID: ${item.variantId}) không tồn tại!`, EC: errorCode.NOT_FOUND, DT: '' };
             }
 
-            // Kiểm tra số lượng tồn kho dựa trên data vừa được khóa
             if (item.quantity > lockedVariant.stock) {
                 await t.rollback();
                 return {
-                    EM: `Sản phẩm (Variant ID: ${item.variantId}) không đủ tồn kho! Chỉ còn ${lockedVariant.stock}.`,
+                    EM: `Sản phẩm '${lockedVariant.sku}' không đủ tồn kho! Chỉ còn ${lockedVariant.stock}.`,
                     EC: errorCode.OUT_OF_STOCK,
                     DT: ''
                 };
@@ -60,7 +76,6 @@ const createOrder = async (userId, data) => {
         }
 
         let shippingFee = 0;
-
         if (deliveryMethod === 'home_delivery') {
             shippingFee = totalBeforeDiscount >= 500000 ? 0 : 30000;
         }
@@ -69,6 +84,7 @@ const createOrder = async (userId, data) => {
         let couponId = null;
 
         if (couponCode) {
+            // Logic xử lý coupon giữ nguyên...
             const coupon = await db.Coupon.findOne({ where: { code: couponCode, isActive: true } });
             if (!coupon) {
                 await t.rollback();
@@ -79,7 +95,6 @@ const createOrder = async (userId, data) => {
                 return { EM: `Đơn hàng phải từ ${coupon.minOrderValue}đ mới được áp dụng mã này!`, EC: errorCode.VALIDATION_ERROR, DT: '' };
             }
 
-            // Tính tiền giảm dựa trên loại mã
             if (coupon.discountType === 'fixed') {
                 discountAmount = coupon.discountValue;
             } else if (coupon.discountType === 'percent') {
@@ -93,19 +108,20 @@ const createOrder = async (userId, data) => {
 
         let finalAmount = totalBeforeDiscount + shippingFee - discountAmount;
         if (finalAmount < 0) finalAmount = 0;
+
         currentStep = 'Tạo đơn hàng vào bảng Orders';
         const newOrder = await db.Order.create({
-            userId: userId,
+            userId: userId, // Sẽ là null nếu là khách
             couponId: couponId,
             totalBeforeDiscount: totalBeforeDiscount,
             shippingFee: shippingFee,
             discountAmount: discountAmount,
             finalAmount: finalAmount,
             paymentMethod: paymentMethod,
-            paymentStatus: false, // Mặc định là chưa thanh toán
-            shippingAddress: shippingAddress,
+            paymentStatus: false,
+            shippingAddress: finalShippingAddress,
             deliveryMethod: deliveryMethod,
-            status: 'pending' // Chờ duyệt
+            status: 'pending'
         }, { transaction: t });
 
         const itemsToInsert = orderItemsData.map(item => ({
@@ -115,11 +131,13 @@ const createOrder = async (userId, data) => {
         currentStep = 'Lưu chi tiết OrderItems';
         await db.OrderItem.bulkCreate(itemsToInsert, { transaction: t });
 
-        currentStep = 'Xóa dữ liệu Giỏ hàng';
-        await db.CartItem.destroy({
-            where: { cartId: cart.id },
-            transaction: t
-        });
+        if (userId && cartId) {
+            currentStep = 'Xóa dữ liệu Giỏ hàng của User';
+            await db.CartItem.destroy({
+                where: { cartId: cartId },
+                transaction: t
+            });
+        }
 
         await t.commit();
 
@@ -127,8 +145,8 @@ const createOrder = async (userId, data) => {
 
     } catch (error) {
         await t.rollback();
-        cconsole.error(`\n[CRITICAL ERROR] Lỗi tại createOrder!`);
-        console.error(`- User ID: ${userId}`);
+        console.error(`\n[CRITICAL ERROR] Lỗi tại createOrder!`);
+        console.error(`- User ID: ${userId || 'Guest'}`);
         console.error(`- Input Data:`, data);
         console.error(`- CHẾT TẠI BƯỚC:  ${currentStep} `);
         console.error(`- Chi tiết lỗi: ${error.message}\n`);

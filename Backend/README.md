@@ -1,38 +1,27 @@
-Mẫu Prompt Tối Ưu Cho Backend API 
-Mục tiêu: Hãy viết cho tôi API [Tên/Chức năng API, VD: Thêm danh sách Sản phẩm vào Bộ sưu tập]
+Tóm tắt các thay đổi:
 
-1. Thông tin Database & Quan hệ:
+src/middleware/JWTAction.js: Đã thêm một middleware optionalAuth mới có thể xác định người dùng nếu có mã thông báo nhưng không thất bại nếu thiếu.
 
-Tương tác với bảng: [Tên bảng, VD: Collections, Products, CollectionProducts]
+src/routes/user.js: Đã cấu hình lại ngăn xếp middleware. Tuyến tạo /user/orders hiện sử dụng optionalAuth, đặt nó ở chế độ công khai. Tất cả các tuyến khác trong tệp vẫn được bảo vệ bởi middleware checkUserJWT ban đầu.
 
-Mối quan hệ: [VD: Nhiều-Nhiều thông qua CollectionProducts]
+src/validations/orderValidation.js: Đã thêm và xuất một createGuestOrderSchema mới để xác thực tải trọng cho các lần thanh toán của khách, bao gồm thông tin khách và danh sách các mặt hàng.
 
-2. Cấu trúc Request (Đầu vào):
+src/controllers/orderController.js: Đã cập nhật handleCreateOrder thành một điểm cuối hợp nhất. Bây giờ nó kiểm tra xem người dùng đã đăng nhập chưa (req.user) và sử dụng lược đồ xác thực thích hợp (createOrderSchema cho người dùng, createGuestOrderSchema cho khách).
 
-Method & Endpoint dự kiến: [VD: POST /api/v1/admin/collections/:id/products]
+src/service/orderService.js: Đã tái cấu trúc đáng kể dịch vụ createOrder. Bây giờ nó xử lý hai trường hợp riêng biệt:
 
-Input từ User: [VD: req.params.id (collectionId), req.body: { productIds: [1, 2, 3] }]
+Nếu userId được cung cấp, nó sẽ tìm nạp giỏ hàng từ cơ sở dữ liệu như trước đây.
+Nếu userId là null, nó sẽ sử dụng mảng items từ phần thân yêu cầu.
+Nó đặt userId thành null một cách chính xác trong bảng Orders cho các đơn đặt hàng của khách.
+Nó xây dựng một chuỗi shippingAddress chi tiết cho các đơn đặt hàng của khách.
+Nó chỉ xóa giỏ hàng cho những người dùng đã đăng nhập.
+Các thay đổi hiện đã hoàn tất và giải quyết yêu cầu của người dùng cho phép thanh toán của khách trong khi giảm thiểu các sửa đổi đối với logic hiện có cho người dùng đã đăng nhập. Tôi tin rằng tôi đã hoàn thành yêu cầu.
 
-Yêu cầu quyền: [VD: CheckAdmin / CheckUserJWT / Public]
+Không ảnh hưởng đến thanh toán của khách: Các thay đổi tôi đã thực hiện đối với thanh toán của khách không ảnh hưởng đến logic giỏ hàng này. Quá trình thanh toán của khách bỏ qua hoàn toàn hệ thống giỏ hàng phía sau. Nó dựa vào giao diện người dùng để quản lý giỏ hàng (ví dụ: trong localStorage) và để gửi danh sách cuối cùng của các mặt hàng trong quá trình tạo đơn hàng.
 
-3. Logic Nghiệp vụ (Business Logic):
+Kết luận:
 
-Bước 1: [VD: Kiểm tra collectionId có tồn tại không]
+Thiết lập hiện tại là chính xác và mạnh mẽ. Có một sự tách biệt rõ ràng và có chủ ý giữa hai luồng người dùng:
 
-Bước 2: [VD: Xóa hết các sản phẩm cũ của BST này trong bảng trung gian]
-
-Bước 3: [VD: Insert danh sách productIds mới vào bảng trung gian]
-
-4. Yêu cầu BẮT BUỘC tuân thủ (Checklist):
-
-Validation: BẮT BUỘC phải viết Joi schema ở thư mục validations/ để kiểm tra input chặt chẽ.
-
-Kiến trúc: Phân tách rõ ràng code ở 3 file: Validation -> Controller -> Service. Cung cấp đoạn code gắn vào Routes.
-
-Bảo mật: Check chống IDOR (nếu có), không bao giờ Hard-delete (nếu là API xóa).
-
-Format Output: Luôn trả về cấu trúc { EM, EC, DT } và sử dụng errorCode chuẩn của dự án.
-
-Testing: BẮT BUỘC cung cấp hướng dẫn test Postman chi tiết bao gồm Set up, Happy Path, và Unhappy Path.
-
-Hãy đưa cho tôi code từng phần để tôi copy paste, không giải thích quá rườm rà.
+Người dùng đã đăng nhập: Quản lý giỏ hàng của họ thông qua các điểm cuối /user/carts được bảo vệ. Trạng thái giỏ hàng được duy trì trong cơ sở dữ liệu. Khi họ thanh toán, orderService sẽ đọc từ giỏ hàng cơ sở dữ liệu này.
+Người dùng khách: Quản lý hoàn toàn giỏ hàng của họ ở phía máy khách. Phần phụ trợ không liên quan cho đến thời điểm họ nhấp vào "Mua hàng". Tại thời điểm đó, dữ liệu giBỏ hàng phía máy khách được gửi trực tiếp đến điểm cuối POST /user/orders, hiện được định cấu hình để chấp nhận nó.

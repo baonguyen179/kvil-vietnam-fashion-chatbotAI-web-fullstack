@@ -12,6 +12,43 @@ const createOrderSchema = Joi.object({
     couponCode: Joi.string().allow('', null), // Mã giảm giá là không bắt buộc
     deliveryMethod: Joi.string().valid('home_delivery', 'store_pickup').default('home_delivery')
 });
+const createGuestOrderSchema = Joi.object({
+    shippingAddress: Joi.string().required().messages({
+        'string.empty': 'Vui lòng nhập địa chỉ giao hàng!',
+        'any.required': 'Địa chỉ giao hàng là bắt buộc!'
+    }),
+    paymentMethod: Joi.string().valid('COD', 'BANK_TRANSFER').required().messages({
+        'any.only': 'Phương thức thanh toán chỉ hỗ trợ COD hoặc BANK_TRANSFER!',
+        'any.required': 'Vui lòng chọn phương thức thanh toán!'
+    }),
+    couponCode: Joi.string().allow('', null),
+    deliveryMethod: Joi.string().valid('home_delivery', 'store_pickup').default('home_delivery'),
+
+    // Thông tin khách hàng vãng lai
+    guestInfo: Joi.object({
+        fullName: Joi.string().required().messages({
+            'string.empty': 'Vui lòng nhập họ và tên!',
+            'any.required': 'Họ và tên là bắt buộc!'
+        }),
+        phone: Joi.string().required().messages({
+            'string.empty': 'Vui lòng nhập số điện thoại!',
+            'any.required': 'Số điện thoại là bắt buộc!'
+        }),
+        email: Joi.string().email().required().messages({
+            'string.email': 'Email không hợp lệ!',
+            'any.required': 'Email là bắt buộc!'
+        }),
+    }).required(),
+
+    // Sản phẩm khách mua (thay vì lấy từ giỏ hàng trong DB)
+    items: Joi.array().items(Joi.object({
+        variantId: Joi.number().integer().required(),
+        quantity: Joi.number().integer().min(1).required()
+    })).min(1).required().messages({
+        'array.min': 'Giỏ hàng không được rỗng!',
+        'any.required': 'Vui lòng cung cấp danh sách sản phẩm!'
+    })
+});
 
 const cancelOrderSchema = Joi.object({
     id: Joi.number().integer().required().messages({
@@ -53,6 +90,7 @@ const updatePaymentStatusSchema = Joi.object({
 });
 module.exports = {
     createOrderSchema,
+    createGuestOrderSchema,
     cancelOrderSchema,
     getOrderListSchema,
     getOrderDetailSchema,

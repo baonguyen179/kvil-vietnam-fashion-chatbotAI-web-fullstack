@@ -4,13 +4,22 @@ const errorCode = require('../config/errorCodes');
 
 const handleCreateOrder = async (req, res) => {
     try {
-        const userId = req.user.id;
+        // userId có thể là null/undefined nếu là khách vãng lai
+        const userId = req.user?.id;
+        let error;
 
-        const { error } = orderValidation.createOrderSchema.validate(req.body);
+        if (userId) {
+            // User đã đăng nhập -> Validate bằng schema cho user
+            ({ error } = orderValidation.createOrderSchema.validate(req.body));
+        } else {
+            // Khách vãng lai -> Validate bằng schema cho khách
+            ({ error } = orderValidation.createGuestOrderSchema.validate(req.body));
+        }
+
         if (error) {
             return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
         }
-
+        // Truyền cả userId và data từ body xuống service
         const data = await orderService.createOrder(userId, req.body);
         return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
 

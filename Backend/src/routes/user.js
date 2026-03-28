@@ -8,6 +8,12 @@ const orderController = require('../controllers/orderController');
 
 const JWTAction = require('../middleware/JWTAction');
 
+
+// Route để tạo order, cho phép cả user đã login và khách vãng lai
+router.post('/user/orders', JWTAction.optionalAuth, orderController.handleCreateOrder);
+
+
+// TẤT CẢ CÁC ROUTE BÊN DƯỚI ĐỀU YÊU CẦU ĐĂNG NHẬP
 router.use(JWTAction.checkUserJWT);
 
 // [AUTH - Đổi mật khẩu]
@@ -29,8 +35,7 @@ router.post('/user/carts', cartController.handleAddToCart);
 router.put('/user/carts/:id', cartController.handleUpdateCartItem);
 router.delete('/user/carts/:id', cartController.handleDeleteCartItem);
 
-// [ORDERS]
-router.post('/user/orders', orderController.handleCreateOrder);
+// [ORDERS] - CÁC ROUTE LIÊN QUAN ĐẾN QUẢN LÝ ORDER CÁ NHÂN
 router.put('/user/orders/:id/cancel', orderController.handleCancelOrder);
 router.get('/user/orders', orderController.handleGetUserOrders);
 router.get('/user/orders/:id', orderController.handleGetUserOrderDetail);
