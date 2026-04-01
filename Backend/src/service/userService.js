@@ -1,8 +1,23 @@
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
+const redisHelper = require('../helpers/redis.helper');
+
+//tạo key cache cho chuẩn xác và tái sử dụng
+const getProfileCacheKey = (userId) => `user:profile:${userId}`;
+const getAddressCacheKey = (userId) => `user:addresses:${userId}`;
 
 const getUserProfile = async (userId) => {
     try {
+        const cacheKey = getProfileCacheKey(userId);
+        const cachedData = await redisHelper.getCache(cacheKey);
+
+        if (cachedData) {
+            return {
+                EM: 'Lấy thông tin hồ sơ (Cache) thành công!',
+                EC: errorCode.SUCCESS,
+                DT: cachedData
+            };
+        }
         const user = await db.User.findOne({
             where: { id: userId },
             attributes: {
@@ -17,7 +32,8 @@ const getUserProfile = async (userId) => {
                 DT: ''
             };
         }
-
+        //Set Cache cho lần gọi tiếp theo (Lưu 1 tiếng = 3600s)
+        await redisHelper.setCache(cacheKey, user, 3600);
         return {
             EM: 'Lấy thông tin hồ sơ thành công!',
             EC: errorCode.SUCCESS,
@@ -46,6 +62,8 @@ const updateUserProfile = async (userId, validatedData) => {
             where: { id: userId },
             attributes: { exclude: ['password', 'refresh_token'] }
         });
+        //xóa cache ngay khi có cập nhật để tránh sai lệch dữ liệu
+        await redisHelper.delCache(getProfileCacheKey(userId));
 
         return { EM: 'Cập nhật hồ sơ thành công!', EC: errorCode.SUCCESS, DT: updatedUser };
 
@@ -56,6 +74,17 @@ const updateUserProfile = async (userId, validatedData) => {
 }
 const getUserAddresses = async (userId) => {
     try {
+        const cacheKey = getAddressCacheKey(userId);
+        const cachedData = await redisHelper.getCache(cacheKey);
+
+        if (cachedData) {
+            return {
+                EM: 'Lấy danh sách địa chỉ (Cache) thành công!',
+                EC: errorCode.SUCCESS,
+                DT: cachedData
+            };
+        }
+
         const addresses = await db.UserAddress.findAll({
             where: { userId: userId },
             order: [
@@ -63,7 +92,7 @@ const getUserAddresses = async (userId) => {
                 ['createdAt', 'DESC']
             ]
         });
-
+        await redisHelper.setCache(cacheKey, addresses, 3600);
         return {
             EM: 'Lấy danh sách địa chỉ thành công!',
             EC: errorCode.SUCCESS,
@@ -107,7 +136,7 @@ const createNewAddress = async (userId, addressData) => {
             detailAddress: addressData.detailAddress,
             isDefault: isDefault
         });
-
+        await redisHelper.delCache(getAddressCacheKey(userId));
         return {
             EM: 'Thêm địa chỉ mới thành công!',
             EC: errorCode.SUCCESS,
@@ -144,6 +173,7 @@ const updateUserAddress = async (userId, addressId, addressData) => {
 
         await address.update(addressData);
 
+        await redisHelper.delCache(getAddressCacheKey(userId));
         return { EM: 'Cập nhật địa chỉ thành công!', EC: errorCode.SUCCESS, DT: address };
 
     } catch (error) {
@@ -182,7 +212,7 @@ const deleteUserAddress = async (userId, addressId) => {
                 await nextAddress.update({ isDefault: true });
             }
         }
-
+        await redisHelper.delCache(getAddressCacheKey(userId));
         return {
             EM: 'Xóa địa chỉ thành công!',
             EC: errorCode.SUCCESS,
@@ -218,7 +248,8 @@ const setDefaultAddress = async (userId, addressId) => {
         );
 
         await address.update({ isDefault: true });
-
+        //Phá cache
+        await redisHelper.delCache(getAddressCacheKey(userId));
         return {
             EM: 'Đã đặt làm địa chỉ mặc định!',
             EC: errorCode.SUCCESS,
@@ -309,7 +340,7 @@ const updateUserRole = async (adminId, targetUserId, newRole) => {
     } catch (error) {
         console.error(`\n[CRITICAL ERROR] Lỗi tại updateUserRole!`);
         console.error(`- Target User ID: ${targetUserId} | New Role: ${newRole}`);
-        console.error(`- CHẾT TẠI BƯỚC: 👉 ${currentStep} 👈`);
+        console.error(`- CHẾT TẠI BƯỚC: ${currentStep} `);
         console.error(`- Chi tiết lỗi: ${error.message}\n`);
         return { EM: 'Lỗi server khi cập nhật quyền người dùng', EC: errorCode.OTHER_ERROR, DT: '' };
     }

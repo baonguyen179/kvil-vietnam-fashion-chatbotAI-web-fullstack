@@ -33,6 +33,27 @@ const delCache = async (key) => {
     }
 };
 
+const delByPattern = async (pattern) => {
+    if (!redisClient.isReady) return null;
+    try {
+        let cursor = 0;
+        do {
+            // SCAN giúp duyệt key an toàn cho performance
+            const reply = await redisClient.scan(cursor, {
+                MATCH: pattern,
+                COUNT: 100
+            });
+            cursor = reply.cursor;
+            if (reply.keys.length > 0) {
+                await redisClient.del(reply.keys);
+            }
+        } while (cursor !== 0);
+        return true;
+    } catch (error) {
+        console.error(`>>> Redis DelPattern Error [${pattern}]:`, error);
+        return null;
+    }
+};
 // ================= QUEUE LOGIC =================
 const pushEmailQueue = async (emailData) => {
     if (!redisClient.isReady) {
@@ -48,4 +69,4 @@ const pushEmailQueue = async (emailData) => {
     }
 };
 
-module.exports = { setCache, getCache, delCache, pushEmailQueue };
+module.exports = { setCache, getCache, delCache, delByPattern, pushEmailQueue };

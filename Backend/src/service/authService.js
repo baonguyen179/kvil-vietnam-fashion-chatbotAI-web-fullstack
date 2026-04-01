@@ -275,7 +275,7 @@ const handleSendOtp = async (email) => {
 
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-        //  Lưu OTP vào Redis thay vì tạo JWT. Hạn sử dụng: 300s (5 phút)
+        //  Lưu OTP vào Redis  Hạn sử dụng: 300s (5 phút)
         await redisHelper.setCache(`otp:${user.email}`, otpCode, 300);
 
         //  Ném việc gửi email vào Redis Queue để API phản hồi ngay lập tức (Non-blocking)
@@ -284,7 +284,7 @@ const handleSendOtp = async (email) => {
         return {
             EM: 'Mã OTP đã được gửi đến email của bạn!',
             EC: errorCode.SUCCESS,
-            DT: '' // Không cần trả về verifyToken nữa
+            DT: ''
         };
     } catch (error) {
         console.error(">>> Lỗi service handleSendOtp:", error);

@@ -3,9 +3,15 @@ const errorCode = require('../config/errorCodes');
 const cloudinary = require('cloudinary').v2;
 const { Op } = require('sequelize');
 const aqp = require('api-query-params').default || require('api-query-params');
+const redisHelper = require('../helpers/redis.helper');
+const PRODUCT_CACHE_TTL = 3600;
 
 const getAllProducts = async (queryParams) => {
     try {
+        const cacheKey = `products:list:${JSON.stringify(queryParams)}`;
+        const cachedData = await redisHelper.getCache(cacheKey);
+        if (cachedData) return { EM: 'Lấy danh sách sản phẩm (Cache) thành công!', EC: errorCode.SUCCESS, DT: cachedData };
+
         //  Tách các tham số cố định ra 
         const page = +queryParams.page || 1;
         const limit = +queryParams.limit || 10;
@@ -105,16 +111,19 @@ const getAllProducts = async (queryParams) => {
                 product.dataValues.images = finalImages;
             }
         });
+        const result = {
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            products: rows
+        };
+        // Lưu Cache
+        await redisHelper.setCache(cacheKey, result, PRODUCT_CACHE_TTL);
 
         return {
             EM: 'Lấy danh sách sản phẩm thành công!',
             EC: errorCode.SUCCESS,
-            DT: {
-                totalItems: count,
-                totalPages: Math.ceil(count / limit),
-                currentPage: page,
-                products: rows
-            }
+            DT: result
         };
 
     } catch (error) {
@@ -164,7 +173,11 @@ const createProduct = async (productData) => {
             description: description || '',
             discountPercent: discountPercent || 0
         });
-
+        //Xóa toàn bộ cache danh sách vì có SP mới làm thay đổi phân trang/lọc
+        await Promise.all([
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('products:search:*')
+        ]);
         return {
             EM: 'Tạo sản phẩm mới thành công!',
             EC: errorCode.SUCCESS,
@@ -204,6 +217,12 @@ const updateProduct = async (productId, updateData) => {
             description: description || product.description,
             discountPercent: discountPercent !== undefined ? discountPercent : product.discountPercent
         });
+        // Xóa cache chi tiết và toàn bộ danh sách
+        await Promise.all([
+            redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('products:search:*')
+        ]);
 
         return { EM: 'Cập nhật sản phẩm thành công!', EC: errorCode.SUCCESS, DT: product };
 
@@ -222,6 +241,10 @@ const deleteProduct = async (productId) => {
         // CHỈ CẦN GỌI HÀM NÀY: Sequelize sẽ tự động chuyển thành câu lệnh UPDATE deletedAt
         await product.destroy();
 
+        await Promise.all([
+            redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delByPattern('products:list:*')
+        ]);
         return { EM: 'Đã xóa mềm sản phẩm thành công!', EC: errorCode.SUCCESS, DT: '' };
 
     } catch (error) {
@@ -284,7 +307,10 @@ const addProductVariant = async (productId, variantData) => {
             sku: finalSku,
             price: price ? price : product.basePrice
         });
-
+        await Promise.all([
+            redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delByPattern('products:list:*')
+        ]);
         return {
             EM: 'Thêm biến thể sản phẩm thành công!',
             EC: errorCode.SUCCESS,
@@ -318,7 +344,10 @@ const addMultipleProductImages = async (productId, imagesDataInput) => {
         });
 
         const newImages = await db.ProductImage.bulkCreate(imagesData);
-
+        await Promise.all([
+            redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delByPattern('products:list:*')
+        ]);
         return {
             EM: `Upload thành công ${imagesDataInput.length} ảnh!`,
             EC: errorCode.SUCCESS,
@@ -349,14 +378,19 @@ const deleteProductImage = async (imageId) => {
             console.log(">>> Cloudinary Delete Response:", cloudResponse);
         }
 
+        const productId = image.productId;
         await image.destroy();
+
+        await Promise.all([
+            redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delByPattern('products:list:*')
+        ]);
 
         return {
             EM: 'Xóa ảnh thành công!',
             EC: errorCode.SUCCESS,
             DT: ''
         };
-
     } catch (error) {
         console.error(">>> Lỗi tại productService (deleteProductImage):", error);
         return {
@@ -368,6 +402,10 @@ const deleteProductImage = async (imageId) => {
 }
 const getProductById = async (productId) => {
     try {
+        const cacheKey = `product:detail:${productId}`;
+        const cachedProduct = await redisHelper.getCache(cacheKey);
+        if (cachedProduct) return { EM: 'Lấy chi tiết (Cache) thành công!', EC: errorCode.SUCCESS, DT: cachedProduct };
+
         const product = await db.Product.findOne({
             where: { id: productId },
             attributes: ['id', 'name', 'basePrice', 'discountPercent', 'description', 'createdAt'],
@@ -400,7 +438,7 @@ const getProductById = async (productId) => {
                 DT: ''
             };
         }
-
+        if (product) await redisHelper.setCache(cacheKey, product, PRODUCT_CACHE_TTL);
         return {
             EM: 'Lấy chi tiết sản phẩm thành công!',
             EC: errorCode.SUCCESS,
@@ -418,6 +456,9 @@ const getProductById = async (productId) => {
 }
 const searchProducts = async (keyword, page = 1, limit = 10) => {
     try {
+        const cacheKey = `products:search:${keyword}:${page}:${limit}`;
+        const cached = await redisHelper.getCache(cacheKey);
+        if (cached) return { EM: `Tìm thấy (Cache) '${keyword}'`, EC: errorCode.SUCCESS, DT: cached };
         if (!keyword) {
             return {
                 EM: 'Vui lòng nhập từ khóa tìm kiếm!',
@@ -479,15 +520,17 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
 
         const totalPages = Math.ceil(count / limit);
 
+        const result = {
+            totalItems: count,
+            totalPages: totalPages,
+            currentPage: +page,
+            products: rows
+        };
+        await redisHelper.setCache(cacheKey, result, 1800); // Search cache ngắn hơn (30p)
         return {
             EM: `Tìm thấy ${count} sản phẩm khớp với từ khóa '${keyword}'`,
             EC: errorCode.SUCCESS,
-            DT: {
-                totalItems: count,
-                totalPages: totalPages,
-                currentPage: +page,
-                products: rows
-            }
+            DT: result
         };
 
     } catch (error) {
@@ -500,6 +543,9 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
     }
 }
 const getBestDiscountProducts = async (keyword, limit = 5) => {
+    const cacheKey = `products:discount:${keyword || 'all'}:${limit}`;
+    const cached = await redisHelper.getCache(cacheKey);
+    if (cached) return { EM: "Lấy sản phẩm ưu đãi (Cache) thành công", EC: 0, DT: cached };
 
     let whereCondition = {
         discountPercent: {
@@ -518,13 +564,12 @@ const getBestDiscountProducts = async (keyword, limit = 5) => {
         order: [['discountPercent', 'DESC']],
         limit: limit
     });
-
+    const result = { products };
+    await redisHelper.setCache(cacheKey, result, 600); // Cache 10 phút 
     return {
         EM: "Lấy sản phẩm ưu đãi cao nhất thành công",
         EC: 0,
-        DT: {
-            products
-        }
+        DT: result
     };
 };
 const getBestSellerProducts = async (keyword, limit = 5) => {
@@ -614,6 +659,9 @@ const checkProductAvailability = async (keyword, size, color) => {
 };
 const filterProductsAdvanced = async (keyword, minPrice, maxPrice, limit = 5) => {
     try {
+        const cacheKey = `products:filter:adv:${keyword}:${minPrice}:${maxPrice}:${limit}`;
+        const cached = await redisHelper.getCache(cacheKey);
+        if (cached) return { EM: "OK (Cache)", EC: 0, DT: cached };
         const productWhere = {};
         const variantWhere = {};
 
@@ -656,11 +704,9 @@ const filterProductsAdvanced = async (keyword, minPrice, maxPrice, limit = 5) =>
             limit: limit
         });
 
-        return {
-            EM: "OK",
-            EC: 0,
-            DT: { products }
-        };
+        const result = { products };
+        await redisHelper.setCache(cacheKey, result, 600);
+        return { EM: "OK", EC: 0, DT: result };
 
     } catch (e) {
         console.error(e);
