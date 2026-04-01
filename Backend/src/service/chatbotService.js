@@ -1,17 +1,10 @@
-const OpenAI = require("openai");
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
-const { executeAiAction } = require('./chatbotActionHandler');
-const { aiFunctionDeclarations } = require('../config/chatbotTools');
+const { executeAiAction } = require('../chatbot/actionHandler');
+const { aiFunctionDeclarations } = require('../chatbot/chatbotTools');
 
-const client = new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY,
-    baseURL: "https://openrouter.ai/api/v1",
-    defaultHeaders: {
-        "HTTP-Referer": "http://localhost:3000",
-        "X-Title": "kvil-chatbot"
-    }
-});
+//config AI 
+const client = require('../config/openai.config');
 
 const processChatbotMessage = async (userId, sessionId, message) => {
     // 1. Lưu log tin nhắn của khách

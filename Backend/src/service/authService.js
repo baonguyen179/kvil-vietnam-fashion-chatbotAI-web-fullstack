@@ -4,8 +4,7 @@ const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const errorCode = require('../config/errorCodes');
 const { createAccessJWT, createRefreshJWT, verifyRefreshToken } = require('../middleware/JWTAction');
-const emailService = require('./emailService');
-const jwt = require('jsonwebtoken');
+const redisHelper = require('../helpers/redis.helper');
 
 const salt = bcrypt.genSaltSync(10);
 const hashUserPassword = async (userPassword) => {
@@ -274,46 +273,38 @@ const handleSendOtp = async (email) => {
             return { EM: 'Email không tồn tại trong hệ thống!', EC: errorCode.NOT_FOUND, DT: '' };
         }
 
-        // Tạo OTP 6 số ngẫu nhiên
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Kỹ thuật Stateless: Nhét OTP và Email vào 1 cái Token có hạn 5 phút
-        const verifyToken = jwt.sign(
-            { email: user.email, otp: otpCode },
-            process.env.JWT_SECRET,
-            { expiresIn: '5m' }
-        );
+        //  Lưu OTP vào Redis thay vì tạo JWT. Hạn sử dụng: 300s (5 phút)
+        await redisHelper.setCache(`otp:${user.email}`, otpCode, 300);
 
-        emailService.sendOtpEmail(user.email, otpCode).catch(err => {
-            console.error(">>> Lỗi gửi email chạy ngầm:", err);
-        });
+        //  Ném việc gửi email vào Redis Queue để API phản hồi ngay lập tức (Non-blocking)
+        await redisHelper.pushEmailQueue({ email: user.email, otpCode });
 
         return {
             EM: 'Mã OTP đã được gửi đến email của bạn!',
             EC: errorCode.SUCCESS,
-            DT: { verifyToken }
+            DT: '' // Không cần trả về verifyToken nữa
         };
     } catch (error) {
         console.error(">>> Lỗi service handleSendOtp:", error);
-        return { EM: 'Lỗi khi gửi OTP', EC: errorCode.OTHER_ERROR, DT: '' };
+        return { EM: 'Lỗi khi xử lý OTP', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 };
-const handleResetPasswordWithOtp = async (email, otp, newPassword, verifyToken) => {
+const handleResetPasswordWithOtp = async (email, otp, newPassword) => {
     try {
-        // 1. Giải mã Token xem có hợp lệ/hết hạn chưa
-        let decoded;
-        try {
-            decoded = jwt.verify(verifyToken, process.env.JWT_SECRET);
-        } catch (err) {
-            return { EM: 'Mã OTP đã hết hạn hoặc không hợp lệ, vui lòng lấy mã mới!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        //  Lấy OTP từ Redis
+        const cachedOtp = await redisHelper.getCache(`otp:${email}`);
+
+        if (!cachedOtp) {
+            return { EM: 'Mã OTP đã hết hạn hoặc bạn chưa yêu cầu!', EC: errorCode.VALIDATION_ERROR, DT: '' };
         }
 
-        // 2. Đối chiếu dữ liệu (Chống IDOR: Kẻ gian dùng email này nhưng token của người khác)
-        if (decoded.email !== email || decoded.otp !== otp) {
+        // Đối chiếu dữ liệu (An toàn 100%, chống IDOR)
+        if (cachedOtp !== otp) {
             return { EM: 'Mã OTP không chính xác!', EC: errorCode.VALIDATION_ERROR, DT: '' };
         }
 
-        // 3. Cập nhật mật khẩu mới
         const user = await db.User.findOne({ where: { email: email } });
         if (!user) return { EM: 'Không tìm thấy tài khoản!', EC: errorCode.NOT_FOUND, DT: '' };
 
@@ -321,6 +312,9 @@ const handleResetPasswordWithOtp = async (email, otp, newPassword, verifyToken) 
         const hashPassword = bcrypt.hashSync(newPassword, salt);
 
         await user.update({ password: hashPassword });
+
+        // Xóa OTP sau khi đổi pass thành công để chống Reuse
+        await redisHelper.delCache(`otp:${email}`);
 
         return { EM: 'Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay.', EC: errorCode.SUCCESS, DT: '' };
 
