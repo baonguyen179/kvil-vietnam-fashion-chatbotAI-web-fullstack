@@ -1,8 +1,24 @@
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 
+const redisHelper = require('../helpers/redis.helper');
+const CART_CACHE_TTL = process.env.CART_CACHE_TTL || 3600;
+// Hàm phụ trợ tạo key cache
+const getCartCacheKey = (userId) => `cart:user:${userId}`;
+
 const getCartByUserId = async (userId) => {
     try {
+        const cacheKey = getCartCacheKey(userId);
+        const cachedCart = await redisHelper.getCache(cacheKey);
+
+        if (cachedCart) {
+            return {
+                EM: 'Lấy thông tin giỏ hàng (Cache) thành công!',
+                EC: errorCode.SUCCESS,
+                DT: cachedCart
+            };
+        }
+
         const cart = await db.Cart.findOne({
             where: { userId: userId },
             attributes: ['id'],
@@ -62,6 +78,7 @@ const getCartByUserId = async (userId) => {
 
         cartData.totalPrice = totalPrice;
 
+        await redisHelper.setCache(cacheKey, cartData, CART_CACHE_TTL);
         return {
             EM: 'Lấy thông tin giỏ hàng thành công!',
             EC: errorCode.SUCCESS,
@@ -131,7 +148,8 @@ const addToCart = async (userId, variantId, quantity) => {
                 quantity: quantity
             });
         }
-
+        // Xóa Cache giỏ hàng của User này để lần tới gọi `getCart` sẽ load lại data mới nhất
+        await redisHelper.delCache(getCartCacheKey(userId));
         return {
             EM: 'Thêm vào giỏ hàng thành công!',
             EC: errorCode.SUCCESS,
@@ -181,7 +199,8 @@ const updateCartItemQuantity = async (userId, cartItemId, newQuantity) => {
         }
 
         await cartItem.update({ quantity: newQuantity });
-
+        //  Xóa Cache giỏ hàng vì có sự thay đổi số lượng (ảnh hưởng tới Total Price)
+        await redisHelper.delCache(getCartCacheKey(userId));
         return { EM: 'Cập nhật số lượng thành công!', EC: errorCode.SUCCESS, DT: cartItem };
 
     } catch (error) {
@@ -205,7 +224,8 @@ const deleteCartItem = async (userId, cartItemId) => {
         }
 
         await cartItem.destroy();
-
+        //  Xóa Cache giỏ hàng sau khi loại bỏ món hàng
+        await redisHelper.delCache(getCartCacheKey(userId));
         return { EM: 'Đã xóa sản phẩm khỏi giỏ hàng!', EC: errorCode.SUCCESS, DT: '' };
 
     } catch (error) {

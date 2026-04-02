@@ -1,6 +1,9 @@
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 const { Op } = require('sequelize');
+const redisHelper = require('../helpers/redis.helper');
+
+const DASHBOARD_CACHE_TTL = process.env.DASHBOARD_CACHE_TTL || 300;
 
 const getDashboardStats = async (queryParams) => {
     let currentStep = 'Khởi tạo getDashboardStats';
@@ -12,6 +15,17 @@ const getDashboardStats = async (queryParams) => {
 
         start.setHours(0, 0, 0, 0);
         end.setHours(23, 59, 59, 999);
+
+        const cacheKey = `dashboard:stats:${start.getTime()}:${end.getTime()}`;
+
+        const cachedData = await redisHelper.getCache(cacheKey);
+        if (cachedData) {
+            return {
+                EM: 'Lấy dữ liệu thống kê (Cache) thành công!',
+                EC: errorCode.SUCCESS,
+                DT: cachedData
+            };
+        }
 
         const dateCondition = { createdAt: { [Op.between]: [start, end] } };
 
@@ -46,18 +60,20 @@ const getDashboardStats = async (queryParams) => {
             order: [[db.sequelize.fn('DATE', db.sequelize.col('createdAt')), 'ASC']],
             raw: true
         });
+        const resultData = {
+            summary: {
+                totalRevenue: parseInt(totalRevenue),
+                totalOrders,
+                pendingOrders
+            },
+            chart: chartData
+        };
+        await redisHelper.setCache(cacheKey, resultData, DASHBOARD_CACHE_TTL);
 
         return {
             EM: 'Lấy dữ liệu thống kê thành công!',
             EC: errorCode.SUCCESS,
-            DT: {
-                summary: {
-                    totalRevenue: parseInt(totalRevenue),
-                    totalOrders,
-                    pendingOrders
-                },
-                chart: chartData
-            }
+            DT: resultData
         };
 
     } catch (error) {

@@ -1,14 +1,28 @@
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 const slugify = require('slugify');
+const redisHelper = require('../helpers/redis.helper');
+
+const CACHE_KEY_LIST = 'categories:list';
+const CATEGORY_CACHE_TTL = process.env.CATEGORY_CACHE_TTL || 86400;
 
 const getAllCategories = async () => {
     try {
+        const cachedCategories = await redisHelper.getCache(CACHE_KEY_LIST);
+        if (cachedCategories) {
+            return {
+                EM: 'Lấy danh sách danh mục (Cache) thành công!',
+                EC: errorCode.SUCCESS,
+                DT: cachedCategories
+            };
+        }
+
         const categories = await db.Category.findAll({
             attributes: ['id', 'name', 'slug'],
             order: [['name', 'ASC']]
         });
 
+        await redisHelper.setCache(CACHE_KEY_LIST, categories, CATEGORY_CACHE_TTL);
         return {
             EM: 'Lấy danh sách danh mục thành công!',
             EC: errorCode.SUCCESS,
@@ -40,6 +54,7 @@ const createCategory = async (categoryData) => {
             where: { slug: generatedSlug }
         });
 
+
         if (isExist) {
             return {
                 EM: 'Danh mục này đã tồn tại!',
@@ -53,6 +68,7 @@ const createCategory = async (categoryData) => {
             slug: generatedSlug
         });
 
+        await redisHelper.delCache(CACHE_KEY_LIST);
         return {
             EM: 'Tạo danh mục mới thành công!',
             EC: errorCode.SUCCESS,
@@ -91,8 +107,8 @@ const updateCategory = async (id, categoryData) => {
             slug: newSlug
         });
 
+        await redisHelper.delCache(CACHE_KEY_LIST);
         return { EM: 'Cập nhật danh mục thành công!', EC: errorCode.SUCCESS, DT: category };
-
     } catch (error) {
         console.error(">>> Lỗi tại categoryService (updateCategory):", error);
         return { EM: 'Lỗi server', EC: errorCode.OTHER_ERROR, DT: '' };
@@ -122,6 +138,7 @@ const deleteCategory = async (id) => {
 
         await category.destroy();
 
+        await redisHelper.delCache(CACHE_KEY_LIST);
         return {
             EM: 'Xóa danh mục thành công!',
             EC: errorCode.SUCCESS,

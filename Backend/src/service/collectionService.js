@@ -3,6 +3,10 @@ const errorCode = require('../config/errorCodes');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
 
+const redisHelper = require('../helpers/redis.helper');
+const COLLECTION_CACHE_TTL = process.env.COLLECTION_CACHE_TTL || 3600; // Cache 1 giờ
+const CACHE_KEY_LIST = 'collections:public:list';
+
 const createCollection = async (data) => {
     try {
         const { name, description, bannerUrl, isActive } = data;
@@ -22,9 +26,10 @@ const createCollection = async (data) => {
             slug,
             isActive: isActive !== undefined ? isActive : true
         });
-
+        if (newCollection.isActive) {
+            await redisHelper.delCache(CACHE_KEY_LIST);
+        }
         return { EM: 'Tạo Bộ sưu tập thành công!', EC: errorCode.SUCCESS, DT: newCollection };
-
     } catch (error) {
         console.error(">>> Lỗi tại collectionService (createCollection):", error);
         return { EM: 'Lỗi server khi tạo Bộ sưu tập', EC: errorCode.OTHER_ERROR, DT: '' };
@@ -32,11 +37,19 @@ const createCollection = async (data) => {
 }
 const getPublicCollections = async () => {
     try {
+        const cachedCollections = await redisHelper.getCache(CACHE_KEY_LIST);
+        if (cachedCollections) return {
+            EM: 'Lấy danh sách Bộ sưu tập (Cache) thành công!',
+            EC: errorCode.SUCCESS,
+            DT: cachedCollections
+        };
+
         const collections = await db.Collection.findAll({
             where: { isActive: true },
             order: [['createdAt', 'DESC']]
         });
 
+        await redisHelper.setCache(CACHE_KEY_LIST, collections, COLLECTION_CACHE_TTL);
         return { EM: 'Lấy danh sách Bộ sưu tập thành công!', EC: errorCode.SUCCESS, DT: collections };
     } catch (error) {
         console.error(">>> Lỗi tại collectionService (getPublicCollections):", error);
@@ -45,6 +58,15 @@ const getPublicCollections = async () => {
 }
 const getCollectionBySlug = async (slug) => {
     try {
+        const cacheKey = `collection:detail:${slug}`;
+        const cachedCollection = await redisHelper.getCache(cacheKey);
+        if (cachedCollection)
+            return {
+                EM: 'Lấy chi tiết Bộ sưu tập (Cache) thành công!',
+                EC: errorCode.SUCCESS,
+                DT: cachedCollection
+            };
+
         const collection = await db.Collection.findOne({
             where: { slug: slug, isActive: true },
             include: [
@@ -70,6 +92,7 @@ const getCollectionBySlug = async (slug) => {
             return { EM: 'Không tìm thấy Bộ sưu tập!', EC: errorCode.NOT_FOUND, DT: '' };
         }
 
+        await redisHelper.setCache(cacheKey, collection, COLLECTION_CACHE_TTL);
         return { EM: 'Lấy chi tiết Bộ sưu tập thành công!', EC: errorCode.SUCCESS, DT: collection };
     } catch (error) {
         console.error(">>> Lỗi tại collectionService (getCollectionBySlug):", error);
@@ -97,6 +120,12 @@ const updateCollection = async (id, data) => {
         }
 
         await collection.update(data);
+        // Xóa cache chi tiết (dùng cả slug cũ và mới đề phòng đổi tên)
+        await Promise.all([
+            redisHelper.delCache(CACHE_KEY_LIST),
+            redisHelper.delCache(`collection:detail:${oldSlug}`),
+            redisHelper.delCache(`collection:detail:${collection.slug}`)
+        ]);
 
         return { EM: 'Cập nhật Bộ sưu tập thành công!', EC: errorCode.SUCCESS, DT: collection };
 
@@ -129,6 +158,8 @@ const addProductsToCollection = async (collectionId, productIds) => {
             await db.CollectionProduct.bulkCreate(dataToInsert);
         }
 
+        //  Khách hàng vào xem chi tiết collection sẽ thấy sản phẩm mới
+        await redisHelper.delCache(`collection:detail:${collection.slug}`);
         return {
             EM: `Đã thêm ${newIdsToInsert.length} sản phẩm mới vào Bộ sưu tập! (Bỏ qua ${existingIds.length} sản phẩm đã có sẵn).`,
             EC: errorCode.SUCCESS,
@@ -153,8 +184,9 @@ const removeProductsFromCollection = async (collectionId, productIds) => {
             }
         });
 
+        //  Khách hàng vào xem chi tiết collection sẽ không thấy sản phẩm cũ nữa
+        await redisHelper.delCache(`collection:detail:${collection.slug}`);
         return { EM: 'Đã xóa các sản phẩm được chọn khỏi Bộ sưu tập!', EC: errorCode.SUCCESS, DT: '' };
-
     } catch (error) {
         console.error(">>> Lỗi (removeProductsFromCollection):", error);
         return { EM: 'Lỗi server khi xóa sản phẩm', EC: errorCode.OTHER_ERROR, DT: '' };

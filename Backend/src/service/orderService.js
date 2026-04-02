@@ -1,6 +1,9 @@
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 
+const redisHelper = require('../helpers/redis.helper');
+const ORDER_CACHE_TTL = process.env.ORDER_CACHE_TTL || 1800; // 30 phút
+
 const createOrder = async (userId, data) => {
     const t = await db.sequelize.transaction();
     let currentStep = 'Khởi tạo hàm createOrder';
@@ -140,6 +143,19 @@ const createOrder = async (userId, data) => {
         }
 
         await t.commit();
+        //  Xóa toàn bộ Cache liên quan sau khi tạo đơn thành công
+        const cacheClearTasks = [
+            redisHelper.delByPattern('dashboard:stats:*'), // Xóa cache thống kê như yêu cầu
+            redisHelper.delByPattern('order:list:admin:*'), // Admin cần thấy đơn mới
+            redisHelper.delByPattern('product:bestsellers:*'), // Bestseller có thể thay đổi
+            redisHelper.delByPattern('product:detail:*'), // Tồn kho giảm -> Xóa cache SP
+            redisHelper.delByPattern('products:list:*'), // Tồn kho giảm -> Xóa cache danh sách SP
+        ];
+        if (userId) {
+            cacheClearTasks.push(redisHelper.delByPattern(`order:list:user:${userId}:*`));
+            cacheClearTasks.push(redisHelper.delCache(`cart:user:${userId}`));
+        }
+        await Promise.all(cacheClearTasks);
 
         return { EM: 'Đặt hàng thành công!', EC: errorCode.SUCCESS, DT: newOrder };
 
@@ -219,8 +235,20 @@ const cancelOrder = async (userId, orderId) => {
         }
 
         await t.commit();
-        return { EM: 'Đã hủy đơn hàng thành công!', EC: errorCode.SUCCESS, DT: '' };
-
+        await Promise.all([
+            redisHelper.delByPattern('dashboard:stats:*'),
+            redisHelper.delByPattern('order:list:admin:*'),
+            redisHelper.delByPattern(`order:list:user:${userId}:*`),
+            redisHelper.delCache(`order:detail:user:${userId}:${orderId}`), // Xóa cache chi tiết đơn này
+            redisHelper.delByPattern('product:bestsellers:*'),
+            redisHelper.delByPattern('product:detail:*'), // Tồn kho tăng lại
+            redisHelper.delByPattern('products:list:*')
+        ]);
+        return {
+            EM: 'Đã hủy đơn hàng thành công!',
+            EC: errorCode.SUCCESS,
+            DT: ''
+        };
     } catch (error) {
         await t.rollback();
         console.error(`\n[CRITICAL ERROR] Lỗi tại cancelOrder!`);
@@ -235,6 +263,16 @@ const getUserOrders = async (userId, queryParams) => {
     let currentStep = 'Khởi tạo getUserOrders';
     try {
         currentStep = 'Xử lý tham số phân trang & trạng thái';
+
+        const cacheKey = `order:list:user:${userId}:${JSON.stringify(queryParams)}`;
+        const cachedData = await redisHelper.getCache(cacheKey);
+        if (cachedData)
+            return {
+                EM: 'Lấy danh sách đơn hàng (Cache) thành công!',
+                EC: errorCode.SUCCESS,
+                DT: cachedData
+            };
+
         const page = parseInt(queryParams.page) || 1;
         const limit = parseInt(queryParams.limit) || 10;
         const offset = (page - 1) * limit;
@@ -256,16 +294,19 @@ const getUserOrders = async (userId, queryParams) => {
         });
 
         const totalPages = Math.ceil(count / limit);
+        const result = {
+            totalItems: count,
+            totalPages: totalPages,
+            currentPage: page,
+            orders: rows
+        };
+
+        await redisHelper.setCache(cacheKey, result, ORDER_CACHE_TTL);
 
         return {
             EM: 'Lấy danh sách đơn hàng thành công!',
             EC: errorCode.SUCCESS,
-            DT: {
-                totalItems: count,
-                totalPages: totalPages,
-                currentPage: page,
-                orders: rows
-            }
+            DT: result
         };
     } catch (error) {
         console.error(`\n[CRITICAL ERROR] Lỗi tại getUserOrders!`);
@@ -278,6 +319,13 @@ const getUserOrders = async (userId, queryParams) => {
 const getUserOrderDetail = async (userId, orderId) => {
     let currentStep = 'Khởi tạo getUserOrderDetail';
     try {
+        const cacheKey = `order:detail:user:${userId}:${orderId}`;
+        const cachedData = await redisHelper.getCache(cacheKey);
+        if (cachedData) return {
+            EM: 'Lấy chi tiết đơn hàng (Cache) thành công!',
+            EC: errorCode.SUCCESS,
+            DT: cachedData
+        };
         currentStep = 'Query lấy chi tiết Order và chắt lọc các cột cần thiết';
         const order = await db.Order.findOne({
             where: { id: orderId, userId: userId },
@@ -345,6 +393,8 @@ const getUserOrderDetail = async (userId, orderId) => {
             })
         };
 
+        // LƯU CACHE
+        await redisHelper.setCache(cacheKey, formattedData, ORDER_CACHE_TTL);
         return { EM: 'Lấy chi tiết đơn hàng thành công!', EC: errorCode.SUCCESS, DT: formattedData };
 
     } catch (error) {
@@ -358,6 +408,14 @@ const getUserOrderDetail = async (userId, orderId) => {
 const getAdminOrders = async (queryParams) => {
     let currentStep = 'Khởi tạo getAdminOrders';
     try {
+        const cacheKey = `order:list:admin:${JSON.stringify(queryParams)}`;
+        const cachedData = await redisHelper.getCache(cacheKey);
+        if (cachedData) return {
+            EM: 'Lấy danh sách đơn (Cache) thành công!',
+            EC: errorCode.SUCCESS,
+            DT: cachedData
+        };
+
         currentStep = 'Xử lý tham số phân trang & bộ lọc';
         const page = parseInt(queryParams.page) || 1;
         const limit = parseInt(queryParams.limit) || 10;
@@ -390,16 +448,17 @@ const getAdminOrders = async (queryParams) => {
 
         currentStep = 'Tính toán phân trang';
         const totalPages = Math.ceil(count / limit);
-
+        const result = {
+            totalItems: count,
+            totalPages: totalPages,
+            currentPage: page,
+            orders: rows
+        };
+        await redisHelper.setCache(cacheKey, result, ORDER_CACHE_TTL);
         return {
             EM: 'Lấy danh sách đơn hàng thành công!',
             EC: errorCode.SUCCESS,
-            DT: {
-                totalItems: count,
-                totalPages: totalPages,
-                currentPage: page,
-                orders: rows
-            }
+            DT: result
         };
     } catch (error) {
         console.error(`\n[CRITICAL ERROR] Lỗi tại getAdminOrders!`);
@@ -467,6 +526,25 @@ const updateOrderStatus = async (orderId, newStatus) => {
         }
 
         await t.commit();
+
+        const orderUserId = order.userId;
+        const cacheClearTasks = [
+            redisHelper.delByPattern('dashboard:stats:*'), // Xóa cache Dashboard
+            redisHelper.delByPattern('order:list:admin:*')
+        ];
+
+        if (orderUserId) {
+            cacheClearTasks.push(redisHelper.delByPattern(`order:list:user:${orderUserId}:*`));
+            cacheClearTasks.push(redisHelper.delCache(`order:detail:user:${orderUserId}:${orderId}`));
+        }
+        // Nếu Admin chuyển sang Hủy -> Cần xóa thêm cache Sản phẩm vì có Restock
+        if (newStatus === 'cancelled') {
+            cacheClearTasks.push(redisHelper.delByPattern('product:detail:*'));
+            cacheClearTasks.push(redisHelper.delByPattern('products:list:*'));
+            cacheClearTasks.push(redisHelper.delByPattern('product:bestsellers:*'));
+        }
+
+        await Promise.all(cacheClearTasks);
         return { EM: `Cập nhật trạng thái thành ${newStatus} thành công!`, EC: errorCode.SUCCESS, DT: '' };
 
     } catch (error) {
@@ -500,6 +578,17 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
 
         currentStep = 'Tiến hành cập nhật paymentStatus';
         await order.update({ paymentStatus: paymentStatus });
+        // Xóa cache liên quan
+        const orderUserId = order.userId;
+        const cacheClearTasks = [
+            redisHelper.delByPattern('dashboard:stats:*'), // Xóa cache Dashboard
+            redisHelper.delByPattern('order:list:admin:*')
+        ];
+        if (orderUserId) {
+            cacheClearTasks.push(redisHelper.delByPattern(`order:list:user:${orderUserId}:*`));
+            cacheClearTasks.push(redisHelper.delCache(`order:detail:user:${orderUserId}:${orderId}`));
+        }
+        await Promise.all(cacheClearTasks);
 
         const statusText = paymentStatus ? 'ĐÃ THANH TOÁN' : 'CHƯA THANH TOÁN';
 
@@ -519,6 +608,10 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
 }
 const getBestSellerProductIds = async (limit = 5) => {
     try {
+        const cacheKey = `product:bestsellers:${limit}`;
+        const cached = await redisHelper.getCache(cacheKey);
+        if (cached) return cached;
+
         const result = await db.OrderItem.findAll({
             attributes: [
                 [db.sequelize.col("variant.product.id"), "productId"],
@@ -544,7 +637,11 @@ const getBestSellerProductIds = async (limit = 5) => {
             raw: true
         });
 
-        return result.map(item => item.productId);
+        const finalResult = result.map(item => item.productId);
+
+        // 🚨 LƯU CACHE
+        await redisHelper.setCache(cacheKey, finalResult, ORDER_CACHE_TTL);
+        return finalResult;
 
     } catch (e) {
         console.error("Lỗi getBestSellerProductIds:", e);

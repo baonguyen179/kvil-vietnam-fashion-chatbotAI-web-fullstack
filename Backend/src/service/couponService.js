@@ -2,6 +2,9 @@ const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 const { Op } = require('sequelize');
 
+const redisHelper = require('../helpers/redis.helper');
+const COUPON_CACHE_TTL = process.env.COUPON_CACHE_TTL || 1800;
+
 const createCoupon = async (data) => {
     let currentStep = 'Khởi tạo createCoupon';
     try {
@@ -32,6 +35,7 @@ const createCoupon = async (data) => {
             isActive: data.isActive
         });
 
+        await redisHelper.delByPattern('coupons:admin:list:*');
         return { EM: 'Tạo mã giảm giá thành công!', EC: errorCode.SUCCESS, DT: newCoupon };
 
     } catch (error) {
@@ -45,6 +49,12 @@ const createCoupon = async (data) => {
 const getAdminCoupons = async (queryParams) => {
     let currentStep = 'Khởi tạo getAdminCoupons';
     try {
+        const cacheKey = `coupons:admin:list:${JSON.stringify(queryParams)}`;
+        const cachedData = await redisHelper.getCache(cacheKey);
+
+        if (cachedData) {
+            return { EM: 'Lấy danh sách mã giảm giá (Cache) thành công!', EC: errorCode.SUCCESS, DT: cachedData };
+        }
         currentStep = 'Xử lý tham số phân trang & bộ lọc';
         const page = parseInt(queryParams.page) || 1;
         const limit = parseInt(queryParams.limit) || 10;
@@ -75,15 +85,19 @@ const getAdminCoupons = async (queryParams) => {
         currentStep = 'Tính toán phân trang';
         const totalPages = Math.ceil(count / limit);
 
+        const result = {
+            totalItems: count,
+            totalPages: totalPages,
+            currentPage: page,
+            coupons: rows
+        };
+
+        //  LƯU CACHE
+        await redisHelper.setCache(cacheKey, result, COUPON_CACHE_TTL);
         return {
             EM: 'Lấy danh sách mã giảm giá thành công!',
             EC: errorCode.SUCCESS,
-            DT: {
-                totalItems: count,
-                totalPages: totalPages,
-                currentPage: page,
-                coupons: rows
-            }
+            DT: result
         };
 
     } catch (error) {

@@ -221,7 +221,8 @@ const updateProduct = async (productId, updateData) => {
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
             redisHelper.delByPattern('products:list:*'),
-            redisHelper.delByPattern('products:search:*')
+            redisHelper.delByPattern('products:search:*'),
+            redisHelper.delByPattern('collection:detail:*')
         ]);
 
         return { EM: 'Cập nhật sản phẩm thành công!', EC: errorCode.SUCCESS, DT: product };
@@ -243,7 +244,8 @@ const deleteProduct = async (productId) => {
 
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
-            redisHelper.delByPattern('products:list:*')
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('collection:detail:*')
         ]);
         return { EM: 'Đã xóa mềm sản phẩm thành công!', EC: errorCode.SUCCESS, DT: '' };
 
@@ -309,7 +311,8 @@ const addProductVariant = async (productId, variantData) => {
         });
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
-            redisHelper.delByPattern('products:list:*')
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('collection:detail:*')
         ]);
         return {
             EM: 'Thêm biến thể sản phẩm thành công!',
@@ -346,7 +349,8 @@ const addMultipleProductImages = async (productId, imagesDataInput) => {
         const newImages = await db.ProductImage.bulkCreate(imagesData);
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
-            redisHelper.delByPattern('products:list:*')
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('collection:detail:*')
         ]);
         return {
             EM: `Upload thành công ${imagesDataInput.length} ảnh!`,
@@ -383,7 +387,8 @@ const deleteProductImage = async (imageId) => {
 
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
-            redisHelper.delByPattern('products:list:*')
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('collection:detail:*')
         ]);
 
         return {
@@ -574,9 +579,10 @@ const getBestDiscountProducts = async (keyword, limit = 5) => {
 };
 const getBestSellerProducts = async (keyword, limit = 5) => {
     try {
+        //  Lấy mảng ID bán chạy đã được sắp xếp từ cao xuống thấp (VD: [15, 2, 8, 21])
         const productIds = await orderService.getBestSellerProductIds(limit);
 
-        if (!productIds.length) {
+        if (!productIds || !productIds.length) {
             return {
                 EM: "Không có bestseller",
                 EC: 0,
@@ -584,6 +590,7 @@ const getBestSellerProducts = async (keyword, limit = 5) => {
             };
         }
 
+        //  Build điều kiện truy vấn
         let whereCondition = {
             id: {
                 [Op.in]: productIds
@@ -596,9 +603,14 @@ const getBestSellerProducts = async (keyword, limit = 5) => {
             };
         }
 
+        // Query DB (Kết quả lúc này bị mất thứ tự ban đầu)
         const products = await db.Product.findAll({
-            where: whereCondition
+            where: whereCondition,
+            raw: true // Thêm raw để tối ưu RAM
         });
+
+        const idIndexMap = new Map(productIds.map((id, index) => [id, index]));
+        products.sort((a, b) => idIndexMap.get(a.id) - idIndexMap.get(b.id));
 
         return {
             EM: "OK",
@@ -607,7 +619,7 @@ const getBestSellerProducts = async (keyword, limit = 5) => {
         };
 
     } catch (e) {
-        console.error(e);
+        console.error("Lỗi getBestSellerProducts:", e);
         return {
             EM: "Lỗi bestseller",
             EC: -1,

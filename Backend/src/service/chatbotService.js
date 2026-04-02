@@ -2,9 +2,11 @@ const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 const { executeAiAction } = require('../chatbot/actionHandler');
 const { aiFunctionDeclarations } = require('../chatbot/chatbotTools');
-
 //config AI 
 const client = require('../config/openai.config');
+
+const redisHelper = require('../helpers/redis.helper');
+const CHAT_CACHE_TTL = process.env.CHAT_CACHE_TTL || 600; // Cache lịch sử chat ngắn hạn (10 phút)
 
 const processChatbotMessage = async (userId, sessionId, message) => {
     // 1. Lưu log tin nhắn của khách
@@ -72,8 +74,8 @@ const processChatbotMessage = async (userId, sessionId, message) => {
             const functionName = call.function.name;
             const args = JSON.parse(call.function.arguments || "{}");
             console.log("------------------------------------------");
-            console.log("🚀 AI quyết định gọi hàm:", functionName);
-            console.log("📦 Tham số AI bóc tách được:", args);
+            console.log("AI quyết định gọi hàm:", functionName);
+            console.log("Tham số AI bóc tách được:", args);
             console.log("------------------------------------------");
             // Thực thi action từ handler (File 2)
             const actionResult = await executeAiAction(functionName, args);
@@ -100,6 +102,8 @@ const processChatbotMessage = async (userId, sessionId, message) => {
         metadata: productIds.length > 0 ? JSON.stringify(productIds) : null
     });
 
+    const identifier = userId ? `user:${userId}` : `session:${sessionId}`;
+    await redisHelper.delByPattern(`chat:history:${identifier}:*`);
     return {
         EM: 'Thành công',
         EC: errorCode.SUCCESS,
@@ -112,6 +116,17 @@ const processChatbotMessage = async (userId, sessionId, message) => {
 };
 const getChatHistory = async (userId, sessionId, limit, page) => {
     try {
+        const identifier = userId ? `user:${userId}` : `session:${sessionId}`;
+        if (!userId && !sessionId) {
+            return { EM: 'Chưa có lịch sử chat', EC: errorCode.SUCCESS, DT: { logs: [] } };
+        }
+
+        const cacheKey = `chat:history:${identifier}:${page}:${limit}`;
+        const cachedHistory = await redisHelper.getCache(cacheKey);
+
+        if (cachedHistory) {
+            return { EM: 'Lấy lịch sử chat (Cache) thành công!', EC: errorCode.SUCCESS, DT: cachedHistory };
+        }
         const offset = (page - 1) * limit;
 
         let whereCondition = {};
@@ -140,15 +155,18 @@ const getChatHistory = async (userId, sessionId, limit, page) => {
             createdAt: log.createdAt
         }));
 
+        const result = {
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            logs: formattedLogs
+        };
+        await redisHelper.setCache(cacheKey, result, CHAT_CACHE_TTL);
+
         return {
             EM: 'Lấy lịch sử chat thành công!',
             EC: errorCode.SUCCESS,
-            DT: {
-                totalItems: count,
-                totalPages: Math.ceil(count / limit),
-                currentPage: page,
-                logs: formattedLogs
-            }
+            DT: result
         };
 
     } catch (error) {
