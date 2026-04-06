@@ -150,6 +150,7 @@ const createOrder = async (userId, data) => {
             redisHelper.delByPattern('product:bestsellers:*'), // Bestseller có thể thay đổi
             redisHelper.delByPattern('product:detail:*'), // Tồn kho giảm -> Xóa cache SP
             redisHelper.delByPattern('products:list:*'), // Tồn kho giảm -> Xóa cache danh sách SP
+            redisHelper.delByPattern('coupons:admin:list:*')
         ];
         if (userId) {
             cacheClearTasks.push(redisHelper.delByPattern(`order:list:user:${userId}:*`));
@@ -242,7 +243,8 @@ const cancelOrder = async (userId, orderId) => {
             redisHelper.delCache(`order:detail:user:${userId}:${orderId}`), // Xóa cache chi tiết đơn này
             redisHelper.delByPattern('product:bestsellers:*'),
             redisHelper.delByPattern('product:detail:*'), // Tồn kho tăng lại
-            redisHelper.delByPattern('products:list:*')
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('coupons:admin:list:*')
         ]);
         return {
             EM: 'Đã hủy đơn hàng thành công!',

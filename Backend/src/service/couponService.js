@@ -129,6 +129,7 @@ const updateCoupon = async (id, data) => {
         currentStep = 'Tiến hành cập nhật dữ liệu';
         await coupon.update(data); // Tính năng cực hay của Sequelize: Gửi field nào, nó update field đó
 
+        await redisHelper.delByPattern('coupons:admin:list:*');
         return { EM: 'Cập nhật mã giảm giá thành công!', EC: errorCode.SUCCESS, DT: coupon };
 
     } catch (error) {
@@ -152,6 +153,7 @@ const deleteCoupon = async (id) => {
         currentStep = 'Thực hiện Xóa Mềm (Soft Delete)';
         await coupon.destroy();
 
+        await redisHelper.delByPattern('coupons:admin:list:*');
         return { EM: 'Đã xóa mã giảm giá thành công!', EC: errorCode.SUCCESS, DT: '' };
 
     } catch (error) {
