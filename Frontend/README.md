@@ -1,3 +1,5 @@
+````markdown
+```bash
 src/
 ├── assets/ # Tài nguyên tĩnh (Hình ảnh, fonts, file global CSS)
 ├── components/ # Các UI component tái sử dụng được
@@ -19,6 +21,8 @@ src/
 └── utils/ # Các hàm tiện ích / cấu hình chung (Helpers/Configs)
 ├── axiosCustomize.js # Cấu hình Axios instance (Base URL, Token Headers)
 └── i18n.js # Cấu hình ngôn ngữ hệ thống
+```
+````
 
 # Tài liệu Hướng dẫn Phát triển Frontend (Frontend Setup & Architecture)
 
