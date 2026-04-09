@@ -1,38 +1,83 @@
 src/
-├── assets/ # Tài nguyên tĩnh (Hình ảnh, fonts, global CSS)
-├── components/ # Các UI component (nút bấm, form, modal...)
-│ ├── admin/ # Component chỉ dùng cho admin (AdminSidebar, AdminHeader...)
-│ ├── user/ # Component chỉ dùng cho user (ProductCard, Banner, UserFooter...)
-│ └── shared/ # Component dùng chung cho cả 2 bên (Button, Input, LoadingSpinner...)
-├── layouts/ # Nơi chứa các vỏ bọc giao diện
-│ ├── AdminLayout.jsx/ # Layout của admin (bao gồm Sidebar + Header + Content Area)
-│ └── UserLayout.jsx/ # Layout của user (bao gồm Navbar + Main Content + Footer)
-├── pages/ # Các trang hiển thị chính (Views)
+├── assets/ # Tài nguyên tĩnh (Hình ảnh, fonts, file global CSS)
+├── components/ # Các UI component tái sử dụng được
+│ ├── admin/ # Component CHỈ DÙNG cho admin (VD: AdminSidebar, StatCard...)
+│ ├── user/ # Component CHỈ DÙNG cho user (VD: ProductCard, HeroBanner...)
+│ └── ui/ # Component dùng CHUNG cho cả 2 bên (VD: Button, Input, Modal, LoadingSpinner...)
+├── layouts/ # Nơi chứa các "vỏ bọc" (Layout) giao diện
+│ ├── AdminLayout.jsx # Chứa Sidebar + Header + thẻ <Outlet /> cho trang Admin
+│ └── UserLayout.jsx # Chứa Navbar + Footer + thẻ <Outlet /> cho trang User
+├── pages/ # Các trang hiển thị chính (Views) ghép nối từ các components
 │ ├── admin/ # Dashboard, Quản lý người dùng, Quản lý sản phẩm...
-│ └── user/ # Trang chủ, Chi tiết sản phẩm, Giỏ hàng, Thông tin cá nhân...
-├── routes/ # Cấu hình định tuyến (Routing)
-├── AppRoutes.jsx
-│ ├── adminRoutes.jsx # Định nghĩa các đường dẫn của Admin
-│ ├── userRoutes.jsxx # Định nghĩa các đường dẫn của User
-├── services/ # Các hàm gọi API (Axios, Fetch)
-├── store/ # Quản lý trạng thái cục bộ (Redux Toolkit)
-└── utils/ # Các hàm tiện ích (axios)
-| ├── axosCustomize.js
-| ├── i18n.js
+│ └── user/ # Trang chủ, Chi tiết sản phẩm, Giỏ hàng, Hồ sơ...
+├── routes/ # Cấu hình định tuyến (Routing Configuration)
+│ ├── AppRoutes.jsx # Cấu hình Route gốc (App-level)
+│ ├── adminRoutes.jsx # Danh sách Route của Admin (có check quyền)
+│ └── userRoutes.jsx # Danh sách Route của User
+├── services/ # Nơi chứa các hàm gọi API (VD: authService.js, productService.js)
+├── store/ # Cấu hình Redux store và các Slices
+└── utils/ # Các hàm tiện ích / cấu hình chung (Helpers/Configs)
+├── axiosCustomize.js # Cấu hình Axios instance (Base URL, Token Headers)
+└── i18n.js # Cấu hình ngôn ngữ hệ thống
 
-# React + Vite
+# Tài liệu Hướng dẫn Phát triển Frontend (Frontend Setup & Architecture)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Chào mừng bạn đến với source code Frontend của dự án! Tài liệu này sẽ giúp bạn hiểu rõ các công nghệ đang được sử dụng, cấu trúc thư mục và quy chuẩn để chúng ta có thể làm việc cùng nhau một cách trơn tru nhất.
 
-Currently, two official plugins are available:
+## 1. Cài đặt và Chạy dự án (Getting Started)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Dự án này sử dụng **Vite** làm build tool, giúp tốc độ khởi động và HMR (Hot Module Replacement) cực kỳ nhanh.
 
-## React Compiler
+```bash
+# 1. Cài đặt các thư viện (Dependencies)
+npm install
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# 2. Chạy server ở chế độ phát triển (Development)
+npm run dev
 
-## Expanding the ESLint configuration
+# 3. Build dự án để đưa lên production
+npm run build
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## 2. Tech Stack (Các công nghệ & Thư viện cốt lõi)
+Dự án sử dụng React 19 mới nhất. Dưới đây là phân loại các thư viện để bạn biết khi nào nên dùng cái gì:
+
+🎨 Giao diện & Styling (UI & CSS)
+Tailwind CSS v4 (tailwindcss): Hệ thống CSS chính của dự án.
+
+Shadcn UI (radix-ui, clsx, tailwind-merge): Bộ UI component tùy biến cao, thường được sử dụng cho phía User để giao diện độc bản và đẹp mắt.
+
+Ant Design (antd): Thư viện UI có sẵn nhiều component phức tạp (Table, DatePicker...). Được khuyến nghị sử dụng chủ yếu ở trang Admin để tiết kiệm thời gian dựng form/bảng.
+
+Lucide React (lucide-react): Thư viện Icon chính thức của dự án.
+
+Tailwind Animate (tw-animate-css): Hỗ trợ các hiệu ứng animation nhanh qua class của Tailwind.
+
+🧠 Quản lý trạng thái (State Management)
+Redux Toolkit (@reduxjs/toolkit, react-redux): Xử lý Global State (ví dụ: thông tin User đang đăng nhập, giỏ hàng).
+
+Redux Persist (redux-persist): Giúp lưu tự động state của Redux xuống localStorage, đảm bảo người dùng F5 không bị mất dữ liệu đăng nhập.
+
+🔀 Định tuyến & Gọi API (Routing & API)
+React Router DOM v6: Xử lý điều hướng trang (routing).
+
+Axios (axios): Thư viện gọi API chính. Đã được config sẵn các Interceptors (tự động gắn token) tại utils/axiosCustomize.js.
+
+⚙️ Các tiện ích khác (Utilities)
+i18next (i18next, react-i18next): Hỗ trợ đa ngôn ngữ (Tiếng Anh / Tiếng Việt).
+
+React Toastify (react-toastify): Hiển thị thông báo (toast/alert) góc màn hình khi thành công/thất bại.
+
+NProgress (nprogress): Hiển thị thanh loading mỏng ở cạnh trên màn hình mỗi khi chuyển trang hoặc chờ API.
+
+# 4. Quy chuẩn khi code (Code Conventions)
+Để giữ cho source code sạch sẽ, mọi người vui lòng tuân thủ các quy tắc sau:
+
+Vị trí Component: Nếu bạn tạo một cái nút (Button) chỉ dùng riêng cho trang Admin, hãy để nó vào components/admin/. Nếu trang User cũng có thể xài cái nút đó, hãy đưa nó ra components/shared/.
+
+Gọi API: KHÔNG viết trực tiếp hàm axios.get vào bên trong Component. Hãy định nghĩa nó ở trong thư mục services/ sau đó import vào Component để dùng.
+
+Sử dụng UI Library: Hạn chế trộn lẫn antd và shadcn trên cùng một màn hình để tránh xung đột CSS và làm nặng trang.
+
+Biến môi trường: Các thông tin nhạy cảm (như API Endpoint) phải được lưu trong file .env (ví dụ: VITE_API_BASE_URL). Không hardcode link API vào source.
+```

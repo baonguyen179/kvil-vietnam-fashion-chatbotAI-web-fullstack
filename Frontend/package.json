@@ -2,6 +2,8 @@
   "name": "fontend",
   "private": true,
   "version": "0.0.0",
+  "author": "BaoNguyen",
+  "description": "Frontend for E-commerce Fashion & AI Chatbot",
   "type": "module",
   "scripts": {
     "dev": "vite",
