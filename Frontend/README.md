@@ -37,9 +37,10 @@ npm run dev
 
 # 3. Build dự án để đưa lên production
 npm run build
-
+```
 
 ## 2. Tech Stack (Các công nghệ & Thư viện cốt lõi)
+
 Dự án sử dụng React 19 mới nhất. Dưới đây là phân loại các thư viện để bạn biết khi nào nên dùng cái gì:
 
 🎨 Giao diện & Styling (UI & CSS)
@@ -71,13 +72,21 @@ React Toastify (react-toastify): Hiển thị thông báo (toast/alert) góc mà
 NProgress (nprogress): Hiển thị thanh loading mỏng ở cạnh trên màn hình mỗi khi chuyển trang hoặc chờ API.
 
 # 4. Quy chuẩn khi code (Code Conventions)
+
 Để giữ cho source code sạch sẽ, mọi người vui lòng tuân thủ các quy tắc sau:
 
-Vị trí Component: Nếu bạn tạo một cái nút (Button) chỉ dùng riêng cho trang Admin, hãy để nó vào components/admin/. Nếu trang User cũng có thể xài cái nút đó, hãy đưa nó ra components/shared/.
+````markdown
+```bash
+#Vị trí Component:
+- Nếu bạn tạo một cái nút (Button) chỉ dùng riêng cho trang Admin, hãy để nó vào components/admin/. Nếu trang User cũng có thể xài cái nút đó, hãy đưa nó ra components/shared/.
 
-Gọi API: KHÔNG viết trực tiếp hàm axios.get vào bên trong Component. Hãy định nghĩa nó ở trong thư mục services/ sau đó import vào Component để dùng.
+# Gọi API:
+- KHÔNG viết trực tiếp hàm axios.get vào bên trong Component. Hãy định nghĩa nó ở trong thư mục services/ sau đó import vào Component để dùng.
 
-Sử dụng UI Library: Hạn chế trộn lẫn antd và shadcn trên cùng một màn hình để tránh xung đột CSS và làm nặng trang.
+# Sử dụng UI Library:
+-Hạn chế trộn lẫn antd và shadcn trên cùng một màn hình để tránh xung đột CSS và làm nặng trang.
 
-Biến môi trường: Các thông tin nhạy cảm (như API Endpoint) phải được lưu trong file .env (ví dụ: VITE_API_BASE_URL). Không hardcode link API vào source.
+# Biến môi trường:
+- Các thông tin nhạy cảm (như API Endpoint) phải được lưu trong file .env (ví dụ: VITE_API_BASE_URL). Không hardcode link API vào source.
 ```
+````
