@@ -1,5 +1,6 @@
 ````markdown
 ```bash
+# Cấu trúc thư mục
 src/
 ├── assets/ # Tài nguyên tĩnh (Hình ảnh, fonts, file global CSS)
 ├── components/ # Các UI component tái sử dụng được
@@ -75,7 +76,7 @@ React Toastify (react-toastify): Hiển thị thông báo (toast/alert) góc mà
 
 NProgress (nprogress): Hiển thị thanh loading mỏng ở cạnh trên màn hình mỗi khi chuyển trang hoặc chờ API.
 
-# 4. Quy chuẩn khi code (Code Conventions)
+## 4. Quy chuẩn khi code (Code Conventions)
 
 Để giữ cho source code sạch sẽ, mọi người vui lòng tuân thủ các quy tắc sau:
 
