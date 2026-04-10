@@ -6,7 +6,7 @@ import rootReducer from './reducer/rootReducer';
 const persistConfig = {
     key: 'root',
     storage,
-    // whitelist: ['user'] // Chỉ lưu những reducer được liệt kê ở đây
+    whitelist: ['auth', 'cart', 'theme']
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

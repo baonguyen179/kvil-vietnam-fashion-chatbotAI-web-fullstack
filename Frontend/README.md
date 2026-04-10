@@ -1,3 +1,16 @@
+> **THÔNG BÁO (Cập nhật mới)**
+> Hệ thống Global State bằng **Redux Toolkit** và **Redux Persist** đã được thiết lập thành công.
+>
+> - Đã cấu hình và bật tính năng lưu state cố định xuống LocalStorage (chống mất dữ liệu khi user ấn F5/Reload) cho các slice: `auth`, `cart`, `theme`.
+>
+> **Lưu ý & Việc cần làm (To-Do cho team):**
+>
+> 1. Vui lòng chạy lệnh `npm install` ở Terminal trước khi chạy dự án để kéo các thư viện mới (`@reduxjs/toolkit`, `redux-persist`...).
+> 2. Nếu tạo thêm State/Slice mới mà muốn dữ liệu không bị xóa mất khi tải lại trang, hãy nhớ bổ sung tên tên Reducer đó vào mảng `whitelist` nằm trong file `src/redux/store.js`.
+> 3. Tham khảo code mẫu tại `src/redux/slices/` để nắm rõ cấu trúc và chuẩn mực viết code Redux chung của nhóm nhé!
+
+---
+
 ````markdown
 ```bash
 # Cấu trúc thư mục
@@ -18,7 +31,11 @@ src/
 │ ├── adminRoutes.jsx # Danh sách Route của Admin (có check quyền)
 │ └── userRoutes.jsx # Danh sách Route của User
 ├── services/ # Nơi chứa các hàm gọi API (VD: authService.js, productService.js)
-├── store/ # Cấu hình Redux store và các Slices
+├── redux/ # Cấu hình Redux store và các Slices
+│   ├── slices/ # Các slice của Redux
+│   │   ├── authSlice.js # Slice của Redux
+│   │   └── userSlice.js # Slice của Redux
+│   └── store.js # Store của Redux
 └── utils/ # Các hàm tiện ích / cấu hình chung (Helpers/Configs)
 ├── axiosCustomize.js # Cấu hình Axios instance (Base URL, Token Headers)
 └── i18n.js # Cấu hình ngôn ngữ hệ thống
@@ -48,33 +65,29 @@ npm run build
 
 Dự án sử dụng React 19 mới nhất. Dưới đây là phân loại các thư viện để bạn biết khi nào nên dùng cái gì:
 
-🎨 Giao diện & Styling (UI & CSS)
-Tailwind CSS v4 (tailwindcss): Hệ thống CSS chính của dự án.
+````markdown
+```bash
+# Giao diện & Styling (UI & CSS)
+- Tailwind CSS v4 (tailwindcss): Hệ thống CSS chính của dự án.
+- Shadcn UI (radix-ui, clsx, tailwind-merge): Bộ UI component tùy biến cao, thường được sử dụng cho phía User để giao diện độc bản và đẹp mắt.
+- Ant Design (antd): Thư viện UI có sẵn nhiều component phức tạp (Table, DatePicker...). Được khuyến nghị sử dụng chủ yếu ở trang Admin để tiết kiệm thời gian dựng form/bảng.
+- Lucide React (lucide-react): Thư viện Icon chính thức của dự án.
+- Tailwind Animate (tw-animate-css): Hỗ trợ các hiệu ứng animation nhanh qua class của Tailwind.
 
-Shadcn UI (radix-ui, clsx, tailwind-merge): Bộ UI component tùy biến cao, thường được sử dụng cho phía User để giao diện độc bản và đẹp mắt.
+# Quản lý trạng thái (State Management)
+- Redux Toolkit (@reduxjs/toolkit, react-redux): Xử lý Global State (ví dụ: thông tin User đang đăng nhập, giỏ hàng).
+- Redux Persist (redux-persist): Giúp lưu tự động state của Redux xuống localStorage, đảm bảo người dùng F5 không bị mất dữ liệu đăng nhập.
 
-Ant Design (antd): Thư viện UI có sẵn nhiều component phức tạp (Table, DatePicker...). Được khuyến nghị sử dụng chủ yếu ở trang Admin để tiết kiệm thời gian dựng form/bảng.
+# Định tuyến & Gọi API (Routing & API)
+- React Router DOM v6: Xử lý điều hướng trang (routing).
+- Axios (axios): Thư viện gọi API chính. Đã được config sẵn các Interceptors (tự động gắn token) tại utils/axiosCustomize.js.
 
-Lucide React (lucide-react): Thư viện Icon chính thức của dự án.
-
-Tailwind Animate (tw-animate-css): Hỗ trợ các hiệu ứng animation nhanh qua class của Tailwind.
-
-🧠 Quản lý trạng thái (State Management)
-Redux Toolkit (@reduxjs/toolkit, react-redux): Xử lý Global State (ví dụ: thông tin User đang đăng nhập, giỏ hàng).
-
-Redux Persist (redux-persist): Giúp lưu tự động state của Redux xuống localStorage, đảm bảo người dùng F5 không bị mất dữ liệu đăng nhập.
-
-🔀 Định tuyến & Gọi API (Routing & API)
-React Router DOM v6: Xử lý điều hướng trang (routing).
-
-Axios (axios): Thư viện gọi API chính. Đã được config sẵn các Interceptors (tự động gắn token) tại utils/axiosCustomize.js.
-
-⚙️ Các tiện ích khác (Utilities)
-i18next (i18next, react-i18next): Hỗ trợ đa ngôn ngữ (Tiếng Anh / Tiếng Việt).
-
-React Toastify (react-toastify): Hiển thị thông báo (toast/alert) góc màn hình khi thành công/thất bại.
-
-NProgress (nprogress): Hiển thị thanh loading mỏng ở cạnh trên màn hình mỗi khi chuyển trang hoặc chờ API.
+# Các tiện ích khác (Utilities)
+- i18next (i18next, react-i18next): Hỗ trợ đa ngôn ngữ (Tiếng Anh / Tiếng Việt).
+- React Toastify (react-toastify): Hiển thị thông báo (toast/alert) góc màn hình khi thành công/thất bại.
+- NProgress (nprogress): Hiển thị thanh loading mỏng ở cạnh trên màn hình mỗi khi chuyển trang hoặc chờ API.
+```
+````
 
 ## 4. Quy chuẩn khi code (Code Conventions)
 
