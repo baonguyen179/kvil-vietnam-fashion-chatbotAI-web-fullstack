@@ -26,6 +26,10 @@ src/
 ├── pages/ # Các trang hiển thị chính (Views) ghép nối từ các components
 │ ├── admin/ # Dashboard, Quản lý người dùng, Quản lý sản phẩm...
 │ └── user/ # Trang chủ, Chi tiết sản phẩm, Giỏ hàng, Hồ sơ...
+│ └──auth/
+│   ├── Login.jsx
+│   ├── Register.jsx
+│   └── ForgotPassword.jsx
 ├── routes/ # Cấu hình định tuyến (Routing Configuration)
 │ ├── AppRoutes.jsx # Cấu hình Route gốc (App-level)
 │ ├── adminRoutes.jsx # Danh sách Route của Admin (có check quyền)
