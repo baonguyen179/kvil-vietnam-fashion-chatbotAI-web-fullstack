@@ -1,4 +1,13 @@
-> **THÔNG BÁO (Cập nhật mới)**
+> **THÔNG BÁO (Cập nhật mới nhất)**
+>
+> - **Cấu trúc Routing**: Đã tách `AppRoutes.jsx` thành 3 file riêng biệt (`AppRoutes.jsx`, `UserRoutes.jsx`, `AdminRoutes.jsx`) để phân chia vùng điều hướng giữa User và Admin được minh bạch theo chuẩn React Router v6.
+> - **Giao diện 404 (NotFound)**: Cải thiện component `NotFound` (Hiển thị thân thiện, kèm nút Go Home) và cấu hình xử lý "Catch-all routes" tối ưu cho mọi đường dẫn sai cấu trúc.
+> - **Admin Sidebar**: Bổ sung nhóm phân mục `Catalog` (với Categories, Products, Collections), module `Orders` và `Coupons` giúp thao tác quản lý ở Dashboard đầy đủ hơn.
+> - **Thêm componet cho Admin Layout**: Admin Header, Admin Content, Admin Footer
+>
+> ---
+>
+> **THÔNG BÁO (Cập nhật cũ hơn)**
 > Hệ thống Global State bằng **Redux Toolkit** và **Redux Persist** đã được thiết lập thành công.
 >
 > - Đã cấu hình và bật tính năng lưu state cố định xuống LocalStorage (chống mất dữ liệu khi user ấn F5/Reload) cho các slice: `auth`, `cart`, `theme`.

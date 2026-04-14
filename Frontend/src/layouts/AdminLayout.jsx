@@ -1,44 +1,27 @@
 import { Outlet } from 'react-router-dom';
-import { Layout, theme, ConfigProvider, App as AntdApp } from 'antd';
-
-const { Header, Sider, Content } = Layout;
+import { theme, ConfigProvider, App as AntdApp } from 'antd';
+import AdminHeader from '../components/admin/admin.header';
+import AdminSidebar from '../components/admin/admin.sidebar';
+import AdminContent from '../components/admin/admin.content';
+import AdminFooter from '../components/admin/admin.footer'; 
+import { useState } from 'react';
 
 // Tách phần giao diện chính ra một component nhỏ để dùng được theme.useToken() an toàn bên trong ConfigProvider
 const AdminLayoutContent = () => {
-    const {
-        token: { colorBgContainer, borderRadiusLG },
-    } = theme.useToken();
-
+    const [collapseMenu, setCollapseMenu] = useState(false);
     return (
-        <Layout className="min-h-screen">
-            {/* Sidebar bên trái */}
-            <Sider width={250} theme="light" className="border-r border-gray-200">
-                {/* <SidebarComponent /> */}
-                <div className="p-4 font-bold text-lg">Admin Sidebar</div>
-            </Sider>
-
-            {/* Phần nội dung bên phải */}
-            <Layout>
-                <Header 
-                    style={{ background: colorBgContainer }} 
-                    className="px-4 border-b border-gray-200"
-                >
-                    {/* <AdminHeaderComponent /> */}
-                    <div>Admin Header</div>
-                </Header>
-
-                <Content 
-                    style={{
-                        background: colorBgContainer,
-                        borderRadius: borderRadiusLG,
-                    }}
-                    className="m-6 p-6 overflow-initial"
-                >
-                    {/* Nội dung các route con của Admin sẽ render tại đây */}
-                    <Outlet />
-                </Content>
-            </Layout>
-        </Layout>
+        <div style={{ display: "flex" }}>
+                <div className='left-side' style={{ minWidth: 80 }}>
+                    <AdminSidebar collapseMenu={collapseMenu} setCollapseMenu={setCollapseMenu} />
+                </div>
+                <div className='right-side' style={{ flex: 1 }}>
+                    <AdminHeader user={{name: "admin", role: "admin"}} collapseMenu={collapseMenu} setCollapseMenu={setCollapseMenu} />
+                    <AdminContent>
+                        <Outlet />
+                    </AdminContent>
+                    <AdminFooter />
+                </div>
+        </div>
     );
 };
 
