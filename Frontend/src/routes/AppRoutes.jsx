@@ -6,7 +6,7 @@ import NotFound from '@/components/NotFound';
 import UserRoutes from './UserRoutes';
 import AdminRoutes from './AdminRoutes';
 
-
+import PrivateRoute from './PrivateRoute';
 
 const AppRoutes = () => {
     return (
@@ -14,7 +14,14 @@ const AppRoutes = () => {
         <Suspense fallback="...is loading">
             <Routes>
                 <Route path="/*" element={<UserRoutes notFound={<NotFound />} />} />
-                <Route path="/admin/*" element={<AdminRoutes notFound={<NotFound />} />} />
+                <Route 
+                    path="/admin/*" 
+                    element={
+                        <PrivateRoute allowedRoles={['ADMIN']}>
+                            <AdminRoutes notFound={<NotFound />} />
+                        </PrivateRoute>
+                    } 
+                />
             </Routes>
             <ToastContainer position="top-center" />
         </Suspense>

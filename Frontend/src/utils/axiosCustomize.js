@@ -1,32 +1,106 @@
 import axios from 'axios';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
+import { store } from '@/redux/store';
+import { setAccessToken, logout } from '@/redux/slices/authSlice';
 
-// 1. Cấu hình NProgress
 NProgress.configure({ showSpinner: false, trickleSpeed: 100 });
 
-// 2. Khởi tạo instance trước
 const instance = axios.create({
-    // Sử dụng biến môi trường từ file .env
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
     timeout: 10000,
+    withCredentials: true, // Cho phép đính kèm cookie (refresh_token)
 });
 
-// 3. Thiết lập Interceptor sau khi đã có biến instance
 instance.interceptors.request.use(function (config) {
     NProgress.start();
-    // Ví dụ: const token = store.getState()?.user?.token;
-    // if (token) config.headers.Authorization = `Bearer ${token}`;
+    
+    const state = store.getState();
+    const token = state?.auth?.access_token;
+    
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     return config;
 }, function (error) {
     return Promise.reject(error);
 });
 
+// Tránh infinite loop
+const NO_RETRY_HEADER = 'x-no-retry';
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
 instance.interceptors.response.use(function (response) {
     NProgress.done();
+    
+    // Trả về data (do backend custom bọc form của res.data)
     return response && response.data ? response.data : response;
-}, function (error) {
+}, async function (error) {
     NProgress.done();
+
+    const originalRequest = error.config;
+    
+    // Xác định trường hợp Token hết hạn (Thường status backend trả ra là 401)
+    if (error.response?.status === 401 && !originalRequest.headers[NO_RETRY_HEADER]) {
+        if (isRefreshing) {
+            return new Promise(function(resolve, reject) {
+                failedQueue.push({ resolve, reject });
+            }).then(token => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                return instance(originalRequest);
+            }).catch(err => {
+                return Promise.reject(err);
+            });
+        }
+
+        originalRequest.headers[NO_RETRY_HEADER] = true;
+        isRefreshing = true;
+
+        try {
+            // Gọi api refresh token
+            const res = await instance.post('/api/v1/auth/refresh');
+            
+            if (res && res.EC === 0 && res.DT && res.DT.access_token) {
+                const newAccessToken = res.DT.access_token;
+                
+                store.dispatch(setAccessToken(newAccessToken));
+                
+                // Đổi config request đã bị lỗi để dùng token mới
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                
+                processQueue(null, newAccessToken);
+                
+                // Request lại chính api vừa fail
+                return instance(originalRequest);
+            } else {
+                // Làm mới token thất bại (refresh token cũng đã hết hạn)
+                store.dispatch(logout()); 
+                processQueue(new Error('Refresh token invalid'));
+                return Promise.reject(error);
+            }
+        } catch (err) {
+            store.dispatch(logout());
+            processQueue(err);
+            return Promise.reject(err);
+        } finally {
+            isRefreshing = false;
+        }
+    }
+
     return error && error.response && error.response.data
         ? Promise.reject(error.response.data)
         : Promise.reject(error);

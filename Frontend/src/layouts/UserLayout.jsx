@@ -13,7 +13,7 @@ const UserLayout = () => {
                 <Outlet />
             </main>
             <footer>
-
+                <div>Footer</div>
             </footer>
         </div>
     )
