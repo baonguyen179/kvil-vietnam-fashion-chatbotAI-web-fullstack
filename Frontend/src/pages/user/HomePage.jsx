@@ -11,7 +11,7 @@ const HomePage = () => {
         <div>
             <h1>HomePage</h1>
             <p>Nội dung trang chủ</p>
-            {isAuthenticated ??
+            {isAuthenticated &&
                 <Button onClick={() => dispatch(logout())}>Logout</Button>}
             {!isAuthenticated &&
                 <Button onClick={() => navigate("/login")}>Login</Button>}

@@ -6,8 +6,11 @@ import { setAccessToken, logout } from '@/redux/slices/authSlice';
 
 NProgress.configure({ showSpinner: false, trickleSpeed: 100 });
 
+// Lấy url từ env hoặc default
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 const instance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
+    baseURL: baseURL,
     timeout: 10000,
     withCredentials: true, // Cho phép đính kèm cookie (refresh_token)
 });
@@ -26,9 +29,6 @@ instance.interceptors.request.use(function (config) {
 }, function (error) {
     return Promise.reject(error);
 });
-
-// Tránh infinite loop
-const NO_RETRY_HEADER = 'x-no-retry';
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -55,7 +55,7 @@ instance.interceptors.response.use(function (response) {
     const originalRequest = error.config;
     
     // Xác định trường hợp Token hết hạn (Thường status backend trả ra là 401)
-    if (error.response?.status === 401 && !originalRequest.headers[NO_RETRY_HEADER]) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
         if (isRefreshing) {
             return new Promise(function(resolve, reject) {
                 failedQueue.push({ resolve, reject });
@@ -67,15 +67,19 @@ instance.interceptors.response.use(function (response) {
             });
         }
 
-        originalRequest.headers[NO_RETRY_HEADER] = true;
+        originalRequest._retry = true;
         isRefreshing = true;
 
         try {
-            // Gọi api refresh token
-            const res = await instance.post('/api/v1/auth/refresh');
+            // Thay vì dùng instance (dễ bị dính đệ quy vòng lặp interceptor), dùng thẻ axios mới
+            const res = await axios.post(`${baseURL}/api/v1/auth/refresh`, {}, {
+                withCredentials: true // bắt buộc gửi kèm refresh_token cookie
+            });
             
-            if (res && res.EC === 0 && res.DT && res.DT.access_token) {
-                const newAccessToken = res.DT.access_token;
+            const data = res && res.data ? res.data : res;
+
+            if (data && data.EC === 0 && data.DT && data.DT.access_token) {
+                const newAccessToken = data.DT.access_token;
                 
                 store.dispatch(setAccessToken(newAccessToken));
                 

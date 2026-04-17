@@ -5,6 +5,7 @@ import PublicRoute from '@/routes/PublicRoute';
 import LoginPage from '@/pages/auth/LoginPage'; 
 import HomePage from '@/pages/user/HomePage';
 import RegisterPage from '@/pages/auth/RegisterPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 
 const UserRoutes = ({ notFound }) => {
     return (
@@ -15,6 +16,7 @@ const UserRoutes = ({ notFound }) => {
             <Route element={<PublicRoute />}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             </Route>
             <Route 
                 path="/profile" 

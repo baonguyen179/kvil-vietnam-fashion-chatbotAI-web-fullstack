@@ -1,12 +1,22 @@
-import { MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
-import { Button, Layout } from 'antd';
-import { useState } from 'react';
+import { MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
+import { Button, Layout, Dropdown, Space, Avatar } from 'antd';
+import { useSelector, useDispatch } from 'react-redux';
+import { performLogout } from '@/redux/slices/authSlice';
+import { useNavigate } from 'react-router-dom';
 import { DownOutlined } from '@ant-design/icons';
-import { Dropdown, Space } from 'antd';
-
 const AdminHeader = (props) => {
-    const { user, collapseMenu, setCollapseMenu } = props;
+    const { collapseMenu, setCollapseMenu } = props;
     const { Header } = Layout;
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    // Nhận dữ liệu user trực tiếp từ Redux store
+    const user = useSelector(state => state.auth.user);
+
+    const handleLogout = async () => {
+        await dispatch(performLogout());
+        navigate('/login');
+    };
 
     const items = [
         {
@@ -17,7 +27,7 @@ const AdminHeader = (props) => {
         {
             key: '4',
             danger: true,
-            label: <span>Đăng xuất</span>,
+            label: <span onClick={handleLogout}>Đăng xuất</span>,
             icon: <LogoutOutlined />,
         },
     ];
@@ -48,7 +58,13 @@ const AdminHeader = (props) => {
                         style={{ color: "unset", lineHeight: "0 !important", marginRight: 20 }}
                     >
                         <Space>
-                            WELCOME{user?.name}
+                            <Avatar icon={<UserOutlined />} src={user?.avatar} />
+                            <span style={{ fontWeight: 500 }}>
+                                {user?.fullName || user?.email || 'Admin User'}
+                            </span>
+                            <span style={{ fontSize: 12, color: 'gray', marginLeft: 4 }}>
+                                ({user?.role || 'Guest'})
+                            </span>
                             <DownOutlined />
                         </Space>
                     </a>

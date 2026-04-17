@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
 import { setLoginData } from "@/redux/slices/authSlice";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ const LoginPage = () => {
 
   const [loginValue, setLoginValue] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e) => {
@@ -30,6 +32,11 @@ const LoginPage = () => {
     
     if (!loginValue || !password) {
       toast.error("Vui lòng nhập đầy đủ Tài khoản và Mật khẩu!");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Mật khẩu phải có độ dài tối thiểu 6 ký tự!");
       return;
     }
 
@@ -55,6 +62,9 @@ const LoginPage = () => {
     }
   };
 
+  // Xác thực real-time (tức thì) cho giao diện
+  const isPasswordShort = password.length > 0 && password.length < 6;
+
   return (
     <div className="flex h-screen items-center justify-center bg-gray-100">
       <Card className="w-[400px] shadow-lg">
@@ -69,26 +79,49 @@ const LoginPage = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="abc@example.com"
-                value={loginValue}
-                onChange={(e) => setLoginValue(e.target.value)}
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="abc@example.com"
+                  value={loginValue}
+                  onChange={(e) => setLoginValue(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Mật khẩu</Label>
               </div>
-              <Input 
-                id="password" 
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                <Input 
+                  id="password" 
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Nhập mật khẩu"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`pl-10 pr-10 ${isPasswordShort ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              
+              {isPasswordShort && (
+                <p className="text-sm text-red-500">
+                  Mật khẩu phải có độ dài tối thiểu 6 ký tự.
+                </p>
+              )}
+
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline inline-block mt-1">
                   Quên mật khẩu?
                 </Link>
             </div>

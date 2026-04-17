@@ -15,17 +15,16 @@ const AdminSideBar = ({collapseMenu, setCollapseMenu}) => {
 const items = [
     {
         key: 'grp',
-        label: 'Kvil Admin',
         type: 'group',
         children: [
             {
                 key: "dashboard",
-                label: <Link href={"/admin"}>Dashboard</Link>,
+                label: <Link to={"/admin"}>Dashboard</Link>,
                 icon: <AppstoreOutlined />,
             },
             {
                 key: "users",
-                label: <Link href={"/admin"}>Manage Users</Link>,
+                label: <Link to={"/admin/users"}>Manage Users</Link>,
                 icon: <TeamOutlined />,
             },
             {
@@ -64,14 +63,50 @@ const items = [
     return (
         <Sider
             collapsed={collapseMenu}
+            theme="light"
+            style={{
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                borderRight: '1px solid #f0f0f0'
+            }}
         >
+            <div style={{
+                height: 64,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#fff',
+                color: '#000',
+                fontSize: collapseMenu ? '18px' : '20px',
+                fontWeight: 'bold',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                borderBottom: '1px solid #f0f0f0'
+            }}>
+                {collapseMenu ? 'K' : 'KVIL ADMIN'}
+            </div>
 
             <Menu
                 mode="inline"
+                theme="light"
                 defaultSelectedKeys={['dashboard']}
                 items={items}
-                style={{ height: '100vh' }}
+                style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', borderRight: 0 }}
             />
+
+            <div style={{
+                padding: '16px',
+                textAlign: 'center',
+                color: 'rgba(0, 0, 0, 0.45)',
+                borderTop: '1px solid #f0f0f0',
+                fontSize: '12px',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                background: '#fff'
+            }}>
+                {collapseMenu ? 'v1' : 'Kvil Store v1.0'}
+            </div>
         </Sider>
     )
 }

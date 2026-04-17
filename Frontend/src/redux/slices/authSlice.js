@@ -1,4 +1,22 @@
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import authService from '@/services/authService';
+
+export const performLogout = createAsyncThunk(
+  'auth/performLogout',
+  async (_, thunkAPI) => {
+    try {
+      // Gọi API báo backend xóa rỗng refresh_token ở DB và xóa Cookie
+      const res = await authService.logout();
+      // Sau đó tự động xóa nốt dữ liệu ở cục Redux Local
+      thunkAPI.dispatch(logout());
+      return res;
+    } catch (error) {
+      // Nếu mất mạng hoặc API lỗi, cứ ép đăng xuất ở Local cho an toàn
+      thunkAPI.dispatch(logout());
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+)
 
 const initialState = {
   user: null,
