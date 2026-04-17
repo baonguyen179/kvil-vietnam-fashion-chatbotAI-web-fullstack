@@ -1,6 +1,5 @@
 import axios from "@/utils/axiosCustomize";
 
-// Centralized config - dễ bảo trì khi backend thay đổi
 const BASE = "/api/v1/admin/orders";
 
 const orderService = {
@@ -9,7 +8,6 @@ const orderService = {
      * @param {Object} params - { page, limit, status, paymentStatus, paymentMethod, deliveryMethod }
      */
     getAdminOrders: async (params = {}) => {
-        // Loại bỏ các key undefined/null/''/rỗng để tránh gửi param thừa
         const cleanParams = Object.fromEntries(
             Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
         );

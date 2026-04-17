@@ -1,26 +1,56 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Admin - Quản lý Đơn hàng & Bộ sưu tập)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Admin - Dashboard & Thống kê số liệu)**
 
-- **Quản lý Bộ sưu tập (Collection Management)** — `CollectionManagePage`:
-  - Tạo / Sửa bộ sưu tập qua `admin.collection.modal.jsx`: upload ảnh Banner (Dragger), Switch `isActive`, slug tự sinh từ backend.
-  - Quản lý sản phẩm thuộc BST qua `admin.collection.drawer.jsx` dùng component **Transfer** (kéo trái/phải), tự so sánh `originalKeys` vs `targetKeys` để chỉ gọi API add/remove những thay đổi thực sự.
-  - Thêm `src/services/collectionService.js` với đầy đủ 6 method: CRUD collection + thêm/xóa sản phẩm.
+- **Dashboard Thống kê (Business Overview)** — `DashboardPage`:
+  - Hệ thống thẻ tóm tắt (Summary Cards) hiển thị: Doanh thu, Tổng đơn hàng, Đơn chờ xử lý.
+  - Tự động format số lượng lớn (Ví dụ: 1.2 tỷ, 500 triệu) giúp giao diện gọn gàng, chuyên nghiệp.
+  - Biểu đồ vùng (Area Chart) sử dụng **Recharts**: Thể hiện trực quan biến động Doanh thu và Số lượng đơn hàng theo thời gian.
+  - Bộ chọn khoảng thời gian (RangePicker) kết hợp các Preset nhanh (7 ngày, 30 ngày, 90 ngày).
+  - Tích hợp `src/services/dashboardService.js` lấy dữ liệu thời gian thực từ Backend.
 
-- **Quản lý Đơn hàng (Order Management)** — `OrderManagePage`:
-  - Bộ lọc 4 chiều đồng thời: `status`, `paymentStatus`, `paymentMethod`, `deliveryMethod` — reset về trang 1 khi đổi filter.
-  - Cập nhật trạng thái đơn và trạng thái thanh toán với **Optimistic UI**: cập nhật local state ngay lập tức, không refetch toàn bộ danh sách sau mỗi thao tác.
-  - Drawer chi tiết (`admin.order.detail.drawer.jsx`) hiển thị đầy đủ: thông tin khách, breakdown tài chính (tạm tính / ship / giảm / tổng), cập nhật nhanh ngay trong drawer.
-  - Thêm `src/services/orderService.js` với 3 method: `getAdminOrders`, `updateOrderStatus`, `updatePaymentStatus`.
-  - **Fix:** `formatCurrency` dùng `parseFloat()` thay vì `typeof === 'number'` để xử lý đúng trường hợp Sequelize trả `DECIMAL` dưới dạng **string**.
+- **Quản lý Mã giảm giá (Coupon Management)** — `CouponManagePage`:
+  - Bảng danh sách với **Progress bar** theo dõi lượt dùng, tự động cảnh báo mã hết hạn.
+  - Modal tạo/sửa chuyên sâu với ràng buộc logic ngày bắt đầu/kết thúc và loại giảm giá (Cố định/%).
 
-- **Constants tách biệt** — `src/constants/orderConstants.js`:
-  - Single-source-of-truth cho toàn bộ enum/label của Order (`ORDER_STATUS_CONFIG`, `PAYMENT_METHOD_LABELS`, `DELIVERY_METHOD_LABELS`, các Option arrays cho Select filter).
-  - Khi backend thay đổi giá trị enum, chỉ cần sửa đúng một file này.
-
-- **Fix Bug Sidebar**:
-  - Sửa `<Link href>` → `<Link to>` cho mục **Orders** và **Coupons** trong `admin.sidebar.jsx` (tránh full-page reload).
-  - Mục **Orders** trỏ đúng đến `/admin/orders`.
+- **Kiến trúc & Tối ưu**:
+  - Module hóa các component Dashboard thành `admin.stats.cards.jsx` và `admin.revenue.chart.jsx`.
+  - Fix triệt để các lỗi `deprecated` của Ant Design v5 (Thay `Space direction="vertical"` bằng `Flex vertical`).
 
 ---
+
+> **THÔNG BÁO (Cập nhật cũ hơn - Admin - Quản lý Mã giảm giá)**
+>
+> - **Chi tiết tính năng Coupons**:
+>   - Tìm kiếm theo mã code + filter theo trạng thái `isActive`.
+>   - **Optimistic delete**: xóa ngay khỏi local state, không cần refetch toàn bộ danh sách.
+>   - **Fix Sidebar**: Mục Coupons trỏ đúng đến `/admin/coupons`.
+
+---
+
+
+> **THÔNG BÁO (Cập nhật cũ hơn - Admin - Quản lý Đơn hàng & Bộ sưu tập)**
+>
+> - **Quản lý Bộ sưu tập (Collection Management)** — `CollectionManagePage`:
+>   - Tạo / Sửa bộ sưu tập qua `admin.collection.modal.jsx`: upload ảnh Banner (Dragger), Switch `isActive`, slug tự sinh từ backend.
+>   - Quản lý sản phẩm thuộc BST qua `admin.collection.drawer.jsx` dùng component **Transfer** (kéo trái/phải), tự so sánh `originalKeys` vs `targetKeys` để chỉ gọi API add/remove những thay đổi thực sự.
+>   - Thêm `src/services/collectionService.js` với đầy đủ 6 method: CRUD collection + thêm/xóa sản phẩm.
+>
+> - **Quản lý Đơn hàng (Order Management)** — `OrderManagePage`:
+>   - Bộ lọc 4 chiều đồng thời: `status`, `paymentStatus`, `paymentMethod`, `deliveryMethod` — reset về trang 1 khi đổi filter.
+>   - Cập nhật trạng thái đơn và trạng thái thanh toán với **Optimistic UI**: cập nhật local state ngay lập tức, không refetch toàn bộ danh sách sau mỗi thao tác.
+>   - Drawer chi tiết (`admin.order.detail.drawer.jsx`) hiển thị đầy đủ: thông tin khách, breakdown tài chính (tạm tính / ship / giảm / tổng), cập nhật nhanh ngay trong drawer.
+>   - Thêm `src/services/orderService.js` với 3 method: `getAdminOrders`, `updateOrderStatus`, `updatePaymentStatus`.
+>   - **Fix:** `formatCurrency` dùng `parseFloat()` thay vì `typeof === 'number'` để xử lý đúng trường hợp Sequelize trả `DECIMAL` dưới dạng **string**.
+>
+> - **Constants tách biệt** — `src/constants/orderConstants.js`:
+>   - Single-source-of-truth cho toàn bộ enum/label của Order (`ORDER_STATUS_CONFIG`, `PAYMENT_METHOD_LABELS`, `DELIVERY_METHOD_LABELS`, các Option arrays cho Select filter).
+>   - Khi backend thay đổi giá trị enum, chỉ cần sửa đúng một file này.
+>
+> - **Fix Bug Sidebar**:
+>   - Sửa `<Link href>` → `<Link to>` cho mục **Orders** và **Coupons** trong `admin.sidebar.jsx` (tránh full-page reload).
+>   - Mục **Orders** trỏ đúng đến `/admin/orders`.
+
+---
+
 
 > **THÔNG BÁO (Cập nhật cũ hơn - Quản trị Hệ thống E-Commerce Chuyên Sâu: Sản Phẩm & Danh Mục)**
 >

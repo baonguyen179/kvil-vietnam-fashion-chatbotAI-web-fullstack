@@ -21,8 +21,6 @@ import {
 
 const { Title, Text } = Typography;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-// Sequelize trả DECIMAL/FLOAT dạng string → dùng parseFloat thay vì typeof check
 const formatCurrency = (val) => {
     const num = parseFloat(val);
     return isNaN(num) ? '—' : `${num.toLocaleString('vi-VN')}đ`;
@@ -31,17 +29,12 @@ const formatCurrency = (val) => {
 const formatDate = (val) =>
     val ? new Date(val).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
-// ─── Component chính ──────────────────────────────────────────────────────────
 const OrderManagePage = () => {
-    // ── State: Dữ liệu ────────────────────────────────────────────────────────
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [updatingId, setUpdatingId] = useState(null); // ID đơn đang được cập nhật
+    const [updatingId, setUpdatingId] = useState(null); 
 
-    // ── State: Phân trang ─────────────────────────────────────────────────────
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
-
-    // ── State: Bộ lọc ─────────────────────────────────────────────────────────
     const [filters, setFilters] = useState({
         status: '',
         paymentStatus: '',
@@ -49,15 +42,12 @@ const OrderManagePage = () => {
         deliveryMethod: '',
     });
 
-    // ── State: Drawer ─────────────────────────────────────────────────────────
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
 
-    // ─── Fetch dữ liệu ────────────────────────────────────────────────────────
     const fetchOrders = useCallback(async (page = 1, limit = 10, activeFilters = filters) => {
         setLoading(true);
         try {
-            // Chuyển 'true'/'false' string → boolean cho paymentStatus
             const params = { page, limit, ...activeFilters };
             if (params.paymentStatus === 'true')  params.paymentStatus = true;
             if (params.paymentStatus === 'false') params.paymentStatus = false;
@@ -82,9 +72,8 @@ const OrderManagePage = () => {
 
     useEffect(() => {
         fetchOrders(1, pagination.pageSize, filters);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []); 
 
-    // ─── Handlers: Bộ lọc ────────────────────────────────────────────────────
     const handleFilterChange = (key, value) => {
         const newFilters = { ...filters, [key]: value };
         setFilters(newFilters);
@@ -102,7 +91,6 @@ const OrderManagePage = () => {
         fetchOrders(newPagination.current, newPagination.pageSize, filters);
     };
 
-    // ─── Handlers: Cập nhật ───────────────────────────────────────────────────
     const handleUpdateStatus = async (orderId, newStatus) => {
         setUpdatingId(orderId);
         try {
@@ -149,7 +137,6 @@ const OrderManagePage = () => {
         }
     };
 
-    // ─── Columns ──────────────────────────────────────────────────────────────
     const columns = [
         {
             title: '#',
@@ -313,12 +300,10 @@ const OrderManagePage = () => {
         },
     ];
 
-    // ─── Kiểm tra có filter nào đang active không ─────────────────────────────
     const hasActiveFilter = Object.values(filters).some(v => v !== '');
 
     return (
         <Card className="shadow-md rounded-xl border-none">
-            {/* ── Header ── */}
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <Title level={4} className="m-0">Quản lý Đơn hàng</Title>
@@ -378,7 +363,6 @@ const OrderManagePage = () => {
                 )}
             </div>
 
-            {/* ── Bảng đơn hàng ── */}
             <Table
                 columns={columns}
                 dataSource={orders}
@@ -399,7 +383,6 @@ const OrderManagePage = () => {
                 }
             />
 
-            {/* ── Drawer chi tiết ── */}
             <AdminOrderDetailDrawer
                 open={drawerOpen}
                 onClose={() => setDrawerOpen(false)}

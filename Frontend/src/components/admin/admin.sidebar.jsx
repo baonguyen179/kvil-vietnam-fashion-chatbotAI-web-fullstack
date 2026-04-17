@@ -53,7 +53,7 @@ const items = [
             },
             {
                 key: "coupons",
-                label: <Link to={"/admin"}>Coupons</Link>,
+                label: <Link to={"/admin/coupons"}>Coupons</Link>,
                 icon: <TagOutlined />,
             },
         ],
