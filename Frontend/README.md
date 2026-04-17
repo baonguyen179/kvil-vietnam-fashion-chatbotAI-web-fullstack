@@ -1,21 +1,46 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Quản trị Hệ thống E-Commerce Chuyên Sâu: Sản Phẩm & Danh Mục)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Admin - Quản lý Đơn hàng & Bộ sưu tập)**
 
-- **Kiến trúc Giao diện Đồng bộ (Uniform UI Architecture)**:
-  - Tái cấu trúc chuẩn hóa đồng bộ 3 màn hình Admin chủ lực (`UserManagePage`, `CategoryManagePage`, `ProductManagePage`). 
-  - Toàn bộ được đặt trong khối `<Card>` nổi bo góc mềm mại, kết hợp linh hoạt `TailwindCSS` với component `Typography.Title` nhằm tạo phong cách cao cấp và chuyên nghiệp.
-  - Phân tách code sạch sẽ nhờ phân rã các Modal và Drawer thành các thành phần nằm trong `src/components/admin/...`.
+- **Quản lý Bộ sưu tập (Collection Management)** — `CollectionManagePage`:
+  - Tạo / Sửa bộ sưu tập qua `admin.collection.modal.jsx`: upload ảnh Banner (Dragger), Switch `isActive`, slug tự sinh từ backend.
+  - Quản lý sản phẩm thuộc BST qua `admin.collection.drawer.jsx` dùng component **Transfer** (kéo trái/phải), tự so sánh `originalKeys` vs `targetKeys` để chỉ gọi API add/remove những thay đổi thực sự.
+  - Thêm `src/services/collectionService.js` với đầy đủ 6 method: CRUD collection + thêm/xóa sản phẩm.
 
-- **Quản lý Danh mục (Category Management)**:
-  - Khởi tạo service độc lập lấy dữ liệu, kết nối API.
-  - Tích hợp Table với công cụ hiển thị Name và Slug. Loại bỏ các input dư thừa không có trong Design Backend để đạt hiệu suất cao.
+- **Quản lý Đơn hàng (Order Management)** — `OrderManagePage`:
+  - Bộ lọc 4 chiều đồng thời: `status`, `paymentStatus`, `paymentMethod`, `deliveryMethod` — reset về trang 1 khi đổi filter.
+  - Cập nhật trạng thái đơn và trạng thái thanh toán với **Optimistic UI**: cập nhật local state ngay lập tức, không refetch toàn bộ danh sách sau mỗi thao tác.
+  - Drawer chi tiết (`admin.order.detail.drawer.jsx`) hiển thị đầy đủ: thông tin khách, breakdown tài chính (tạm tính / ship / giảm / tổng), cập nhật nhanh ngay trong drawer.
+  - Thêm `src/services/orderService.js` với 3 method: `getAdminOrders`, `updateOrderStatus`, `updatePaymentStatus`.
+  - **Fix:** `formatCurrency` dùng `parseFloat()` thay vì `typeof === 'number'` để xử lý đúng trường hợp Sequelize trả `DECIMAL` dưới dạng **string**.
 
-- **Khởi tạo Hệ thống Sản phẩm Phân lớp (Advanced Product Mgt)**:
-  - Hệ thống cho phép quản trị nhiều chiều một sản phẩm E-commerce (Data đa tầng) :
-    1. **Thông tin gốc**: Thêm / Sửa qua `admin.product.modal.jsx` (Tên, Mã Danh mục lấy động từ Category, Giá, Rating).
-    2. **Biến thể chi tiết**: Ngăn phụ `admin.variant.drawer.jsx` chuyên liệt kê Màu sắc, Size, Tồn kho thực tế (Stock).
-    3. **Thư viện Hình ảnh**: Sử dụng `admin.image.drawer.jsx` cho phép đẩy nhiều File ảnh một lượt bằng định dạng Binary `FormData` đi thẳng lên Cloudinary, và có khả năng xóa từng ảnh. Tự động nhận diện Thumbnail mặc định.
+- **Constants tách biệt** — `src/constants/orderConstants.js`:
+  - Single-source-of-truth cho toàn bộ enum/label của Order (`ORDER_STATUS_CONFIG`, `PAYMENT_METHOD_LABELS`, `DELIVERY_METHOD_LABELS`, các Option arrays cho Select filter).
+  - Khi backend thay đổi giá trị enum, chỉ cần sửa đúng một file này.
+
+- **Fix Bug Sidebar**:
+  - Sửa `<Link href>` → `<Link to>` cho mục **Orders** và **Coupons** trong `admin.sidebar.jsx` (tránh full-page reload).
+  - Mục **Orders** trỏ đúng đến `/admin/orders`.
 
 ---
+
+> **THÔNG BÁO (Cập nhật cũ hơn - Quản trị Hệ thống E-Commerce Chuyên Sâu: Sản Phẩm & Danh Mục)**
+>
+> - **Kiến trúc Giao diện Đồng bộ (Uniform UI Architecture)**:
+>   - Tái cấu trúc chuẩn hóa đồng bộ 3 màn hình Admin chủ lực (`UserManagePage`, `CategoryManagePage`, `ProductManagePage`). 
+>   - Toàn bộ được đặt trong khối `<Card>` nổi bo góc mềm mại, kết hợp linh hoạt `TailwindCSS` với component `Typography.Title` nhằm tạo phong cách cao cấp và chuyên nghiệp.
+>   - Phân tách code sạch sẽ nhờ phân rã các Modal và Drawer thành các thành phần nằm trong `src/components/admin/...`.
+>
+> - **Quản lý Danh mục (Category Management)**:
+>   - Khởi tạo service độc lập lấy dữ liệu, kết nối API.
+>   - Tích hợp Table với công cụ hiển thị Name và Slug. Loại bỏ các input dư thừa không có trong Design Backend để đạt hiệu suất cao.
+>
+> - **Khởi tạo Hệ thống Sản phẩm Phân lớp (Advanced Product Mgt)**:
+>   - Hệ thống cho phép quản trị nhiều chiều một sản phẩm E-commerce (Data đa tầng):
+>     1. **Thông tin gốc**: Thêm / Sửa qua `admin.product.modal.jsx` (Tên, Mã Danh mục lấy động từ Category, Giá, Rating).
+>     2. **Biến thể chi tiết**: Ngăn phụ `admin.variant.drawer.jsx` chuyên liệt kê Màu sắc, Size, Tồn kho thực tế (Stock).
+>     3. **Thư viện Hình ảnh**: Sử dụng `admin.image.drawer.jsx` cho phép đẩy nhiều File ảnh một lượt bằng định dạng Binary `FormData` đi thẳng lên Cloudinary, và có khả năng xóa từng ảnh. Tự động nhận diện Thumbnail mặc định.
+
+---
+
 
 > **THÔNG BÁO (Cập nhật cũ hơn - Quản trị Quyền, Đăng xuất Redux Thunk & Xử lý Cookie)**
 >

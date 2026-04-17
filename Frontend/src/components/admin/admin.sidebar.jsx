@@ -48,12 +48,12 @@ const items = [
             },
             {
                 key: "orders",
-                label: <Link href={"/admin"}>Orders</Link>,
+                label: <Link to={"/admin/orders"}>Orders</Link>,
                 icon: <ShoppingCartOutlined />,
             },
             {
                 key: "coupons",
-                label: <Link href={"/admin"}>Coupons</Link>,
+                label: <Link to={"/admin"}>Coupons</Link>,
                 icon: <TagOutlined />,
             },
         ],

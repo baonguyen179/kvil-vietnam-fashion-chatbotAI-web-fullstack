@@ -3,6 +3,8 @@ import AdminLayout from '@/layouts/AdminLayout';
 import UserManagePage from '@/pages/admin/UserManagePage';
 import CategoryManagePage from '@/pages/admin/CategoryManagePage';
 import ProductManagePage from '@/pages/admin/ProductManagePage';
+import CollectionManagePage from '@/pages/admin/CollectionManagePage';
+import OrderManagePage from '@/pages/admin/OrderManagePage';
 
 const AdminRoutes = ({ notFound }) => {
     return (
@@ -12,6 +14,8 @@ const AdminRoutes = ({ notFound }) => {
                 <Route path="users" element={<UserManagePage />} />
                 <Route path="categories" element={<CategoryManagePage />} />
                 <Route path="products" element={<ProductManagePage />} />
+                <Route path="collections" element={<CollectionManagePage />} />
+                <Route path="orders" element={<OrderManagePage />} />
             </Route>
             <Route path="*" element={notFound} />
         </Routes>
@@ -19,3 +23,4 @@ const AdminRoutes = ({ notFound }) => {
 };
 
 export default AdminRoutes;
+
