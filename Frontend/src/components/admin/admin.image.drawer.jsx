@@ -9,6 +9,7 @@ const AdminImageDrawer = ({
     isDrawerVisible,
     setIsDrawerVisible,
     manageImageProduct,
+    fetchProducts
 }) => {
     const [images, setImages] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -62,6 +63,7 @@ const AdminImageDrawer = ({
                     if (res && res.EC === 0) {
                         message.success(res.EM || "Xóa ảnh thành công!");
                         fetchProductImages();
+                        if (fetchProducts) fetchProducts(); // Gọi để cập nhật thumbnail ở bảng chính
                     } else {
                         message.error(res.EM || "Xóa ảnh thất bại!");
                     }
@@ -80,7 +82,7 @@ const AdminImageDrawer = ({
             return message.warning("Vui lòng chọn ít nhất một tấm ảnh!");
         }
 
-        const filesToUpload = fileList.map(item => item.originFileObj);
+        const filesToUpload = fileList.map(item => item.originFileObj || item);
         
         setUploading(true);
         try {
@@ -89,6 +91,7 @@ const AdminImageDrawer = ({
                 message.success(res.EM || "Tải ảnh lên thành công!");
                 setFileList([]);
                 fetchProductImages();
+                if (fetchProducts) fetchProducts(); // Gọi để cập nhật thumbnail ở bảng chính
             } else {
                 message.error(res.EM || "Tải ảnh thất bại!");
             }

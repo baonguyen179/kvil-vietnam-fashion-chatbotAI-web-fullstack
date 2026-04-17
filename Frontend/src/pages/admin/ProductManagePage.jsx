@@ -306,12 +306,14 @@ const ProductManagePage = () => {
                 isDrawerVisible={isVariantDrawerVisible}
                 setIsDrawerVisible={setIsVariantDrawerVisible}
                 manageVariantProduct={manageVariantProduct}
+                fetchProducts={() => fetchProducts(pagination.current, pagination.pageSize, filters.search, filters.categoryId)}
             />
 
             <AdminImageDrawer 
                 isDrawerVisible={isImageDrawerVisible}
                 setIsDrawerVisible={setIsImageDrawerVisible}
                 manageImageProduct={manageImageProduct}
+                fetchProducts={() => fetchProducts(pagination.current, pagination.pageSize, filters.search, filters.categoryId)}
             />
             
         </Card>

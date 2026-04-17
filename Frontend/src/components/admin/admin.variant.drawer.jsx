@@ -9,6 +9,7 @@ const AdminVariantDrawer = ({
     isDrawerVisible,
     setIsDrawerVisible,
     manageVariantProduct,
+    fetchProducts
 }) => {
     const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -56,6 +57,7 @@ const AdminVariantDrawer = ({
                 message.success(res.EM || "Thêm biến thể thành công!");
                 form.resetFields();
                 fetchProductVariants(); // Tải lại danh sách biến thể
+                if (fetchProducts) fetchProducts(); // Gọi API cập nhật bảng chính ở ngoài
             } else {
                 message.error(res.EM || "Thêm biến thể thất bại!");
             }
