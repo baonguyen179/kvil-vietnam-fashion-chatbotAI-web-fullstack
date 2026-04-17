@@ -8,7 +8,7 @@ const AdminContent = ({ children }) => {
         token: { colorBgContainer, borderRadiusLG },
     } = theme.useToken();
     return (
-        <Content style={{ margin: '24px 16px 0' }}>
+        <Content style={{ margin: '24px 16px 0', flex: 1, overflowY: 'auto' }}>
             <div
                 style={{
                     padding: 24,

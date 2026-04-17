@@ -10,11 +10,11 @@ import { useState } from 'react';
 const AdminLayoutContent = () => {
     const [collapseMenu, setCollapseMenu] = useState(false);
     return (
-        <div style={{ display: "flex" }}>
-                <div className='left-side' style={{ minWidth: 80 }}>
+        <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+                <div className='left-side' style={{ minWidth: 80, height: "100vh", overflow: "hidden" }}>
                     <AdminSidebar collapseMenu={collapseMenu} setCollapseMenu={setCollapseMenu} />
                 </div>
-                <div className='right-side' style={{ flex: 1 }}>
+                <div className='right-side' style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
                     <AdminHeader user={{name: "admin", role: "admin"}} collapseMenu={collapseMenu} setCollapseMenu={setCollapseMenu} />
                     <AdminContent>
                         <Outlet />

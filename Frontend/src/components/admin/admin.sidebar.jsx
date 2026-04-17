@@ -34,15 +34,15 @@ const items = [
                 children: [
                     {
                         key: 'categories',
-                        label: <Link href={"/admin"}>Categories</Link>,
+                        label: <Link to={"/admin/categories"}>Categories</Link>,
                     },
                     {
                         key: 'products',
-                        label: <Link href={"/admin"}>Products</Link>,
+                        label: <Link to={"/admin/products"}>Products</Link>,
                     },
                     {
                         key: 'collections',
-                        label: <Link href={"/admin"}>Collections</Link>,
+                        label: <Link to={"/admin/collections"}>Collections</Link>,
                     },
                 ],
             },
@@ -66,11 +66,10 @@ const items = [
             theme="light"
             style={{
                 height: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
                 borderRight: '1px solid #f0f0f0'
             }}
         >
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{
                 height: 64,
                 display: 'flex',
@@ -106,6 +105,7 @@ const items = [
                 background: '#fff'
             }}>
                 {collapseMenu ? 'v1' : 'Kvil Store v1.0'}
+            </div>
             </div>
         </Sider>
     )

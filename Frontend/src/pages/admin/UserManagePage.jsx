@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select, Space, Tag, message, Popconfirm } from 'antd';
-import { SearchOutlined, PlusOutlined, CrownOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Input, Button, Select, Space, Tag, message, Popconfirm, Card, Typography } from 'antd';
+import { SearchOutlined, CrownOutlined } from '@ant-design/icons';
 import userService from '@/services/userService';
 import { useSelector } from 'react-redux';
 
 const { Option } = Select;
+const { Title } = Typography;
 
 const UserManagePage = () => {
     const currentUser = useSelector(state => state.auth.user);
@@ -120,7 +121,11 @@ const UserManagePage = () => {
                                 okText="Đồng ý"
                                 cancelText="Hủy"
                             >
-                                <Button size="small" icon={<CrownOutlined />} style={{ color: '#d97706', borderColor: '#d97706' }}>
+                                <Button 
+                                    size="small" 
+                                    icon={<CrownOutlined />} 
+                                    className="text-amber-600 border-amber-600 hover:bg-amber-500! hover:text-white! hover:border-amber-500! hover:scale-110! transition-all duration-300 shadow-sm"
+                                >
                                     Cấp quyền
                                 </Button>
                             </Popconfirm>
@@ -133,7 +138,12 @@ const UserManagePage = () => {
                                 cancelText="Hủy"
                                 disabled={isSelf} // Khóa popup nếu tự hủy bản thân
                             >
-                                <Button danger size="small" disabled={isSelf}>
+                                <Button 
+                                    danger 
+                                    size="small" 
+                                    disabled={isSelf}
+                                    className={!isSelf ? "hover:bg-red-500! hover:text-white! hover:scale-110! transition-all duration-300 shadow-sm" : ""}
+                                >
                                     Hủy quyền
                                 </Button>
                             </Popconfirm>
@@ -145,8 +155,13 @@ const UserManagePage = () => {
     ];
 
     return (
-        <div style={{ padding: '24px', background: '#fff', borderRadius: '8px', minHeight: 'calc(100vh - 150px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <Card className="shadow-md rounded-xl border-none">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <Title level={4} className="m-0">Quản lý người dùng</Title>
+                    <p className="text-gray-500 mt-1 mb-0">Quản lý danh sách tài khoản và phân quyền hệ thống</p>
+                </div>
+                
                 <Space>
                     <Input.Search
                         placeholder="Tìm theo email, tên, SĐT..."
@@ -154,35 +169,35 @@ const UserManagePage = () => {
                         enterButton={<SearchOutlined />}
                         size="large"
                         onSearch={handleSearch}
-                        style={{ width: 300 }}
+                        className="w-[300px]"
                     />
                     <Select
                         placeholder="Lọc theo vai trò"
                         allowClear
                         size="large"
-                        style={{ width: 150 }}
+                        className="w-[150px]"
                         onChange={handleRoleFilter}
                     >
                         <Option value="ADMIN">Admin</Option>
                         <Option value="USER">User</Option>
                     </Select>
                 </Space>
-                
-                {/* <Button type="primary" size="large" icon={<PlusOutlined />}>
-                    Thêm người dùng
-                </Button> */}
             </div>
 
             <Table
                 columns={columns}
                 dataSource={users}
                 rowKey="id"
-                pagination={pagination}
                 loading={loading}
                 onChange={handleTableChange}
                 bordered
+                pagination={{
+                    ...pagination,
+                    showSizeChanger: true,
+                    showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} người dùng`
+                }}
             />
-        </div>
+        </Card>
     );
 };
 

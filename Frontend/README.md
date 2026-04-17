@@ -1,20 +1,39 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Quản trị Quyền, Đăng xuất Redux Thunk & Xử lý Cookie)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Quản trị Hệ thống E-Commerce Chuyên Sâu: Sản Phẩm & Danh Mục)**
 
-- **Cấp Quyền & Hủy Quyền (Role Management)**:
-  - Hoàn thiện tính năng Quản lý phân quyền tại `UserManagePage` sử dụng `Popconfirm` của Ant Design để bảo vệ thao tác, tránh bấm nhầm.
-  - Phân loại rõ ràng nút bấm mạ vàng "Cấp quyền" (đối với User) và nút đỏ "Hủy quyền" (đối với Admin).
-  - Tích hợp vòng lặp bảo vệ (Self-check): Nút "Hủy quyền" tự động bị vô hiệu hóa (disabled) nếu Admin đang cố gắng giáng chức chính mình. Bảng (Table) sẽ tự động reload ngay sau khi phân quyền thành công.
+- **Kiến trúc Giao diện Đồng bộ (Uniform UI Architecture)**:
+  - Tái cấu trúc chuẩn hóa đồng bộ 3 màn hình Admin chủ lực (`UserManagePage`, `CategoryManagePage`, `ProductManagePage`). 
+  - Toàn bộ được đặt trong khối `<Card>` nổi bo góc mềm mại, kết hợp linh hoạt `TailwindCSS` với component `Typography.Title` nhằm tạo phong cách cao cấp và chuyên nghiệp.
+  - Phân tách code sạch sẽ nhờ phân rã các Modal và Drawer thành các thành phần nằm trong `src/components/admin/...`.
 
-- **Đăng xuất (Logout) & Redux AsyncThunk**:
-  - Gói gọn tiến trình đăng xuất thông qua `performLogout` thunk bên trong `authSlice.js`.
-  - Luồng AsyncThunk cho phép gọi API `POST /api/v1/auth/logout` để clear token ở nền tảng Backend trước, sau đó tự động kích hoạt reducer `logout()` dọn dẹp LocalStorage & Redux State phía Frontend, giúp mã nguồn tại các Component gọi hàm trở nên vô cùng ngắn gọn (`await dispatch(performLogout())`).
+- **Quản lý Danh mục (Category Management)**:
+  - Khởi tạo service độc lập lấy dữ liệu, kết nối API.
+  - Tích hợp Table với công cụ hiển thị Name và Slug. Loại bỏ các input dư thừa không có trong Design Backend để đạt hiệu suất cao.
 
-- **Xử lý Triệt để Lỗi Cookie CORS (SameSite/Secure)**:
-  - Khắc phục lỗi kẹt thẻ Refresh Token (cấp thành 2 thẻ) do xung đột cấu hình giữa hàm Tạo và Xóa cookie.
-  - Áp dụng cấu hình linh hoạt biến môi trường: `sameSite: 'none'` + `secure: true` khi build trên Production và `sameSite: 'lax'` + `secure: false` khi chạy Localhost, đảm bảo luồng Cookie lưu/xóa thông suốt trên cả Browser lẫn API Tester.
+- **Khởi tạo Hệ thống Sản phẩm Phân lớp (Advanced Product Mgt)**:
+  - Hệ thống cho phép quản trị nhiều chiều một sản phẩm E-commerce (Data đa tầng) :
+    1. **Thông tin gốc**: Thêm / Sửa qua `admin.product.modal.jsx` (Tên, Mã Danh mục lấy động từ Category, Giá, Rating).
+    2. **Biến thể chi tiết**: Ngăn phụ `admin.variant.drawer.jsx` chuyên liệt kê Màu sắc, Size, Tồn kho thực tế (Stock).
+    3. **Thư viện Hình ảnh**: Sử dụng `admin.image.drawer.jsx` cho phép đẩy nhiều File ảnh một lượt bằng định dạng Binary `FormData` đi thẳng lên Cloudinary, và có khả năng xóa từng ảnh. Tự động nhận diện Thumbnail mặc định.
 
-- **Validation (Kiểm tra nhập liệu Form)**:
-  - Bổ sung xác thực độ dài Mật khẩu (tối thiểu 6 ký tự) tại `LoginPage.jsx`. Hoạt động song song 2 lớp: cảnh báo chữ đỏ ngay lập tức theo thời gian thực (Real-time) và chặn Submit bằng `toast.error` bật lên khi cố ý bỏ qua cảnh báo.
+---
+
+> **THÔNG BÁO (Cập nhật cũ hơn - Quản trị Quyền, Đăng xuất Redux Thunk & Xử lý Cookie)**
+>
+> - **Cấp Quyền & Hủy Quyền (Role Management)**:
+>   - Hoàn thiện tính năng Quản lý phân quyền tại `UserManagePage` sử dụng `Popconfirm` của Ant Design để bảo vệ thao tác, tránh bấm nhầm.
+>   - Phân loại rõ ràng nút bấm mạ vàng "Cấp quyền" (đối với User) và nút đỏ "Hủy quyền" (đối với Admin).
+>   - Tích hợp vòng lặp bảo vệ (Self-check): Nút "Hủy quyền" tự động bị vô hiệu hóa (disabled) nếu Admin đang cố gắng giáng chức chính mình. Bảng (Table) sẽ tự động reload ngay sau khi phân quyền thành công.
+> 
+> - **Đăng xuất (Logout) & Redux AsyncThunk**:
+>   - Gói gọn tiến trình đăng xuất thông qua `performLogout` thunk bên trong `authSlice.js`.
+>   - Luồng AsyncThunk cho phép gọi API `POST /api/v1/auth/logout` để clear token ở nền tảng Backend trước, sau đó tự động kích hoạt reducer `logout()` dọn dẹp LocalStorage & Redux State phía Frontend, giúp mã nguồn tại các Component gọi hàm trở nên vô cùng ngắn gọn (`await dispatch(performLogout())`).
+> 
+> - **Xử lý Triệt để Lỗi Cookie CORS (SameSite/Secure)**:
+>   - Khắc phục lỗi kẹt thẻ Refresh Token (cấp thành 2 thẻ) do xung đột cấu hình giữa hàm Tạo và Xóa cookie.
+>   - Áp dụng cấu hình linh hoạt biến môi trường: `sameSite: 'none'` + `secure: true` khi build trên Production và `sameSite: 'lax'` + `secure: false` khi chạy Localhost, đảm bảo luồng Cookie lưu/xóa thông suốt trên cả Browser lẫn API Tester.
+> 
+> - **Validation (Kiểm tra nhập liệu Form)**:
+>   - Bổ sung xác thực độ dài Mật khẩu (tối thiểu 6 ký tự) tại `LoginPage.jsx`. Hoạt động song song 2 lớp: cảnh báo chữ đỏ ngay lập tức theo thời gian thực (Real-time) và chặn Submit bằng `toast.error` bật lên khi cố ý bỏ qua cảnh báo.
 
 ---
 
