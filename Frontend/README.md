@@ -1,4 +1,15 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Admin - Dashboard & Thống kê số liệu)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Admin - Giám sát Chatbot AI)**
+
+- **Quản lý & Giám sát Chatbot** — `ChatbotManagePage`:
+  - Hệ thống thẻ thống kê (Stats Cards): Tổng tin nhắn, tổng phiên, tin nhắn hôm nay, tỷ lệ phản hồi của BOT.
+  - Theo dõi danh sách phiên chat (Sessions) với bộ lọc đa năng: Tìm kiếm nội dung tin, lọc theo loại (User/Guest), lọc theo khoảng thời gian (RangePicker).
+  - Chi tiết phiên chat (`admin.chatbot.session.detail.drawer.jsx`): Hiển thị hội thoại dạng bong bóng (bubble) trực quan, phân biệt rõ người dùng và BOT, hiển thị các sản phẩm được BOT gợi ý.
+  - Tính năng xóa phiên chat với cơ chế **Optimistic UI**, tự động cập nhật lại bảng và số liệu thống kê ngay lập tức.
+  - Tích hợp `src/services/chatbotService.js` xử lý toàn bộ logic nghiệp vụ và tương tác API Backend.
+
+---
+
+**THÔNG BÁO BẢN CẬP NHẬT TRƯỚC (Admin - Dashboard & Thống kê số liệu)**
 
 - **Dashboard Thống kê (Business Overview)** — `DashboardPage`:
   - Hệ thống thẻ tóm tắt (Summary Cards) hiển thị: Doanh thu, Tổng đơn hàng, Đơn chờ xử lý.

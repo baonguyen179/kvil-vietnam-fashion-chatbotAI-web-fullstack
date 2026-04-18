@@ -5,7 +5,8 @@ import {
     TeamOutlined, 
     ShoppingOutlined, 
     ShoppingCartOutlined, 
-    TagOutlined 
+    TagOutlined,
+    RobotOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 
@@ -55,6 +56,11 @@ const items = [
                 key: "coupons",
                 label: <Link to={"/admin/coupons"}>Coupons</Link>,
                 icon: <TagOutlined />,
+            },
+            {
+                key: "chatbot",
+                label: <Link to={"/admin/chatbot"}>Chatbot AI</Link>,
+                icon: <RobotOutlined />,
             },
         ],
     },
