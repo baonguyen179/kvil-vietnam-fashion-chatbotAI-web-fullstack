@@ -20,6 +20,11 @@ const AdminHeader = (props) => {
 
     const items = [
         {
+            key: 'home',
+            label: <span onClick={() => navigate('/')}>Trang chủ</span>,
+            icon: <UserOutlined />
+        },
+        {
             key: '1',
             label: <span>Settings</span>,
             icon: <SettingOutlined />

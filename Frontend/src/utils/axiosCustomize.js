@@ -1,8 +1,13 @@
 import axios from 'axios';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
-import { store } from '@/redux/store';
 import { setAccessToken, logout } from '@/redux/slices/authSlice';
+
+let store;
+
+export const injectStore = (_store) => {
+    store = _store;
+};
 
 NProgress.configure({ showSpinner: false, trickleSpeed: 100 });
 
@@ -18,7 +23,7 @@ const instance = axios.create({
 instance.interceptors.request.use(function (config) {
     NProgress.start();
     
-    const state = store.getState();
+    const state = store?.getState();
     const token = state?.auth?.access_token;
     
     if (token) {
@@ -81,7 +86,7 @@ instance.interceptors.response.use(function (response) {
             if (data && data.EC === 0 && data.DT && data.DT.access_token) {
                 const newAccessToken = data.DT.access_token;
                 
-                store.dispatch(setAccessToken(newAccessToken));
+                store?.dispatch(setAccessToken(newAccessToken));
                 
                 // Đổi config request đã bị lỗi để dùng token mới
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -92,12 +97,12 @@ instance.interceptors.response.use(function (response) {
                 return instance(originalRequest);
             } else {
                 // Làm mới token thất bại (refresh token cũng đã hết hạn)
-                store.dispatch(logout()); 
+                store?.dispatch(logout()); 
                 processQueue(new Error('Refresh token invalid'));
                 return Promise.reject(error);
             }
         } catch (err) {
-            store.dispatch(logout());
+            store?.dispatch(logout());
             processQueue(err);
             return Promise.reject(err);
         } finally {

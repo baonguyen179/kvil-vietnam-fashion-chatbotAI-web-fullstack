@@ -1,9 +1,19 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ShoppingBag, User, Menu, X, Search } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { ShoppingBag, User, Menu, X, Search, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import { useDispatch, useSelector } from "react-redux";
+import { performLogout } from "@/redux/slices/authSlice";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState, useEffect } from "react";
 
 const navLinks = [
     { label: "TRANG CHỦ", href: "/" },
@@ -15,10 +25,80 @@ const navLinks = [
 ];
 
 export const UserHeader = () => {
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
     const { pathname } = useLocation();
+    const { user, isAuthenticated } = useSelector((state) => state.auth);
+
     const [activeLink, setActiveLink] = useState(navLinks[0].label);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+
+    const handleLogout = async () => {
+        await dispatch(performLogout());
+        navigate("/login");
+    };
+
+    const UserMenu = ({ size = "base" }) => {
+        const isMobile = size === "mobile";
+        
+        if (!isAuthenticated) {
+            return (
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn(
+                        "text-[#504444] hover:bg-[#f3ede6]",
+                        size === "sm" ? "h-8 w-8" : "h-9 w-9"
+                    )}
+                    onClick={() => navigate("/login")}
+                >
+                    <User className={size === "sm" ? "h-4 w-4" : "h-5 w-5"} strokeWidth={1.5} />
+                </Button>
+            );
+        }
+
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={cn(
+                            "text-[#504444] hover:bg-[#f3ede6]",
+                            size === "sm" ? "h-8 w-8" : "h-9 w-9"
+                        )}
+                    >
+                        <User className={size === "sm" ? "h-4 w-4" : "h-5 w-5"} strokeWidth={1.5} />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 rounded-none p-2" style={{ fontFamily: "'Noto Serif', Georgia, serif" }}>
+                    <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                            <p className="text-sm font-medium leading-none">{user?.fullName || "User"}</p>
+                            <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                        </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {user?.role === "ADMIN" && (
+                        <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            <span>Trang quản trị viên</span>
+                        </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Tài khoản của tôi</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Đăng xuất</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        );
+    };
 
     /* Watch scroll to shrink header */
     useEffect(() => {
@@ -66,9 +146,7 @@ export const UserHeader = () => {
                             <ShoppingBag className="h-5 w-5" strokeWidth={1.5} />
                             <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#785254] text-[9px] font-semibold text-white">0</span>
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-[#504444] hover:bg-[#f3ede6] md:flex hidden">
-                            <User className="h-5 w-5" strokeWidth={1.5} />
-                        </Button>
+                        <UserMenu />
                     </div>
                 </div>
 
@@ -124,9 +202,7 @@ export const UserHeader = () => {
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-[#504444]">
                             <ShoppingBag className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-[#504444]">
-                            <User className="h-4 w-4" />
-                        </Button>
+                        <UserMenu size="sm" />
                     </div>
 
                     <Button

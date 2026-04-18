@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import storage from 'redux-persist/lib/storage'; // Mặc định dùng localStorage
 import rootReducer from './reducer/rootReducer';
+import { injectStore } from '@/utils/axiosCustomize';
 
 const persistConfig = {
     key: 'root',
@@ -21,4 +22,5 @@ const store = configureStore({
         }),
 });
 const persistor = persistStore(store);
+injectStore(store);
 export { store, persistor };

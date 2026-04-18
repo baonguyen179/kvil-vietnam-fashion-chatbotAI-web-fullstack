@@ -14,7 +14,7 @@ const BestSellers = () => {
             try {
                 setLoading(true);
                 const response = await productService.getBestSellers(10); // Fetch 10 products
-                console.log("res best seller:", response);
+                // console.log("res best seller:", response);
                 if (response && response.EC === 0) {
                     setProducts(response?.DT?.products || []);
                 }
@@ -35,7 +35,7 @@ const BestSellers = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
                     {[...Array(10)].map((_, i) => (
                         <div key={i} className="flex flex-col gap-3">
-                            <div className="aspect-[2/3] bg-gray-100 rounded-sm" />
+                            <div className="aspect-2/3 bg-gray-100 rounded-sm" />
                             <div className="h-4 bg-gray-100 w-3/4" />
                             <div className="h-4 bg-gray-100 w-1/2" />
                         </div>

@@ -1,4 +1,22 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Tái thiết kế Giao diện & Sản phẩm động)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Bộ sưu tập Động, Nâng cấp Header & Sửa lỗi khởi tạo)**
+
+- **Editorial Carousel (BST Động)**:
+  - Triển khai `UserEditorial` sử dụng **Shadcn Carousel**, tự động lấy dữ liệu từ Backend.
+  - Tối ưu hiển thị ảnh với `aspect-ratio` chuyên nghiệp, tránh vỡ ảnh và hỗ trợ hiệu ứng Zoom khi hover.
+  - Overlay tiêu đề và nút "Khám phá ngay" đồng bộ phong cách thương hiệu.
+- **Nâng cấp Header & Auth Control**:
+  - **Admin Header**: Thêm nút quay về "Trang chủ" ngay trong menu user.
+  - **User Header**: Tích hợp **Dropdown Menu** cho icon User.
+  - **Phân quyền**: Tự động hiển thị "Trang quản trị viên" nếu user có quyền `ADMIN`.
+  - **Đăng xuất**: Tích hợp nút Đăng xuất trực tiếp trên Header người dùng.
+- **Sửa lỗi Hệ thống (Critical Fixes)**:
+  - **WSOD Fix**: Xử lý lỗi "Circular Dependency" giữa Redux Store và Axios giúp ứng dụng khởi động ổn định.
+  - **Backend Fix**: Sửa lỗi `oldSlug is not defined` khi cập nhật bộ sưu tập.
+  - **UI Fix**: Sửa lỗi sai cú pháp tỷ lệ khung hình (`aspect-[2/3]`) giúp layout sản phẩm chuẩn xác trên mọi thiết bị.
+
+---
+
+**THÔNG BÁO BẢN CẬP NHẬT TRƯỚC (Frontend - Tái thiết kế Giao diện & Sản phẩm động)**
 
 - **Thiết kế Giao diện Tổng thể (UI/UX Redesign)**:
   - **Header Động**: Chuyển sang bố cục 2 hàng chuyên nghiệp, tự động thu gọn và sắp xếp lại các icon khi scroll (hiệu ứng Shrink Header).
