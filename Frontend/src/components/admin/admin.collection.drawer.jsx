@@ -114,7 +114,7 @@ const AdminCollectionDrawer = ({ open, onClose, collection }) => {
                 targetKeys={targetKeys}
                 onChange={(nextKeys) => setTargetKeys(nextKeys)}
                 render={item => (
-                    <div className="flex flex-col leading-tight">
+                    <div className="flex flex-col leading-tight w-full overflow-hidden">
                         <span className="font-medium text-sm truncate" style={{ maxWidth: 220 }}>{item.title}</span>
                         <span className="text-xs text-red-500">{item.description}</span>
                     </div>
@@ -123,7 +123,7 @@ const AdminCollectionDrawer = ({ open, onClose, collection }) => {
                 filterOption={(input, item) =>
                     item.title.toLowerCase().includes(input.toLowerCase())
                 }
-                styles={{ list: { width: '100%', height: 450 } }}
+                listStyle={{ flex: 1, height: 450 }}
                 loading={loadingInit}
             />
         </Drawer>

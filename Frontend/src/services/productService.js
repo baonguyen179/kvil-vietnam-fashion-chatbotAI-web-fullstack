@@ -40,6 +40,9 @@ const productService = {
     },
     deleteProductImage: async (imageId) => {
         return await axios.delete(`/api/v1/admin/products/images/${imageId}`);
+    },
+    getBestSellers: async (limit = 10) => {
+        return await axios.get(`/api/v1/products/best-seller`, { params: { limit } });
     }
 }
 

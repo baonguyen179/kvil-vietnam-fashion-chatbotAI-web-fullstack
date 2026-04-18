@@ -1,4 +1,19 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Admin - Giám sát Chatbot AI)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Tái thiết kế Giao diện & Sản phẩm động)**
+
+- **Thiết kế Giao diện Tổng thể (UI/UX Redesign)**:
+  - **Header Động**: Chuyển sang bố cục 2 hàng chuyên nghiệp, tự động thu gọn và sắp xếp lại các icon khi scroll (hiệu ứng Shrink Header).
+  - **Footer Chuyên sâu**: Triển khai Footer 2 hàng với đầy đủ thông tin liên hệ, liên kết chính sách và bản quyền.
+- **Tính năng Sản phẩm Động (Dynamic Products)**:
+  - **Best Sellers Section**: Kết nối API lấy danh sách sản phẩm bán chạy nhất từ Backend, hiển thị dưới dạng Grid 10 sản phẩm (5 cột trên Desktop).
+  - **Global `ProductCard`**: Tách ProductCard thành component dùng chung, tích hợp các tính năng cao cấp:
+    - **Hover Image Switch**: Tự động chuyển đổi giữa ảnh chính và ảnh phụ khi di chuột (hiệu ứng Cross-fade).
+    - **Auto Pricing**: Tự động tính toán giá khuyến mãi, hiển thị song song giá gốc (gạch ngang) và giá bán.
+    - **Discount Badge**: Nhãn giảm giá nổi bật góc ảnh.
+    - **Smart Truncate**: Tự động cắt gọn khi tên sản phẩm quá dài để giữ Grid luôn cân đối.
+
+---
+
+**THÔNG BÁO BẢN CẬP NHẬT TRƯỚC (Admin - Giám sát Chatbot AI)**
 
 - **Quản lý & Giám sát Chatbot** — `ChatbotManagePage`:
   - Hệ thống thẻ thống kê (Stats Cards): Tổng tin nhắn, tổng phiên, tin nhắn hôm nay, tỷ lệ phản hồi của BOT.
