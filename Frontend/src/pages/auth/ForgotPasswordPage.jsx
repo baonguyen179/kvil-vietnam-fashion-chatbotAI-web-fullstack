@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
 import { Eye, EyeOff, Mail, Lock, KeyRound } from "lucide-react";
+import logo from "@/assets/logo.png";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,8 +90,12 @@ const ForgotPasswordPage = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 py-10">
       <Card className="w-[450px] shadow-lg">
-        <CardHeader className="space-y-1">
+        <CardHeader className="space-y-2 flex flex-col items-center">
+          <Link to="/" className="mb-2">
+            <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+          </Link>
           <CardTitle className="text-2xl text-center font-bold">Quên mật khẩu</CardTitle>
+
           <CardDescription className="text-center">
             {step === 1 ? "Nhập email của bạn để nhận mã xác nhận (OTP)" : "Vui lòng nhập mã OTP và mật khẩu mới"}
           </CardDescription>

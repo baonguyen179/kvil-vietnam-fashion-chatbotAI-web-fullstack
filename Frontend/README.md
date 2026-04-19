@@ -1,18 +1,18 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Bộ sưu tập Động, Nâng cấp Header & Sửa lỗi khởi tạo)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Nâng cấp trang Tài khoản & Đồng bộ dữ liệu)**
 
-- **Editorial Carousel (BST Động)**:
-  - Triển khai `UserEditorial` sử dụng **Shadcn Carousel**, tự động lấy dữ liệu từ Backend.
-  - Tối ưu hiển thị ảnh với `aspect-ratio` chuyên nghiệp, tránh vỡ ảnh và hỗ trợ hiệu ứng Zoom khi hover.
-  - Overlay tiêu đề và nút "Khám phá ngay" đồng bộ phong cách thương hiệu.
-- **Nâng cấp Header & Auth Control**:
-  - **Admin Header**: Thêm nút quay về "Trang chủ" ngay trong menu user.
-  - **User Header**: Tích hợp **Dropdown Menu** cho icon User.
-  - **Phân quyền**: Tự động hiển thị "Trang quản trị viên" nếu user có quyền `ADMIN`.
-  - **Đăng xuất**: Tích hợp nút Đăng xuất trực tiếp trên Header người dùng.
-- **Sửa lỗi Hệ thống (Critical Fixes)**:
-  - **WSOD Fix**: Xử lý lỗi "Circular Dependency" giữa Redux Store và Axios giúp ứng dụng khởi động ổn định.
-  - **Backend Fix**: Sửa lỗi `oldSlug is not defined` khi cập nhật bộ sưu tập.
-  - **UI Fix**: Sửa lỗi sai cú pháp tỷ lệ khung hình (`aspect-[2/3]`) giúp layout sản phẩm chuẩn xác trên mọi thiết bị.
+- **Đồng bộ hóa dữ liệu (Real-time Sync)**:
+  - Triển khai cơ chế **Outlet Context** trong `AccountLayout`, giúp tự động làm mới cột "Tổng tin tài khoản" ngay khi người dùng cập nhật hồ sơ thành công mà không cần reload trang.
+- **Nâng cấp User Account Summary**:
+  - Chuyển đổi logic lấy dữ liệu: Gọi trực tiếp API `getUserProfile` để đảm bảo thông tin luôn chính xác và đầy đủ nhất từ Database.
+  - Hiển thị chi tiết: Họ tên, Email, Số điện thoại, Ngày sinh (định dạng chuẩn vi-VN) và Giới tính.
+  - Tích hợp bộ quay Loading (`Loader2`) giúp trải nghiệm người dùng mượt mà hơn.
+- **Sửa lỗi Hệ thống**:
+  - Khắc phục triệt để lỗi cú pháp `Declaration or statement expected` tại `AccountLayout.jsx`.
+  - Tối ưu hóa việc fetch dữ liệu ngầm (background fetching) để giữ giao diện ổn định khi cập nhật.
+
+---
+
+**THÔNG BÁO BẢN CẬP NHẬT TRƯỚC (Frontend - Bộ sưu tập Động, Nâng cấp Header & Sửa lỗi khởi tạo)**
 
 ---
 

@@ -23,7 +23,7 @@ const AppRoutes = () => {
                     } 
                 />
             </Routes>
-            <ToastContainer position="top-center" />
+            <ToastContainer position="top-left" />
         </Suspense>
     )
 };

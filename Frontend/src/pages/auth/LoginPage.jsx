@@ -5,6 +5,8 @@ import authService from "@/services/authService";
 import { toast } from "react-toastify";
 import { setLoginData } from "@/redux/slices/authSlice";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import logo from "@/assets/logo.png";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,8 +70,12 @@ const LoginPage = () => {
   return (
     <div className="flex h-screen items-center justify-center bg-gray-100">
       <Card className="w-[400px] shadow-lg">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center font-bold">Đăng nhập</CardTitle>
+        <CardHeader className="space-y-2 flex flex-col items-center">
+          <Link to="/" className="mb-2">
+            <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+          </Link>
+          <CardTitle className="text-2xl text-center font-bold">Chào mừng bạn trở lại</CardTitle>
+
           <CardDescription className="text-center">
             Nhập email và mật khẩu của bạn để tiếp tục
           </CardDescription>
