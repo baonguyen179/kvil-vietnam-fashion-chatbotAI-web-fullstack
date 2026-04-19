@@ -36,6 +36,27 @@ const userService = {
 
     updateUserProfile: async (profileData) => {
         return await axios.put("/api/v1/user/profile", profileData);
+    },
+
+    // [ADDRESSES] - USER ADDRESS MANAGEMENT
+    getUserAddresses: async () => {
+        return await axios.get("/api/v1/user/addresses");
+    },
+
+    createNewAddress: async (addressData) => {
+        return await axios.post("/api/v1/user/addresses", addressData);
+    },
+
+    updateUserAddress: async (addressId, addressData) => {
+        return await axios.put(`/api/v1/user/addresses/${addressId}`, addressData);
+    },
+
+    deleteUserAddress: async (addressId) => {
+        return await axios.delete(`/api/v1/user/addresses/${addressId}`);
+    },
+
+    setDefaultAddress: async (addressId) => {
+        return await axios.patch(`/api/v1/user/addresses/${addressId}/default`);
     }
 }
 

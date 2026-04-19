@@ -43,7 +43,7 @@ const AccountLayout = () => {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-16">
                 <aside className="md:col-span-3 flex flex-col gap-8">
                     <div className="pb-4 border-b border-[#eeeeee]">
-                        <h1 className="text-2xl font-normal text-[#1c1c19]" style={{ fontFamily: "'Noto Serif', Georgia, serif" }}>
+                        <h1 className="text-2xl font-normal text-[#1c1c19]" style={{ fontFamily: "'Lora', serif" }}>
                             Tài khoản của bạn
                         </h1>
                     </div>

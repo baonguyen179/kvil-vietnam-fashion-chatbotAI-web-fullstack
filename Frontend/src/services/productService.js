@@ -2,7 +2,9 @@ import axios from "@/utils/axiosCustomize";
 
 const productService = {
     getAllProducts: async (queryParams = {}) => {
-        // Convert object into query string. Example: { page: 1, limit: 10, name: 'ao' } -> ?page=1&limit=10&name=ao
+        if (typeof queryParams === 'string') {
+            return await axios.get(`/api/v1/products?${queryParams}`);
+        }
         return await axios.get(`/api/v1/products`, { params: queryParams });
     },
     searchProducts: async (keyword, page = 1, limit = 10) => {

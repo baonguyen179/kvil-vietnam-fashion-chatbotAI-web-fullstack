@@ -9,6 +9,12 @@ import RegisterPage from '@/pages/auth/RegisterPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import OrderHistory from '@/pages/user/Account/OrderHistory';
 import ProfilePage from '@/pages/user/Account/ProfilePage';
+import AddressPage from '@/pages/user/Account/AddressPage';
+import AboutPage from '@/pages/user/AboutPage';
+import AboutStory from '@/pages/user/About/AboutStory';
+import PolicyContent from '@/pages/user/About/PolicyContent';
+import ProductsLayout from '@/pages/user/Products/ProductsLayout';
+import ProductList from '@/pages/user/Products/ProductList';
 
 const UserRoutes = ({ notFound }) => {
 
@@ -16,6 +22,19 @@ const UserRoutes = ({ notFound }) => {
         <Routes>
             <Route path="/" element={<UserLayout />}>
                 <Route index element={<HomePage />} />
+                <Route path="about" element={<AboutPage />}>
+                    <Route index element={<AboutStory />} />
+                    <Route path="chinh-sach-doi-tra" element={<PolicyContent />} />
+                    <Route path="chinh-sach-bao-mat" element={<PolicyContent />} />
+                    <Route path="dieu-khoan-dich-vu" element={<PolicyContent />} />
+                    <Route path="chinh-sach-thanh-toan" element={<PolicyContent />} />
+                    <Route path="chinh-sach-giao-nhan-van-chuyen" element={<PolicyContent />} />
+                </Route>
+
+                <Route path="collections" element={<ProductsLayout />}>
+                    <Route index element={<ProductList />} />
+                    <Route path=":categoryLabel" element={<ProductList />} />
+                </Route>
                 
                 <Route 
                     path="account" 
@@ -27,7 +46,7 @@ const UserRoutes = ({ notFound }) => {
                 >
                     <Route index element={<OrderHistory />} />
                     <Route path="profile" element={<ProfilePage />} /> 
-                    <Route path="addresses" element={<OrderHistory />} />
+                    <Route path="addresses" element={<AddressPage />} />
 
                 </Route>
             </Route>

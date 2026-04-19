@@ -21,7 +21,7 @@ const instance = axios.create({
 });
 
 instance.interceptors.request.use(function (config) {
-    NProgress.start();
+    // NProgress.start();
     
     const state = store?.getState();
     const token = state?.auth?.access_token;
@@ -50,12 +50,12 @@ const processQueue = (error, token = null) => {
 };
 
 instance.interceptors.response.use(function (response) {
-    NProgress.done();
+    // NProgress.done();
     
     // Trả về data (do backend custom bọc form của res.data)
     return response && response.data ? response.data : response;
 }, async function (error) {
-    NProgress.done();
+    // NProgress.done();
 
     const originalRequest = error.config;
     

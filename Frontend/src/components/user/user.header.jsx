@@ -17,9 +17,8 @@ import { useState, useEffect } from "react";
 
 const navLinks = [
     { label: "TRANG CHỦ", href: "/" },
-    { label: "GIỚI THIỆU", href: "#gioi-thieu" },
-    { label: "OUTLET", href: "#outlet" },
-    { label: "SẢN PHẨM", href: "#san-pham" },
+    { label: "GIỚI THIỆU", href: "/about" },
+    { label: "SẢN PHẨM", href: "/collections" },
     { label: "ALBUMS", href: "#albums" },
     { label: "LIÊN HỆ", href: "#lien-he" },
 ];
@@ -72,7 +71,7 @@ export const UserHeader = () => {
                         <User className={size === "sm" ? "h-4 w-4" : "h-5 w-5"} strokeWidth={1.5} />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-none p-2" style={{ fontFamily: "'Noto Serif', Georgia, serif" }}>
+                <DropdownMenuContent align="end" className="w-56 rounded-none p-2" style={{ fontFamily: "'Lora', serif" }}>
                     <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                             <p className="text-sm font-medium leading-none">{user?.fullName || "User"}</p>
@@ -122,7 +121,7 @@ export const UserHeader = () => {
         <header
             className={cn(
                 "fixed left-0 top-0 z-50 w-full bg-white transition-all duration-500",
-                scrolled ? "shadow-md" : "shadow-none"
+                scrolled ? "shadow-md" : "shadow-sm"
             )}
         >
             <div className="mx-auto w-full max-w-screen-2xl px-6 md:px-12 lg:px-20">
@@ -180,7 +179,7 @@ export const UserHeader = () => {
                                         "relative text-[11px] tracking-[0.15em] uppercase font-medium transition-colors",
                                         active ? "text-[#785254]" : "text-[#504444] hover:text-[#785254]"
                                     )}
-                                    style={{ fontFamily: "'Noto Serif', Georgia, serif" }}
+                                    style={{ fontFamily: "'Lora', serif" }}
                                 >
                                     {link.label}
                                     <span 
