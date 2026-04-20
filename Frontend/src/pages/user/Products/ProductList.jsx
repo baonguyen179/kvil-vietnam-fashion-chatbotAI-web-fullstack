@@ -54,8 +54,8 @@ const ProductList = () => {
                 // Gọi thẳng API với query string đã nối
                 const response = await productService.getAllProducts(queryString);
                 
-                console.log("Gửi request với Query String: ", queryString);
-                console.log("Kết quả API nhận được: ", response);
+                // console.log("Gửi request với Query String: ", queryString);
+                // console.log("Kết quả API nhận được: ", response);
 
                 if (response && response.EC === 0) {
                     setProducts(response.DT.products || []);

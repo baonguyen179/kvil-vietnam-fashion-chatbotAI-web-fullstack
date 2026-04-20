@@ -3,7 +3,6 @@ import { NavLink, Outlet, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import categoryService from '@/services/categoryService';
 import { ChevronDown, Filter, X } from 'lucide-react';
-import { Slider } from 'antd';
 
 const ProductsLayout = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -57,7 +56,6 @@ const ProductsLayout = () => {
 
     return (
         <div className="w-full bg-[#ffffff] min-h-screen">
-            {/* Header di động cho bộ lọc */}
             <div className="md:hidden sticky top-[64px] z-30 bg-white border-b px-4 py-3 flex justify-between items-center">
                 <button 
                     onClick={() => setIsMobileMenuOpen(true)}
@@ -140,7 +138,6 @@ const ProductsLayout = () => {
                             </div>
                         </div>
 
-                        {/* Nhóm lọc: Màu sắc */}
                         <div className="space-y-4">
                             <h3 className="text-sm font-bold uppercase tracking-widest text-[#1c1c19]" style={{ fontFamily: "'Lora', serif" }}>
                                 Màu sắc
@@ -163,45 +160,34 @@ const ProductsLayout = () => {
                             </div>
                         </div>
 
-                        {/* Nhóm lọc: Khoảng giá */}
                         <div className="space-y-4">
                             <h3 className="text-sm font-bold uppercase tracking-widest text-[#1c1c19]" style={{ fontFamily: "'Lora', serif" }}>
                                 Mức giá
                             </h3>
-                            <div className="space-y-6 pt-2">
-                                <Slider
-                                    range
-                                    min={100000}
-                                    max={5000000}
-                                    step={100000}
-                                    value={[
-                                        parseInt(searchParams.get('minPrice') || '100000'),
-                                        parseInt(searchParams.get('maxPrice') || '5000000')
-                                    ]}
-                                    onChange={(values) => {
-                                        const [min, max] = values;
-                                        const newParams = new URLSearchParams(searchParams);
-                                        newParams.set('minPrice', min.toString());
-                                        newParams.set('maxPrice', max.toString());
-                                        newParams.set('page', '1');
-                                        setSearchParams(newParams);
-                                    }}
-                                    styles={{
-                                        track: { background: '#1c1c19' },
-                                        handle: { border: '2px solid #1c1c19', background: '#fff' }
-                                    }}
-                                    tooltip={{
-                                        formatter: (value) => `${value.toLocaleString()} đ`
-                                    }}
-                                />
-                                <div className="flex justify-between items-center text-[11px] text-[#1c1c19] font-medium">
-                                    <span>{parseInt(searchParams.get('minPrice') || '100000').toLocaleString()} đ</span>
-                                    <span>{parseInt(searchParams.get('maxPrice') || '5000000').toLocaleString()} đ</span>
+                            <div className="space-y-6">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex justify-between text-[11px] text-[#888888] uppercase tracking-wider">
+                                        <span>100.000 đ</span>
+                                        <span>5.000.000 đ</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="100000" 
+                                        max="5000000" 
+                                        step="100000"
+                                        value={searchParams.get('maxPrice') || 5000000}
+                                        onChange={(e) => updateFilter('maxPrice', e.target.value)}
+                                        className="w-full h-1 bg-[#eeeeee] rounded-lg appearance-none cursor-pointer accent-[#1c1c19]"
+                                    />
                                 </div>
+                                {searchParams.get('maxPrice') && (
+                                    <p className="text-xs text-[#1c1c19]">
+                                        Dưới: <span className="font-bold">{parseInt(searchParams.get('maxPrice')).toLocaleString()} đ</span>
+                                    </p>
+                                )}
                             </div>
                         </div>
 
-                        {/* Nút xóa lọc */}
                         {searchParams.toString() !== '' && (
                             <button 
                                 onClick={() => setSearchParams({})}

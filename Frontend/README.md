@@ -1,16 +1,19 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Nâng cấp trang Tài khoản & Đồng bộ dữ liệu)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Trang Danh sách sản phẩm & Sửa lỗi Bộ lọc AQP)**
 
-- **Đồng bộ hóa dữ liệu (Real-time Sync)**:
-  - Triển khai cơ chế **Outlet Context** trong `AccountLayout`, giúp tự động làm mới cột "Tổng tin tài khoản" ngay khi người dùng cập nhật hồ sơ thành công mà không cần reload trang.
-- **Nâng cấp User Account Summary**:
-  - Chuyển đổi logic lấy dữ liệu: Gọi trực tiếp API `getUserProfile` để đảm bảo thông tin luôn chính xác và đầy đủ nhất từ Database.
-  - Hiển thị chi tiết: Họ tên, Email, Số điện thoại, Ngày sinh (định dạng chuẩn vi-VN) và Giới tính.
-  - Tích hợp bộ quay Loading (`Loader2`) giúp trải nghiệm người dùng mượt mà hơn.
-- **Sửa lỗi Hệ thống**:
-  - Khắc phục triệt để lỗi cú pháp `Declaration or statement expected` tại `AccountLayout.jsx`.
-  - Tối ưu hóa việc fetch dữ liệu ngầm (background fetching) để giữ giao diện ổn định khi cập nhật.
+- **Trang Danh sách sản phẩm (Product Listing)**:
+  - Triển khai `ProductsLayout` và `ProductList` với giao diện 2 cột cao cấp, tương thích hoàn toàn trên Mobile (Sidebar chuyển thành Drawer).
+  - **Bộ lọc thông minh**: Tích hợp lọc theo Danh mục, Kích thước, Màu sắc và **Khoảng giá (Range Slider)** bằng Ant Design.
+  - **Đồng bộ URL**: Mọi trạng thái lọc được lưu trực tiếp vào URL Search Params, hỗ trợ SEO và cho phép chia sẻ liên kết kết quả lọc.
+- **Khắc phục lỗi Bộ lọc Giá (AQP Bug Fix)**:
+  - Chuyển đổi cơ chế gửi tham số lọc giá sang **Query String thủ công** để đảm bảo các toán tử `>=` và `<=` được gửi lên Backend chính xác tuyệt đối, không bị mã hóa sai định dạng.
+  - Cập nhật `productService.js` hỗ trợ nhận chuỗi truy vấn thô để tối ưu hóa việc giao tiếp với thư viện AQP (Adonis Query Parser) ở phía máy chủ.
+- **Nội dung Chính sách & Điều khoản**:
+  - Hoàn thiện 100% nội dung các trang: Chính sách đổi trả, Bảo mật, Điều khoản dịch vụ, Thanh toán và Giao nhận.
+- **Cải thiện điều hướng**:
+  - Kết nối menu "SẢN PHẨM" trên Header trực tiếp vào trang `/collections`.
 
 ---
+
 
 **THÔNG BÁO BẢN CẬP NHẬT TRƯỚC (Frontend - Bộ sưu tập Động, Nâng cấp Header & Sửa lỗi khởi tạo)**
 

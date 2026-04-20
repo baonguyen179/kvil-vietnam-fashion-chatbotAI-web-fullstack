@@ -83,7 +83,7 @@ export const UserHeader = () => {
                         <User className="mr-2 h-4 w-4" />
                         <span>Thông tin tài khoản</span>
                     </DropdownMenuItem>
-                    {user?.role === "ADMIN" && (
+                    {["SUPER_ADMIN", "SALES", "ACCOUNTANT"].includes(user?.role) && (
                         <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
                             <LayoutDashboard className="mr-2 h-4 w-4" />
                             <span>Trang quản trị viên</span>
