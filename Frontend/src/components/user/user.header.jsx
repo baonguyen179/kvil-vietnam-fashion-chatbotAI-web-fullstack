@@ -140,7 +140,7 @@ export const UserHeader = () => {
                     <div className="flex-1" />
 
                     <Link to="/" className="shrink-0 transition-opacity hover:opacity-80">
-                        <img src={logo} alt="KOISAN Logo" className="h-10 w-auto object-contain" />
+                        <img src="https://res.cloudinary.com/dnj77wstm/image/upload/v1776768974/logo_ozmocg.png" alt="KOISAN Logo" className="h-10 w-auto object-contain" />
                     </Link>
 
                     <div className="flex flex-1 items-center justify-end gap-5">

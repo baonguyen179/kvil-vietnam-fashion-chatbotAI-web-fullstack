@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import bannerKoisan from "@/assets/banner_koisan.png";
-import bannerKoisan2 from "@/assets/banner_koisan_2.jpg";
 
 const Hero = () => {
     const [isFirstImage, setIsFirstImage] = useState(true);
@@ -12,11 +10,11 @@ const Hero = () => {
         >
             <div 
                 className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ${isFirstImage ? "opacity-100" : "opacity-0"}`}
-                style={{ backgroundImage: `url(${bannerKoisan})` }}
+                style={{ backgroundImage: `url(https://res.cloudinary.com/dnj77wstm/image/upload/v1776768822/banner_koisan_wzmv3r.png)` }}
             />
             <div 
                 className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ${!isFirstImage ? "opacity-100" : "opacity-0"}`}
-                style={{ backgroundImage: `url(${bannerKoisan2})` }}
+                style={{ backgroundImage: `url(https://res.cloudinary.com/dnj77wstm/image/upload/v1776768926/banner_koisan_2_ink3ii.jpg)` }}
             />
 
             <div className="absolute inset-0 bg-black/10 pointer-events-none group-hover:bg-black/5 transition-colors duration-500" />
