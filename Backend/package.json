@@ -1,0 +1,47 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "API Server for E-commerce Fashion & AI Chatbot",
+  "keywords": [
+    "nodejs",
+    "react",
+    "api",
+    "jwt"
+  ],
+  "license": "ISC",
+  "author": "BaoNguyen",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "test": "jest --detectOpenHandles",
+    "dev": "nodemon ./src/server.js",
+    "start": "node ./src/server.js"
+  },
+  "dependencies": {
+    "@google/genai": "1.44.0",
+    "api-query-params": "6.1.0",
+    "bcryptjs": "3.0.3",
+    "cloudinary": "1.41.3",
+    "cookie-parser": "1.4.6",
+    "dotenv": "17.2.3",
+    "express": "5.2.1",
+    "joi": "18.0.2",
+    "jsonwebtoken": "9.0.3",
+    "morgan": "1.10.1",
+    "multer": "2.1.1",
+    "multer-storage-cloudinary": "4.0.0",
+    "mysql2": "3.16.0",
+    "nodemailer": "8.0.3",
+    "openai": "6.32.0",
+    "redis": "5.11.0",
+    "sequelize": "6.13.0",
+    "sequelize-cli": "6.6.5",
+    "slugify": "1.6.6",
+    "vnpay": "^2.5.0"
+  },
+  "devDependencies": {
+    "jest": "30.3.0",
+    "nodemon": "3.1.11",
+    "supertest": "7.2.2"
+  }
+}
