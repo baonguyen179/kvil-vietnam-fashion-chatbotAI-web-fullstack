@@ -3,7 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
 import { Eye, EyeOff, Mail, Lock, KeyRound } from "lucide-react";
-import logo from "@/assets/logo.png";
 
 
 import { Button } from "@/components/ui/button";
@@ -92,7 +91,7 @@ const ForgotPasswordPage = () => {
       <Card className="w-[450px] shadow-lg">
         <CardHeader className="space-y-2 flex flex-col items-center">
           <Link to="/" className="mb-2">
-            <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+            <img src="https://res.cloudinary.com/dnj77wstm/image/upload/v1776768974/logo_ozmocg.png" alt="Logo" className="h-10 w-auto object-contain" />
           </Link>
           <CardTitle className="text-2xl text-center font-bold">Quên mật khẩu</CardTitle>
 

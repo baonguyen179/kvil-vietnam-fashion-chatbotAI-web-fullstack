@@ -2,7 +2,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ShoppingBag, User, Menu, X, Search, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
 import { useDispatch, useSelector } from "react-redux";
 import { performLogout } from "@/redux/slices/authSlice";
 import {
@@ -175,7 +174,7 @@ export const UserHeader = () => {
                         )}
                     >
                         <Link to="/" className="block">
-                            <img src={logo} alt="Logo" className="h-6 w-auto object-contain" />
+                            <img src="https://res.cloudinary.com/dnj77wstm/image/upload/v1776768974/logo_ozmocg.png" alt="Logo" className="h-6 w-auto object-contain" />
                         </Link>
                     </div>
 
