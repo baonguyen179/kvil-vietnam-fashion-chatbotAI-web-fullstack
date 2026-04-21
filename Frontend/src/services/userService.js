@@ -13,7 +13,15 @@ const userService = {
         });
     },
     updateUserRole: async (userId, newRole) => {
-        return await axios.patch(`/api/v1/admin/users/${userId}/role`, { role: newRole });
+        // Gửi mảng roles để tương thích với hạ tầng multi-role mới
+        return await axios.patch(`/api/v1/admin/users/${userId}/role`, { 
+            roles: [newRole],
+            permissions: [] 
+        });
+    },
+
+    createAdminUser: async (userData) => {
+        return await axios.post("/api/v1/admin/users", userData);
     },
 
     // [ORDERS] - USER ORDER MANAGEMENT

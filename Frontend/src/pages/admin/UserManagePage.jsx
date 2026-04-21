@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select, Space, Tag, message, Popconfirm, Card, Typography } from 'antd';
-import { SearchOutlined, CrownOutlined } from '@ant-design/icons';
+import { Table, Input, Button, Select, Space, Tag, message as antdMessage, Popconfirm, Card, Typography, Modal, Form, App } from 'antd';
+import { SearchOutlined, CrownOutlined, UserAddOutlined } from '@ant-design/icons';
 import userService from '@/services/userService';
 import { useSelector } from 'react-redux';
 
 const { Option } = Select;
 const { Title } = Typography;
 
+const ROLE_CONFIG = {
+    'SUPER_ADMIN': { color: 'gold', label: 'Super Admin' },
+    'SALES': { color: 'green', label: 'Sales' },
+    'ACCOUNTANT': { color: 'cyan', label: 'Accountant' },
+    'CUSTOMER': { color: 'blue', label: 'Customer' },
+};
+
 const UserManagePage = () => {
+    const { message } = App.useApp();
     const currentUser = useSelector(state => state.auth.user);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -20,11 +28,15 @@ const UserManagePage = () => {
         search: '',
         role: undefined,
     });
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [form] = Form.useForm();
+    const [createLoading, setCreateLoading] = useState(false);
 
     const fetchUsers = async (page = 1, limit = 10, search = '', role = '') => {
         setLoading(true);
         try {
             const res = await userService.getAdminUsers({ page, limit, search, role });
+            // console.log("res getAdminUsers: ", res);
             if (res && res.EC === 0) {
                 setUsers(res.DT.users);
                 setPagination({
@@ -75,6 +87,25 @@ const UserManagePage = () => {
         fetchUsers(1, pagination.pageSize, filters.search, value); // Reset to page 1
     };
 
+    const handleCreateUser = async (values) => {
+        setCreateLoading(true);
+        try {
+            const res = await userService.createAdminUser(values);
+            if (res && res.EC === 0) {
+                message.success(res.EM || "Tạo người dùng thành công!");
+                setIsModalOpen(false);
+                form.resetFields();
+                fetchUsers(1, pagination.pageSize, filters.search, filters.role);
+            } else {
+                message.error(res.EM || "Tạo người dùng thất bại!");
+            }
+        } catch (error) {
+            message.error("Lỗi khi kết nối đến máy chủ");
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
     const columns = [
         {
             title: 'STT',
@@ -102,8 +133,8 @@ const UserManagePage = () => {
             dataIndex: 'role',
             key: 'role',
             render: (role) => {
-                let color = role === 'ADMIN' ? 'gold' : 'blue';
-                return <Tag color={color}>{role}</Tag>;
+                const config = ROLE_CONFIG[role] || { color: 'blue', label: role };
+                return <Tag color={config.color} className="font-medium uppercase">{config.label}</Tag>;
             }
         },
         {
@@ -111,44 +142,23 @@ const UserManagePage = () => {
             key: 'action',
             render: (_, record) => {
                 const isSelf = currentUser?.id === record.id;
+                
                 return (
-                    <Space size="middle">
-                        {record.role !== 'ADMIN' ? (
-                            <Popconfirm
-                                title="Cấp quyền Admin"
-                                description={`Bạn có chắc muốn cấp quyền ADMIN cho ${record.fullName}?`}
-                                onConfirm={() => handleUpdateRole(record.id, 'ADMIN')}
-                                okText="Đồng ý"
-                                cancelText="Hủy"
-                            >
-                                <Button 
-                                    size="small" 
-                                    icon={<CrownOutlined />} 
-                                    className="text-amber-600 border-amber-600 hover:bg-amber-500! hover:text-white! hover:border-amber-500! hover:scale-110! transition-all duration-300 shadow-sm"
-                                >
-                                    Cấp quyền
-                                </Button>
-                            </Popconfirm>
-                        ) : (
-                            <Popconfirm
-                                title="Hủy quyền Admin"
-                                description={`Bạn có chắc muốn giáng cấp ${record.fullName} xuống USER?`}
-                                onConfirm={() => handleUpdateRole(record.id, 'USER')}
-                                okText="Đồng ý"
-                                cancelText="Hủy"
-                                disabled={isSelf} // Khóa popup nếu tự hủy bản thân
-                            >
-                                <Button 
-                                    danger 
-                                    size="small" 
-                                    disabled={isSelf}
-                                    className={!isSelf ? "hover:bg-red-500! hover:text-white! hover:scale-110! transition-all duration-300 shadow-sm" : ""}
-                                >
-                                    Hủy quyền
-                                </Button>
-                            </Popconfirm>
-                        )}
-                    </Space>
+                    <Select
+                        size="small"
+                        value={record.role}
+                        className="w-36"
+                        disabled={isSelf}
+                        onChange={(newRole) => {
+                            handleUpdateRole(record.id, newRole);
+                        }}
+                    >
+                        {Object.entries(ROLE_CONFIG).map(([key, config]) => (
+                            <Option key={key} value={key}>
+                                {config.label}
+                            </Option>
+                        ))}
+                    </Select>
                 );
             },
         },
@@ -175,14 +185,72 @@ const UserManagePage = () => {
                         placeholder="Lọc theo vai trò"
                         allowClear
                         size="large"
-                        className="w-[150px]"
+                        className="w-[180px]"
                         onChange={handleRoleFilter}
                     >
-                        <Option value="ADMIN">Admin</Option>
-                        <Option value="USER">User</Option>
+                        {Object.entries(ROLE_CONFIG).map(([key, config]) => (
+                            <Option key={key} value={key}>{config.label}</Option>
+                        ))}
                     </Select>
+                    <Button 
+                        type="primary" 
+                        size="large" 
+                        icon={<UserAddOutlined />}
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-500! shadow-sm"
+                    >
+                        Thêm người dùng
+                    </Button>
                 </Space>
             </div>
+
+            <Modal
+                title={<Title level={4}>Thêm người dùng mới</Title>}
+                open={isModalOpen}
+                onCancel={() => {
+                    setIsModalOpen(false);
+                    form.resetFields();
+                }}
+                onOk={() => form.submit()}
+                confirmLoading={createLoading}
+                okText="Tạo tài khoản"
+                cancelText="Hủy"
+                destroyOnHidden
+                centered
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleCreateUser}
+                    className="mt-4"
+                >
+                    <Form.Item
+                        name="loginValue"
+                        label="Email hoặc Số điện thoại"
+                        rules={[{ required: true, message: 'Vui lòng nhập Email hoặc Số điện thoại!' }]}
+                    >
+                        <Input placeholder="name@example.com hoặc 0123456789" size="large" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="password"
+                        label="Mật khẩu"
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập mật khẩu!' },
+                            { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' }
+                        ]}
+                    >
+                        <Input.Password placeholder="Tối thiểu 6 ký tự" size="large" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="fullName"
+                        label="Họ tên"
+                    >
+                        <Input placeholder="VD: Nguyễn Văn A" size="large" />
+                    </Form.Item>
+                </Form>
+            </Modal>
 
             <Table
                 columns={columns}

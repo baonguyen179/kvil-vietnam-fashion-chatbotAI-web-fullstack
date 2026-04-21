@@ -68,7 +68,7 @@ const AdminHeader = (props) => {
                                 {user?.fullName || user?.email || 'Admin User'}
                             </span>
                             <span style={{ fontSize: 12, color: 'gray', marginLeft: 4 }}>
-                                ({user?.role || 'Guest'})
+                                ({user?.roles?.join(', ') || user?.role || 'Guest'})
                             </span>
                             <DownOutlined />
                         </Space>

@@ -25,6 +25,50 @@ export const cartSlice = createSlice({
       state.isOpen = action.payload !== undefined ? action.payload : !state.isOpen;
     },
 
+    // --- LOCAL CART REDUCERS FOR GUEST USERS ---
+    
+    addToCartLocal: (state, action) => {
+      // payload là một item có cấu trúc { variant: { ... }, quantity: number }
+      const newItem = action.payload;
+      const existingItem = state.cartItems.find(item => item.variant.id === newItem.variant.id);
+      
+      if (existingItem) {
+        existingItem.quantity += newItem.quantity;
+      } else {
+        // Tạo ID giả cho item (vì chưa có ID từ DB)
+        const tempId = Date.now();
+        state.cartItems.push({ ...newItem, id: tempId });
+      }
+      
+      // Tính lại tổng tiền
+      state.totalPrice = state.cartItems.reduce((total, item) => {
+        return total + (item.variant.price * item.quantity);
+      }, 0);
+    },
+
+    removeFromCartLocal: (state, action) => {
+      // payload là item.id
+      state.cartItems = state.cartItems.filter(item => item.id !== action.payload);
+      
+      // Tính lại tổng tiền
+      state.totalPrice = state.cartItems.reduce((total, item) => {
+        return total + (item.variant.price * item.quantity);
+      }, 0);
+    },
+
+    updateQuantityLocal: (state, action) => {
+      // payload là { id, quantity }
+      const item = state.cartItems.find(i => i.id === action.payload.id);
+      if (item) {
+        item.quantity = action.payload.quantity;
+      }
+      
+      // Tính lại tổng tiền
+      state.totalPrice = state.cartItems.reduce((total, item) => {
+        return total + (item.variant.price * item.quantity);
+      }, 0);
+    },
+
     clearCart: (state) => {
       state.cartId = null;
       state.cartItems = [];
@@ -34,6 +78,13 @@ export const cartSlice = createSlice({
   },
 })
 
-export const { setCartData, toggleCartDrawer, clearCart } = cartSlice.actions
+export const { 
+  setCartData, 
+  toggleCartDrawer, 
+  clearCart,
+  addToCartLocal,
+  removeFromCartLocal,
+  updateQuantityLocal
+} = cartSlice.actions
 
 export default cartSlice.reducer

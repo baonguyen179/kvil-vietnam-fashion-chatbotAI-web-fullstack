@@ -14,6 +14,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
+import CartSheet from "./cart.sheet";
+import { toggleCartDrawer } from "@/redux/slices/cartSlice";
 
 const navLinks = [
     { label: "TRANG CHỦ", href: "/" },
@@ -32,6 +34,8 @@ export const UserHeader = () => {
     const [activeLink, setActiveLink] = useState(navLinks[0].label);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const { cartItems } = useSelector((state) => state.cart);
+    const cartCount = cartItems?.length || 0;
 
     const handleLogout = async () => {
         await dispatch(performLogout());
@@ -118,12 +122,13 @@ export const UserHeader = () => {
     const isLinkActive = (label) => activeLink === label;
 
     return (
-        <header
-            className={cn(
-                "fixed left-0 top-0 z-50 w-full bg-white transition-all duration-500",
-                scrolled ? "shadow-md" : "shadow-sm"
-            )}
-        >
+        <>
+            <header
+                className={cn(
+                    "fixed left-0 top-0 z-50 w-full bg-white transition-all duration-500",
+                    scrolled ? "shadow-md" : "shadow-sm"
+                )}
+            >
             <div className="mx-auto w-full max-w-screen-2xl px-6 md:px-12 lg:px-20">
                 
                 <div 
@@ -142,9 +147,16 @@ export const UserHeader = () => {
                         <Button variant="ghost" size="icon" className="text-[#504444] hover:bg-[#f3ede6]">
                             <Search className="h-5 w-5" strokeWidth={1.5} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="relative text-[#504444] hover:bg-[#f3ede6]">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="relative text-[#504444] hover:bg-[#f3ede6]"
+                            onClick={() => dispatch(toggleCartDrawer(true))}
+                        >
                             <ShoppingBag className="h-5 w-5" strokeWidth={1.5} />
-                            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#785254] text-[9px] font-semibold text-white">0</span>
+                            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#785254] text-[9px] font-semibold text-white">
+                                {cartCount}
+                            </span>
                         </Button>
                         <UserMenu />
                     </div>
@@ -199,8 +211,16 @@ export const UserHeader = () => {
                             scrolled ? "w-auto opacity-100 ml-8" : "w-0 opacity-0"
                         )}
                     >
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-[#504444]">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-[#504444] relative"
+                            onClick={() => dispatch(toggleCartDrawer(true))}
+                        >
                             <ShoppingBag className="h-4 w-4" />
+                            <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#785254] text-[8px] font-semibold text-white">
+                                {cartCount}
+                            </span>
                         </Button>
                         <UserMenu size="sm" />
                     </div>
@@ -241,7 +261,9 @@ export const UserHeader = () => {
                     ))}
                 </nav>
             </div>
-        </header>
+            </header>
+            <CartSheet />
+        </>
     );
 };
 

@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
 import { setLoginData } from "@/redux/slices/authSlice";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 
@@ -127,9 +127,15 @@ const LoginPage = () => {
                 </p>
               )}
 
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline inline-block mt-1">
+              <div className="flex items-center justify-between mt-1">
+                <Link to="/" className="text-sm text-gray-500 hover:text-black flex items-center gap-1 transition-colors">
+                  <ArrowLeft size={16} />
+                  Quay về trang chủ
+                </Link>
+                <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
                   Quên mật khẩu?
                 </Link>
+              </div>
             </div>
 
             <Button 

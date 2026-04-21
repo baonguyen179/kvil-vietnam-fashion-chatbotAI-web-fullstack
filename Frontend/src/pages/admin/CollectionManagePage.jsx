@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Table, Input, Button, Space, Tag, message, Card, Typography,
-    Tooltip, Badge, Image
+    Table, Input, Button, Space, Tag, message as antdMessage, Card, Typography,
+    Tooltip, Badge, Image, App
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, SearchOutlined,
@@ -14,6 +14,7 @@ import AdminCollectionDrawer from '@/components/admin/admin.collection.drawer';
 const { Title, Text } = Typography;
 
 const CollectionManagePage = () => {
+    const { message } = App.useApp();
     const [collections, setCollections] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');

@@ -86,7 +86,16 @@ instance.interceptors.response.use(function (response) {
             if (data && data.EC === 0 && data.DT && data.DT.access_token) {
                 const newAccessToken = data.DT.access_token;
                 
+                // Cập nhật Access Token mới
                 store?.dispatch(setAccessToken(newAccessToken));
+                
+                // Nếu có thông tin User mới (kèm Roles/Permissions cập nhật), đồng bộ vào Redux
+                if (data.DT.user) {
+                    store?.dispatch({ 
+                        type: 'auth/updateUser', 
+                        payload: data.DT.user 
+                    });
+                }
                 
                 // Đổi config request đã bị lỗi để dùng token mới
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

@@ -159,7 +159,7 @@ const ChatbotSessionDetailDrawer = ({ open, sessionId, onClose }) => {
                 </div>
             }
             closeIcon={<CloseOutlined />}
-            width={560}
+            size="large"
             destroyOnClose
             styles={{ body: { padding: '12px 16px', overflowY: 'auto' } }}
             footer={

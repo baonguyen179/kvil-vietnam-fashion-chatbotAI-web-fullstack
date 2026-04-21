@@ -7,17 +7,17 @@ import UserRoutes from './UserRoutes';
 import AdminRoutes from './AdminRoutes';
 
 import PrivateRoute from './PrivateRoute';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const AppRoutes = () => {
     return (
-        // fallback = {< LoadingSpinner />}
-        <Suspense fallback="...is loading">
+        <Suspense fallback={<LoadingSpinner />}>
             <Routes>
                 <Route path="/*" element={<UserRoutes notFound={<NotFound />} />} />
                 <Route 
                     path="/admin/*" 
                     element={
-                        <PrivateRoute allowedRoles={['ADMIN']}>
+                        <PrivateRoute allowedRoles={['SUPER_ADMIN','SALES','ACCOUNTANT']}>
                             <AdminRoutes notFound={<NotFound />} />
                         </PrivateRoute>
                     } 

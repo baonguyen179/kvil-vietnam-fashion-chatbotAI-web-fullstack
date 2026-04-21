@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Card, Table, Typography, Button, Space, Tag, Badge,
-    Tooltip, Input, Select, DatePicker, message, Popconfirm, Flex
+    Tooltip, Input, Select, DatePicker, message as antdMessage, Popconfirm, Flex, App
 } from 'antd';
 import {
     ReloadOutlined, FilterOutlined, SearchOutlined,
@@ -41,6 +41,7 @@ const formatDuration = (startedAt, lastActivity) => {
 };
 
 const ChatbotManagePage = () => {
+    const { message } = App.useApp();
     const [stats, setStats]           = useState(null);
     const [statsLoading, setStatsLoading] = useState(false);
 

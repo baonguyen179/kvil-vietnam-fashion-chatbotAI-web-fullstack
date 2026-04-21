@@ -10,6 +10,10 @@ import './utils/i18n'
 
 
 
+import { injectStore } from "./utils/axiosCustomize";
+
+injectStore(store);
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>

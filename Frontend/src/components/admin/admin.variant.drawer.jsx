@@ -103,7 +103,7 @@ const AdminVariantDrawer = ({
         <Drawer
             title={`Quản lý Biến thể: ${manageVariantProduct?.name || ''}`}
             placement="right"
-            width={700}
+            size="large"
             onClose={handleClose}
             open={isDrawerVisible}
         >

@@ -15,7 +15,7 @@ const AdminLayoutContent = () => {
                     <AdminSidebar collapseMenu={collapseMenu} setCollapseMenu={setCollapseMenu} />
                 </div>
                 <div className='right-side' style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
-                    <AdminHeader user={{name: "admin", role: "admin"}} collapseMenu={collapseMenu} setCollapseMenu={setCollapseMenu} />
+                    <AdminHeader collapseMenu={collapseMenu} setCollapseMenu={setCollapseMenu} />
                     <AdminContent>
                         <Outlet />
                     </AdminContent>

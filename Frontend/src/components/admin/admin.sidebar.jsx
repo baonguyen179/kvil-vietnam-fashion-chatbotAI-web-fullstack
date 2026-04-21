@@ -1,3 +1,4 @@
+import React from "react";
 import Layout from "antd/es/layout";
 import Menu from "antd/es/menu";
 import { 
@@ -7,31 +8,47 @@ import {
     ShoppingCartOutlined, 
     TagOutlined,
     RobotOutlined,
+    HistoryOutlined,
+    TransactionOutlined,
+    SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
-const AdminSideBar = ({collapseMenu, setCollapseMenu}) => {
+const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
     const { Sider } = Layout;
 
-const items = [
-    {
-        key: 'grp',
-        type: 'group',
-        children: [
+    const user = useSelector(state => state.auth.user);
+    const { roles = [], permissions = [] } = user || {};
+    const isSuperAdmin = roles.includes('SUPER_ADMIN');
+
+    // Sử dụng useMemo để tối ưu hiệu suất, chỉ tính toán lại menu khi quyền hạn thay đổi
+    const items = React.useMemo(() => {
+        // Định nghĩa các menu items và quyền truy cập tương ứng
+        const allItems = [
             {
                 key: "dashboard",
                 label: <Link to={"/admin"}>Dashboard</Link>,
                 icon: <AppstoreOutlined />,
+                permission: 'dashboard.read'
             },
             {
                 key: "users",
                 label: <Link to={"/admin/users"}>Manage Users</Link>,
                 icon: <TeamOutlined />,
+                permission: 'users.manage'
+            },
+            {
+                key: "roles",
+                label: <Link to={"/admin/roles"}>Roles & Permissions</Link>,
+                icon: <SafetyCertificateOutlined />,
+                permission: 'roles.manage' 
             },
             {
                 key: 'catalog',
-                label: 'Catalog', // Gom Categories, Products, Collections vào đây
+                label: 'Catalog',
                 icon: <ShoppingOutlined />,
+                permission: 'products.read',
                 children: [
                     {
                         key: 'categories',
@@ -45,26 +62,54 @@ const items = [
                         key: 'collections',
                         label: <Link to={"/admin/collections"}>Collections</Link>,
                     },
+                    {
+                        key: 'inventory',
+                        label: <Link to={"/admin/inventory"}>Inventory Logs</Link>,
+                        icon: <HistoryOutlined />,
+                    },
                 ],
             },
             {
                 key: "orders",
                 label: <Link to={"/admin/orders"}>Orders</Link>,
                 icon: <ShoppingCartOutlined />,
+                permission: 'orders.read'
             },
             {
                 key: "coupons",
                 label: <Link to={"/admin/coupons"}>Coupons</Link>,
                 icon: <TagOutlined />,
+                permission: 'coupons.manage'
+            },
+            {
+                key: "transactions",
+                label: <Link to={"/admin/transactions"}>Transactions</Link>,
+                icon: <TransactionOutlined />,
+                permission: 'payments.read'
             },
             {
                 key: "chatbot",
                 label: <Link to={"/admin/chatbot"}>Chatbot AI</Link>,
                 icon: <RobotOutlined />,
+                permission: 'chatbot.read'
             },
-        ],
-    },
-];
+        ];
+
+        // Lọc menu theo quyền hạn hoặc vai trò Super Admin
+        const filtered = allItems.filter(item => {
+            if (isSuperAdmin) return true;
+            if (item.permission && permissions.includes(item.permission)) return true;
+            return false;
+        });
+
+        return [
+            {
+                key: 'grp',
+                type: 'group',
+                children: filtered
+            }
+        ];
+    }, [isSuperAdmin, permissions]);
 
     return (
         <Sider
@@ -115,6 +160,6 @@ const items = [
             </div>
         </Sider>
     )
-}
+});
 
 export default AdminSideBar;

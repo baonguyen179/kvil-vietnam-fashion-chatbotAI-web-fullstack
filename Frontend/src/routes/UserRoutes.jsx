@@ -15,6 +15,10 @@ import AboutStory from '@/pages/user/About/AboutStory';
 import PolicyContent from '@/pages/user/About/PolicyContent';
 import ProductsLayout from '@/pages/user/Products/ProductsLayout';
 import ProductList from '@/pages/user/Products/ProductList';
+import ProductDetailPage from '@/pages/user/Products/ProductDetailPage';
+import { lazy } from 'react';
+
+const CartPage = lazy(() => import('@/pages/user/Cart/CartPage'));
 
 const UserRoutes = ({ notFound }) => {
 
@@ -35,6 +39,9 @@ const UserRoutes = ({ notFound }) => {
                     <Route index element={<ProductList />} />
                     <Route path=":categoryLabel" element={<ProductList />} />
                 </Route>
+
+                <Route path="products/:id/:slug?" element={<ProductDetailPage />} />
+                <Route path="cart" element={<CartPage />} />
                 
                 <Route 
                     path="account" 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Space, Modal, Form, message, Popconfirm, Card, Typography } from 'antd';
+import { Table, Input, Button, Space, Modal, Form, message as antdMessage, Popconfirm, Card, Typography, App } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import categoryService from '@/services/categoryService';
 
 const { Title } = Typography;
 
 const CategoryManagePage = () => {
+    const { message } = App.useApp();
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
@@ -221,6 +222,7 @@ const CategoryManagePage = () => {
                 confirmLoading={submitLoading}
                 okText="Lưu"
                 cancelText="Hủy"
+                destroyOnHidden
                 centered
             >
                 <Form

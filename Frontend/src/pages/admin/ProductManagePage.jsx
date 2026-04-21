@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Input, Button, Select, Space, message, Popconfirm, Card, Typography, Tooltip, Avatar, Tag } from 'antd';
+import { Table, Input, Button, Select, Space, Popconfirm, Card, Typography, Tooltip, Avatar, Tag, App } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, PictureOutlined, TagsOutlined, PictureFilled } from '@ant-design/icons';
 import productService from '@/services/productService';
 import categoryService from '@/services/categoryService';
@@ -11,6 +11,7 @@ import AdminImageDrawer from '@/components/admin/admin.image.drawer';
 const { Title, Text } = Typography;
 
 const ProductManagePage = () => {
+    const { message } = App.useApp();
     // ---- STATE: Data ----
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);

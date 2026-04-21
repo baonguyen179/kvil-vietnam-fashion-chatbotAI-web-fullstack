@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Table, Button, Space, Tag, message, Card, Typography,
-    Tooltip, Badge, Select, Popconfirm, Input, Progress, Flex
+    Table, Button, Space, Tag, message as antdMessage, Card, Typography,
+    Tooltip, Badge, Select, Popconfirm, Input, Progress, Flex, App
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined,
@@ -24,6 +24,7 @@ const isExpired = (endDate) =>
     endDate ? new Date(endDate) < new Date() : false;
 
 const CouponManagePage = () => {
+    const { message } = App.useApp();
     const [coupons, setCoupons]   = useState([]);
     const [loading, setLoading]   = useState(false);
     const [deletingId, setDeletingId] = useState(null);
@@ -123,12 +124,12 @@ const CouponManagePage = () => {
             dataIndex: 'code',
             key: 'code',
             render: (code, record) => (
-                <Space direction="vertical" size={2}>
+                <Flex vertical gap={2}>
                     <Text className="font-mono font-bold text-blue-700 text-sm">{code}</Text>
                     {isExpired(record.endDate) && record.isActive && (
                         <Tag color="red" className="text-xs">Hết hạn</Tag>
                     )}
-                </Space>
+                </Flex>
             ),
         },
         {

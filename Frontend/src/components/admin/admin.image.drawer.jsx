@@ -137,7 +137,7 @@ const AdminImageDrawer = ({
         <Drawer
             title={`Bộ Sưu Tập: ${manageImageProduct?.name || ''}`}
             placement="right"
-            width={600}
+            size="large"
             onClose={handleClose}
             open={isDrawerVisible}
         >

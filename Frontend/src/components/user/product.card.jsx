@@ -1,4 +1,7 @@
 import { cn } from "@/lib/utils";
+import { Link } from 'react-router-dom';
+import { encodeId } from '@/utils/idHasher';
+import { slugify } from '@/utils/slugify';
 
 const serif = { fontFamily: "'Noto Serif', Georgia, serif" };
 const sans = { fontFamily: "'Manrope', Helvetica, sans-serif" };
@@ -20,7 +23,10 @@ const ProductCard = ({ product }) => {
     const discountedPrice = basePrice * (1 - discountPercent / 100);
 
     return (
-        <div className="flex flex-col bg-white group cursor-pointer transition-all duration-300 hover:shadow-lg rounded-sm overflow-hidden">
+        <Link 
+            to={`/products/${encodeId(product?.id)}/${slugify(product?.name)}`}
+            className="flex flex-col bg-white group cursor-pointer transition-all duration-300 hover:shadow-lg rounded-sm overflow-hidden no-underline"
+        >
             <div className="relative aspect-2/3 w-full bg-[#f6f6f6] overflow-hidden">
                 {discountPercent > 0 && (
                     <div className="absolute top-2 left-2 z-20 bg-white px-2 py-1 shadow-sm">
@@ -67,7 +73,7 @@ const ProductCard = ({ product }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </Link>
     );
 };
 

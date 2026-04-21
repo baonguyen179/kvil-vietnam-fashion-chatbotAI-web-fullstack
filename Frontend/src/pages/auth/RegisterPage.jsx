@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 
@@ -176,6 +176,12 @@ const RegisterPage = () => {
               {confirmPassword && password !== confirmPassword && (
                 <p className="text-sm text-red-500">Mật khẩu xác nhận không khớp!</p>
               )}
+            </div>
+            <div className="flex justify-start py-1">
+              <Link to="/" className="text-sm text-gray-500 hover:text-black flex items-center gap-1 transition-colors">
+                <ArrowLeft size={16} />
+                Quay về trang chủ
+              </Link>
             </div>
 
             <Button 

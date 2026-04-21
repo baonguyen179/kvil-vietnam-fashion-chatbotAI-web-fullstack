@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Table, Button, Space, Tag, message, Card, Typography,
-    Tooltip, Badge, Select, Popconfirm
+    Table, Button, Space, Tag, message as antdMessage, Card, Typography,
+    Tooltip, Badge, Select, Popconfirm, Flex, App
 } from 'antd';
 import {
     EyeOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -30,6 +30,7 @@ const formatDate = (val) =>
     val ? new Date(val).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
 const OrderManagePage = () => {
+    const { message } = App.useApp();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [updatingId, setUpdatingId] = useState(null); 
@@ -177,7 +178,7 @@ const OrderManagePage = () => {
             key: 'payment',
             width: 160,
             render: (_, record) => (
-                <Space direction="vertical" size={2}>
+                <Flex vertical gap={2}>
                     <Tag color={record.paymentMethod === 'COD' ? 'default' : 'geekblue'} className="text-xs">
                         {PAYMENT_METHOD_LABELS[record.paymentMethod] || record.paymentMethod}
                     </Tag>
@@ -189,7 +190,7 @@ const OrderManagePage = () => {
                             </span>
                         }
                     />
-                </Space>
+                </Flex>
             ),
         },
         {
