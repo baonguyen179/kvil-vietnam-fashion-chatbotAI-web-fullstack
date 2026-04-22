@@ -20,9 +20,11 @@ const UserFooter = () => {
                     <div className="flex flex-col gap-4">
                         <h3 className="text-[#1c1c19] text-base font-bold uppercase tracking-wider">Liên kết</h3>
                         <ul className="flex flex-col gap-2 text-sm">
+                            <li><Link to="/tra-cuu-don-hang" className="font-bold text-[#1c1c19] hover:text-blue-600 transition-colors tracking-widest">Tra cứu đơn hàng</Link></li>
                             <li><Link to="/search" className="hover:text-[#785254] transition-colors">Tìm kiếm</Link></li>
                             <li><Link to="/about" className="hover:text-[#785254] transition-colors">Giới thiệu</Link></li>
                             <li><Link to="/returns" className="hover:text-[#785254] transition-colors">Chính sách đổi trả</Link></li>
+
                             <li><Link to="/privacy" className="hover:text-[#785254] transition-colors">Chính sách bảo mật</Link></li>
                             <li><Link to="/terms" className="hover:text-[#785254] transition-colors">Điều khoản dịch vụ</Link></li>
                             <li><Link to="/payment" className="hover:text-[#785254] transition-colors">Chính sách thanh toán</Link></li>

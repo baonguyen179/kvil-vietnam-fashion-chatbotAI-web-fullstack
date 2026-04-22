@@ -125,8 +125,12 @@ const useCheckout = () => {
                 const orderId = res.DT.id;
                 // console.log(">>> [ORDER CREATED SUCCESS] ID:", orderId);
                 
-                // [SECURITY] Save last order ID for guest verification on success page
+                // [SECURITY] Save last order ID and phone for guest verification on success page
                 sessionStorage.setItem('KOISAN_LAST_ORDER_ID', orderId.toString());
+                if (isGuest) {
+                    sessionStorage.setItem('KOISAN_LAST_ORDER_PHONE', formData.phone);
+                }
+
 
                 if (formData.paymentMethod === 'VNPAY') {
                     try {

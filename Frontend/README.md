@@ -1,13 +1,20 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Tối ưu Checkout & Thanh toán VNPay)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Hệ thống Dẫn hướng & Tra cứu Đơn hàng cho Khách)**
 
-- **Tối ưu hóa quy trình Checkout (Checkout Optimization)**:
-  - Tái cấu trúc logic trang đặt hàng theo nguyên tắc **SRP (Single Responsibility)**, tách toàn bộ xử lý nghiệp vụ sang custom hook `useCheckout`.
-  - Triển khai cơ chế **Same-tab Redirection** cho thanh toán VNPay, giúp tăng tính ổn định trên di động và tránh bị trình duyệt chặn popup.
-- **Bảo mật trang kết quả (Order Success Security)**:
-  - Tích hợp xác thực quyền sở hữu đơn hàng bằng `sessionStorage` cho khách vãng lai, ngăn chặn việc truy cập trái phép bằng cách thay đổi ID đơn hàng trên URL.
-- **Xử lý phản hồi thanh toán (Payment Return Handling)**:
-  - Hoàn thiện trang `VNPayReturnPage` với khả năng xử lý **Đồng bộ trạng thái** đơn hàng ngay khi khách hàng quay lại từ cổng thanh toán (Fallback cho trường hợp IPN bị lỗi).
-  - Khắc phục triệt để lỗi hiển thị "Thanh toán thất bại" dù Database đã cập nhật (do lệch định dạng mã phản hồi `'00'` vs `0`).
+- **Tra cứu đơn hàng cho Khách vãng lai (Guest Order Tracking)**:
+  - Triển khai trang `/tra-cuu-don-hang` cho phép khách tra cứu trạng thái đơn hàng an toàn (xác thực kép ID + SĐT).
+  - Tính năng **Khôi phục Mã đơn hàng**: Hỗ trợ khách hàng nhận lại danh sách mã đơn hàng qua Email nếu vô tình quên hoặc làm mất (Giới hạn 30 ngày gần nhất).
+  - Tích hợp cơ chế **Auto-fill & Auto-search**: Tự động điền và tìm kiếm thông tin khi khách nhấn link từ Email hoặc quay lại từ trang thanh toán.
+- **Hệ thống Dẫn hướng chủ động (Proactive Guidance)**:
+  - **Email Xác nhận Tức thì**: Gửi email thông tin đơn hàng kèm link tra cứu ngay sau khi khách nhấn đặt hàng (áp dụng cho cả User và Guest), đảm bảo khách luôn có "lối thoát" quay lại trang web.
+  - **Tối ưu trang Kết quả (VNPay Return/Success)**: Cung cấp chỉ dẫn chi tiết và nút "Thanh toán lại" thông minh hướng khách về trang tra cứu thay vì báo lỗi đơn thuần.
+- **Hạ tầng hỗ trợ (Backend Integration)**:
+  - Triển khai API public an toàn: `GET /order/guest/:id` và `POST /order/guest/recover`.
+  - Mẫu Email chuyên nghiệp (`sendOrderConfirmationEmail`) với đầy đủ Logo, thông tin tài chính và link Tracking.
+
+---
+
+**THÔNG BÁO BẢN CẬP NHẬT TRƯỚC (Frontend - Tối ưu Checkout & Thanh toán VNPay)**
+
 
 ---
 

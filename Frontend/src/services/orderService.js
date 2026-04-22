@@ -75,6 +75,26 @@ const orderService = {
     },
 
     /**
+     * Tra cứu thông tin đơn hàng khách vãng lai
+     * @param {number} orderId 
+     * @param {string} phone 
+     */
+    getGuestOrderDetail: async (orderId, phone) => {
+        return await axios.get(`/api/v1/order/guest/${orderId}`, { params: { phone } });
+    },
+
+    /**
+     * Yêu cầu gửi lại danh sách mã đơn hàng cho khách vãng lai qua Email
+     * @param {string} email 
+     * @param {string} phone 
+     */
+    recoverGuestOrderIds: async (email, phone) => {
+        return await axios.post("/api/v1/order/guest/recover", { email, phone });
+    },
+
+
+
+    /**
      * Xác thực kết quả thanh toán trả về từ VNPay
      * @param {Object} queryParams 
      */

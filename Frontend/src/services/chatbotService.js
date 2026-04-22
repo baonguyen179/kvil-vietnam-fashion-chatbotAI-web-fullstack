@@ -1,60 +1,30 @@
-import axios from "@/utils/axiosCustomize";
+import axios from "../utils/axiosCustomize";
 
-const BASE = "/api/v1/admin/chatbot";
-
-const cleanParams = (params = {}) =>
-    Object.fromEntries(
-        Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
-    );
-
+/**
+ * [SENIOR SERVICE] Chatbot Service
+ * Provides methods to interact with the AI Chatbot backend.
+ */
 const chatbotService = {
     /**
-     * [GET] Thống kê tổng quan chatbot
-     * Response DT: { totalMessages, totalSessions, todayMessages,
-     *                userMessages, botMessages, botResponseRate, topSessions }
+     * Gửi tin nhắn đến Chatbot
+     * @param {string} message - Nội dung tin nhắn
+     * @returns {Promise} 
      */
-    getAdminChatStats: async () => {
-        return await axios.get(`${BASE}/stats`);
+    sendMessage: async (message) => {
+        return await axios.post("/api/v1/chatbot/message", { message });
     },
 
     /**
-     * [GET] Danh sách phiên chat (có phân trang + bộ lọc)
-     * @param {Object} params - { page, limit, search, type, startDate, endDate }
-     * Response DT: { totalItems, totalPages, currentPage, sessions[] }
+     * Lấy lịch sử hội thoại
+     * @param {number} page - Trang hiện tại
+     * @param {number} limit - Số lượng tin nhắn mỗi trang
+     * @returns {Promise}
      */
-    getAdminChatSessions: async (params = {}) => {
-        return await axios.get(`${BASE}/sessions`, { params: cleanParams(params) });
-    },
-
-    /**
-     * [GET] Chi tiết toàn bộ log của một phiên chat
-     * @param {string} sessionId
-     * @param {Object} params - { page, limit }
-     * Response DT: { sessionId, totalMessages, totalPages, currentPage, logs[] }
-     */
-    getAdminSessionDetail: async (sessionId, params = {}) => {
-        return await axios.get(`${BASE}/sessions/${encodeURIComponent(sessionId)}`, {
-            params: cleanParams(params),
+    getHistory: async (page = 1, limit = 20) => {
+        return await axios.get("/api/v1/chatbot/history", {
+            params: { page, limit }
         });
-    },
-
-    /**
-     * [DELETE] Xóa toàn bộ lịch sử chat theo sessionId
-     * @param {string} sessionId
-     * Response DT: { deletedCount, sessionId }
-     */
-    deleteSession: async (sessionId) => {
-        return await axios.delete(`${BASE}/sessions/${encodeURIComponent(sessionId)}`);
-    },
-
-    /**
-     * [DELETE] Xóa toàn bộ lịch sử chat của một user đăng nhập
-     * @param {number} userId
-     * Response DT: { deletedCount, userId }
-     */
-    deleteUserChats: async (userId) => {
-        return await axios.delete(`${BASE}/users/${userId}`);
-    },
+    }
 };
 
 export default chatbotService;

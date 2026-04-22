@@ -23,6 +23,8 @@ const CartPage = lazy(() => import('@/pages/user/Cart/CartPage'));
 const CheckoutPage = lazy(() => import('@/pages/user/Checkout/CheckoutPage'));
 const OrderSuccessPage = lazy(() => import('@/pages/user/Checkout/OrderSuccessPage'));
 const VNPayReturnPage = lazy(() => import('@/pages/user/Checkout/VNPayReturnPage'));
+const GuestTrackingPage = lazy(() => import('@/pages/user/GuestTracking/GuestTrackingPage'));
+
 
 
 
@@ -53,6 +55,7 @@ const UserRoutes = ({ notFound }) => {
                 <Route path="checkout" element={<CheckoutPage />} />
                 <Route path="order-success/:orderId" element={<OrderSuccessPage />} />
                 <Route path="order/vnpay-return" element={<VNPayReturnPage />} />
+                <Route path="tra-cuu-don-hang" element={<GuestTrackingPage />} />
 
 
 

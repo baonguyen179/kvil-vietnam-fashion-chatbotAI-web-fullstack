@@ -36,14 +36,23 @@ const OrderSuccessPage = () => {
                     if (res && res.EC === 0) {
                         setOrderData(res.DT);
                     } else {
-                        // Even if guest session is valid, if we can't fetch detail (no guest API), 
-                        // we still show the success message but with limited info.
                         setOrderData({ orderId });
                     }
                 } else {
-                    // For guests, we don't have a detail API, so we just use the ID from URL (since session matched)
-                    setOrderData({ orderId });
+                    // [GUEST] Try to fetch info using phone from session
+                    const guestPhone = sessionStorage.getItem('KOISAN_LAST_ORDER_PHONE');
+                    if (guestPhone) {
+                        const res = await orderService.getGuestOrderDetail(orderId, guestPhone);
+                        if (res && res.EC === 0) {
+                            setOrderData(res.DT);
+                        } else {
+                            setOrderData({ orderId });
+                        }
+                    } else {
+                        setOrderData({ orderId });
+                    }
                 }
+
             } catch (err) {
                 console.error("Fetch order detail error:", err);
                 setOrderData({ orderId });
@@ -105,11 +114,36 @@ const OrderSuccessPage = () => {
                     </div>
 
                     {orderData?.finalAmount && (
-                        <div className="pt-4 border-t border-[#eeeeee] flex justify-between items-center text-sm">
-                            <span className="text-gray-500">Tổng cộng:</span>
-                            <span className="font-bold text-blue-600">{orderData.finalAmount?.toLocaleString()}₫</span>
+                        <div className="pt-4 border-t border-[#eeeeee] space-y-4">
+                            <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-500 uppercase text-[10px] tracking-widest">Tổng cộng:</span>
+                                <span className="font-bold text-blue-600">{orderData.finalAmount?.toLocaleString()}₫</span>
+                            </div>
+                            
+                            {!orderData.paymentStatus && orderData.status !== 'cancelled' && (
+                                <div className="p-4 bg-orange-50 border border-orange-100 space-y-3">
+                                    <p className="text-[10px] text-orange-800 uppercase font-bold tracking-widest">Chưa hoàn tất thanh toán</p>
+                                    <Button 
+                                        onClick={async () => {
+                                            const phone = sessionStorage.getItem('KOISAN_LAST_ORDER_PHONE');
+                                            try {
+                                                const res = await orderService.getGuestVNPayUrl(orderId, phone);
+                                                if (res && res.EC === 0 && res.DT) {
+                                                    window.location.href = res.DT;
+                                                }
+                                            } catch (e) {
+                                                console.error(e);
+                                            }
+                                        }}
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-none uppercase text-[10px] font-bold tracking-widest h-10 shadow-lg shadow-blue-100"
+                                    >
+                                        Thanh toán ngay
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
+
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -122,21 +156,40 @@ const OrderSuccessPage = () => {
                         </Button>
                     ) : (
                         <Button asChild className="h-14 bg-black text-white hover:bg-zinc-800 rounded-none w-full uppercase tracking-widest text-xs font-bold">
-                            <Link to="/" className="flex items-center justify-center gap-2">
+                            <Link to="/collections" className="flex items-center justify-center gap-2">
                                 <ShoppingBag size={16} />
                                 Tiếp tục mua sắm
                             </Link>
                         </Button>
                     )}
-                    
+
+                    {!isAuthenticated && (
+                        <div className="bg-blue-50/50 p-6 rounded-none border border-blue-100 text-left space-y-3">
+                            <p className="text-[10px] font-bold text-blue-900 uppercase tracking-widest flex items-center gap-2 italic">
+                                <ShieldAlert size={14} />
+                                Ghi chú dành cho khách vãng lai
+                            </p>
+                            <p className="text-xs text-blue-700 leading-relaxed">
+                                Đơn hàng của bạn đã được ghi nhận. Bạn có thể theo dõi tiến độ giao hàng hoặc thanh toán lại bất cứ lúc nào bằng cách sử dụng tính năng <b>"Tra cứu đơn hàng"</b> trên thanh menu hoặc dưới chân trang.
+                            </p>
+                            <div className="flex flex-col gap-2 pt-2">
+                                <Button asChild variant="link" className="text-blue-600 p-0 h-auto text-[11px] justify-start uppercase font-bold tracking-tighter hover:text-blue-800">
+                                    <Link to={`/tra-cuu-don-hang?orderId=${orderId}`}>Đi tới trang tra cứu ngay</Link>
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     <Button asChild variant="outline" className="h-12 border-[#eeeeee] text-[#504444] hover:bg-gray-50 rounded-none w-full text-xs uppercase tracking-widest">
                         <Link to="/">Về trang chủ</Link>
                     </Button>
                 </div>
 
+
                 <p className="text-[10px] text-gray-400">
-                    Mọi thắc mắc vui lòng liên hệ hotline: <b>1900 xxxx</b>
+                    Mọi thắc mắc vui lòng liên hệ hotline: <b>0225.3846.118</b>
                 </p>
+
             </div>
         </div>
     );

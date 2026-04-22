@@ -51,21 +51,14 @@ const VNPayReturnPage = () => {
         verifyPayment();
     }, [searchParams]);
 
-    const handleRepay = async () => {
+    const handleRepay = () => {
         if (!orderInfo?.id) return;
         
-        try {
-            // Đối với Guest, cần số điện thoại. 
-            // Tuy nhiên ở trang này ta không có số điện thoại.
-            // Giải pháp: Backend nên trả về một phần thông tin đơn hàng nếu verify fail.
-            // Hoặc yêu cầu user vào lại trang tra cứu đơn hàng (nếu là guest).
-            
-            // Tạm thời hiển thị thông báo hướng dẫn nếu không có đủ thông tin
-            toast.info("Vui lòng sử dụng tính năng 'Tra cứu đơn hàng' để thực hiện thanh toán lại.");
-            // navigate('/order-lookup'); // Nếu có trang này
-        } catch (error) {
-            toast.error("Không thể khởi tạo lại thanh toán lúc này.");
-        }
+        // Lấy phone từ sessionStorage đã lưu lúc checkout
+        const phone = sessionStorage.getItem('KOISAN_LAST_ORDER_PHONE') || '';
+        
+        // Chuyển hướng về trang tra cứu với các params để auto-fill
+        navigate(`/tra-cuu-don-hang?orderId=${orderInfo.id}&phone=${phone}`);
     };
 
     if (status === 'verifying') {
@@ -91,7 +84,7 @@ const VNPayReturnPage = () => {
                     </div>
                     
                     <h1 className="text-3xl font-light text-[#1c1c19] uppercase tracking-wider" style={{ fontFamily: "'Lora', serif" }}>
-                        {status === 'success' ? 'Thanh toán thành công!' : 'Thành toán thất bại'}
+                        {status === 'success' ? 'Thanh toán thành công!' : 'Thanh toán thất bại'}
                     </h1>
                     
                     <p className="text-gray-500 text-sm">
@@ -126,6 +119,16 @@ const VNPayReturnPage = () => {
                     </div>
                 )}
 
+                {status !== 'success' && (
+                    <div className="bg-blue-50/50 p-5 rounded-none border border-blue-100 text-left">
+                        <p className="text-[11px] font-bold text-blue-800 uppercase tracking-widest mb-2 italic">Hướng dẫn tra cứu:</p>
+                        <p className="text-xs text-blue-700 leading-relaxed">
+                            Đừng lo lắng! Đơn hàng của bạn đã được hệ thống ghi nhận. 
+                            Bạn có thể truy cập mục <b>Tra cứu đơn hàng</b> bất cứ lúc nào để thực hiện thanh toán lại hoặc kiểm tra tình trạng vận chuyển.
+                        </p>
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-3">
                     {status === 'success' ? (
                         <Button asChild className="h-12 bg-black text-white hover:bg-zinc-800 rounded-none w-full">
@@ -137,10 +140,10 @@ const VNPayReturnPage = () => {
                     ) : (
                         <Button 
                             onClick={handleRepay}
-                            className="h-12 bg-blue-600 text-white hover:bg-blue-700 rounded-none w-full flex items-center justify-center gap-2"
+                            className="h-12 bg-blue-600 text-white hover:bg-blue-700 rounded-none w-full flex items-center justify-center gap-2 font-bold tracking-widest text-xs uppercase"
                         >
                             <RefreshCw size={18} />
-                            Thực hiện thanh toán lại
+                            Quay lại trang Tra cứu & Thanh toán
                         </Button>
                     )}
 
@@ -151,6 +154,7 @@ const VNPayReturnPage = () => {
                         </Link>
                     </Button>
                 </div>
+
 
                 <p className="text-[11px] text-gray-400 italic">
                     {status === 'success' 
