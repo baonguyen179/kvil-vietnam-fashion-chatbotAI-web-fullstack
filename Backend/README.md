@@ -30,13 +30,13 @@ Hệ thống Backend được xây dựng trên nền tảng Node.js với cấu
 
 Hệ thống sử dụng bộ mã quyền (Role) động để giới hạn quyền truy cập tài nguyên:
 
-| Role              | Mô tả                 | Quyền hạn chính                                                        |
-| :---------------- | :-------------------- | :--------------------------------------------------------------------- |
-| **`SUPER_ADMIN`** | Quản trị viên cao cấp | Full quyền. Quản lý Role, Tạo tài khoản Admin, Giám sát toàn hệ thống. |
-| **`SALES`**       | Nhân viên Kinh doanh  | Quản lý Sản phẩm, Danh mục, Đơn hàng, Kho hàng và Duyệt đổi trả.       |
-| **`ACCOUNTANT`**  | Nhân viên Kế toán     | Xem thống kê doanh thu, Đối soát giao dịch thanh toán (VNPay).         |
-| **`CUSTOMER`**    | Khách hàng thành viên | Quản lý Profile, Giỏ hàng, Đặt hàng và gửi yêu cầu Đổi trả.            |
-| **`GUEST`**       | Khách vãng lai        | Xem sản phẩm, Chat với Bot, Đặt hàng (Guest Checkout).                 |
+| Role              | Mô tả                 | Quyền hạn chính                                                           |
+| :---------------- | :-------------------- | :------------------------------------------------------------------------ |
+| **`SUPER_ADMIN`** | Quản trị viên cao cấp | Full quyền. Quản lý Role, Tạo tài khoản Admin, Giám sát toàn hệ thống.    |
+| **`SALES`**       | Nhân viên Kinh doanh  | Quản lý Sản phẩm, Danh mục, Đơn hàng, Kho hàng và Duyệt đổi trả.          |
+| **`ACCOUNTANT`**  | Nhân viên Kế toán     | Xem thống kê doanh thu, Đối soát giao dịch thanh toán (VNPay).            |
+| **`CUSTOMER`**    | Khách hàng thành viên | Quản lý Profile, Giỏ hàng, Đặt hàng và gửi yêu cầu Đổi trả.               |
+| **`GUEST`**       | Khách vãng lai        | Xem sản phẩm, Chat với Bot, Đặt hàng (Guest Checkout).                    |
 | **`INDIVIDUAL`**  | Quyền hạn cá nhân     | Các quyền cụ thể được cấp riêng cho một User mà không phụ thuộc vào Role. |
 
 ### 🛡️ Cơ chế Phân quyền Hybrid (Roles + Permissions)
@@ -55,11 +55,14 @@ Hệ thống KVIL áp dụng mô hình phân quyền **Hybrid RBAC** (Kết hợ
 Middleware này đóng vai trò là "người gác cổng" cho toàn bộ các route Admin. Luồng xử lý kỹ thuật như sau:
 
 ### 1. Cách thức khai báo trong Route
+
 Hệ thống hỗ trợ 2 cách truyền tham số cực kỳ linh hoạt:
+
 - **Kiểu cũ (Legacy):** `checkUserPermission('SALES', 'ACCOUNTANT')` -> Kiểm tra theo vai trò.
 - **Kiểu mới (Granular):** `checkUserPermission([], ['products.update'])` -> Kiểm tra chính xác quyền hạn cần thiết.
 
 ### 2. Luồng xử lý logic (Logic Flow)
+
 Hàm xử lý được thiết kế theo thứ tự ưu tiên giảm dần để đảm bảo an toàn:
 
 1.  **Xác thực người dùng:** Kiểm tra `req.user` đã tồn tại chưa (đã qua middleware JWTAction).
@@ -144,3 +147,65 @@ Hệ thống sử dụng cơ chế **Checksum HMAC-SHA512** để xác thực m�
 
 - **Redis Layer**: Giảm tải cho MySQL bằng cách cache các truy vấn nặng (Stats, Bestsellers).
 - **Database Indexing**: Các cột `email`, `phone`, `sku` được đánh chỉ mục để tìm kiếm trong thời gian thực.
+
+## 1. Giai đoạn: Khởi tạo thanh toán (Initiate Payment)
+
+Áp dụng cho cả lúc mới đặt hàng xong hoặc người dùng vào Lịch sử đơn hàng để thanh toán lại đơn cũ.
+Frontend: Gọi tới
+
+```
+GET /api/v1/user/orders/:id/payment-url.
+Controller (orderController.handleGetVNPayUrl): Tiếp nhận yêu cầu, lấy userId từ Token.
+Service (orderService.getVNPayPaymentUrl):
+```
+
+Kiểm tra đơn hàng có tồn tại và thuộc về user không.
+Kiểm tra trạng thái (Chỉ cho phép nếu đơn là pending và paymentStatus là false).
+
+```
+Gọi vnpayService.generatePaymentUrl để tạo đường dẫn sang VNPAY.
+Ghi log: Tạo một bản ghi trong PaymentTransactions với trạng thái PENDING (Để đánh dấu bắt đầu một phiên thanh toán).
+```
+
+Frontend: Nhận URL và thực hiện window.location.href để chuyển khách sang cổng VNPAY.
+
+## 2. Giai đoạn: Xử lý kết quả (IPN - Quan trọng nhất)
+
+Đây là luồng chạy ngầm giữa Server VNPAY và Server của bạn, đảm bảo dữ liệu luôn đúng ngay cả khi khách hàng tắt trình duyệt.
+
+VNPAY Side: Sau khi khách nhập OTP và trả tiền xong, VNPAY gọi tới GET /api/v1/vnpay/ipn.
+Controller (orderController.handleVNPayIPN):
+Gọi vnpayService.verifyIpnCall: Kiểm tra mã Hash (Checksum) để đảm bảo dữ liệu không bị sửa đổi.
+Nếu hợp lệ, trích xuất: orderId, vnp_Amount, vnp_ResponseCode.
+
+```
+Service (orderService.processVNPayPayment):
+``
+Locking: Sử dụng SELECT FOR UPDATE để khóa hàng đơn hàng đó lại (Tránh việc ReturnURL và IPN cùng xử lý một lúc).
+Validation: So sánh số tiền từ VNPAY gửi về với finalAmount trong Đơn hàng.
+Update: Nếu responseCode === '00':
+Đổi paymentStatus = true, status = 'confirmed'.
+Cập nhật/Tạo log PaymentTransaction trạng thái SUCCESS.
+Cache: Xóa các key Redis liên quan đến đơn hàng và Dashboard để dữ liệu mới được cập nhật.
+Responding: Trả về JSON cho VNPAY biết là Server đã nhận dữ liệu thành công.
+## 3. Giai đoạn: Đồng bộ dữ liệu (Admin Sync - QueryDR)
+Dành cho trường hợp Admin thấy đơn khách đã báo trừ tiền nhưng Server vẫn báo "Chưa thanh toán" (Do mạng lỗi IPN không tới).
+
+Admin Panel: Admin nhấn nút "Đồng bộ VNPAY". Gọi PATCH /api/v1/admin/orders/:id/vnpay-sync.
+Controller (orderController.handleSyncVNPayStatus): Gọi service đối soát.
+Service (orderService.syncOrderWithVNPay):
+Lấy ngày tạo giao dịch gần nhất từ PaymentTransactions.
+Gọi API queryTransaction của vnpayService.
+VNPAY Response: Nếu VNPAY phản hồi giao dịch này thực tế đã thành công (00).
+Hệ thống tự động gọi lại hàm processVNPayPayment để cập nhật Database như thể vừa nhận được IPN.
+## 4. Giai đoạn: Hoàn tiền (Refund API)
+Khi khách muốn trả hàng và Admin đồng ý.
+
+Admin Panel: Admin duyệt yêu cầu trả hàng. Gọi PATCH /api/v1/admin/orders/returns/:id/status với status: 'APPROVED'.
+Service (orderService.updateReturnStatus):
+Cập nhật trạng thái yêu cầu trả hàng.
+Hoàn kho (Tăng số lượng sản phẩm).
+Refund Logic: Nếu đơn hàng thanh toán qua VNPAY:
+Gọi vnpayService.refundTransaction.
+Ghi log giao dịch hoàn tiền vào PaymentTransactions với trạng thái REFUNDED.
+```

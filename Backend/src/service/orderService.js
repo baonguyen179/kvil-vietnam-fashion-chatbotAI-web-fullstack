@@ -1,8 +1,82 @@
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
-
 const redisHelper = require('../helpers/redis.helper');
+const vnpayService = require('./vnpayService'); // Bổ sung service vnpay
 const ORDER_CACHE_TTL = process.env.ORDER_CACHE_TTL || 1800; // 30 phút
+
+
+/**
+ * Hàm lấy Link thanh toán VNPAY cho đơn hàng sẵn có (Repay)
+ * Đảm bảo tính linh hoạt khi đơn cũ chưa được trả tiền
+ */
+const getVNPayPaymentUrl = async (req, orderId, userId) => {
+    try {
+        const order = await db.Order.findOne({
+            where: { id: orderId, userId: userId }
+        });
+
+        if (!order) return { EM: 'Đơn hàng không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
+        if (order.paymentStatus === true) return { EM: 'Đơn hàng này đã được thanh toán rồi!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        if (order.status === 'cancelled') return { EM: 'Đơn hàng đã bị hủy, không thể thanh toán!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+
+        const paymentUrl = vnpayService.generatePaymentUrl(req, order.id, order.finalAmount);
+        
+        // Ghi lại log PENDING để theo dõi phiên thanh toán
+        await db.PaymentTransaction.create({
+            orderId: order.id,
+            provider: 'VNPAY',
+            transactionId: 'INITIATED',
+            amount: order.finalAmount,
+            status: 'PENDING'
+        });
+
+        return { EM: 'Tạo link thanh toán thành công!', EC: errorCode.SUCCESS, DT: paymentUrl };
+    } catch (error) {
+        console.error(">>> Lỗi getVNPayPaymentUrl:", error);
+        return { EM: 'Lỗi server khi tạo link thanh toán', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+
+/**
+ * [SENIOR FEATURE] Lấy Link thanh toán cho khách vãng lai (Security: ID + Phone)
+ * Giải quyết bài toán khách vãng lai lỡ tắt browser muốn trả tiền lại
+ */
+const getGuestVNPayPaymentUrl = async (req, orderId, phone) => {
+    try {
+        const order = await db.Order.findOne({
+            where: { id: orderId }
+        });
+
+        if (!order) return { EM: 'Đơn hàng không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
+        
+        // Bảo mật: Nếu đơn hàng thuộc về một User đã login, yêu cầu dùng luồng login
+        if (order.userId) return { EM: 'Đơn hàng này yêu cầu đăng nhập để thanh toán!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+
+        if (order.paymentStatus === true) return { EM: 'Đơn hàng này đã được thanh toán rồi!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        if (order.status === 'cancelled') return { EM: 'Đơn hàng đã bị hủy, không thể thanh toán!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+
+        // Kiểm tra khớp số điện thoại trong shippingAddress (Guest phone nằm trong chuỗi này)
+        if (!order.shippingAddress.includes(phone)) {
+            return { EM: 'Thông tin xác thực (Số điện thoại) không chính xác!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        const paymentUrl = vnpayService.generatePaymentUrl(req, order.id, order.finalAmount);
+        
+        // Ghi lại log PENDING
+        await db.PaymentTransaction.create({
+            orderId: order.id,
+            provider: 'VNPAY',
+            transactionId: 'GUEST_INITIATED',
+            amount: order.finalAmount,
+            status: 'PENDING'
+        });
+
+        return { EM: 'Tạo link thanh toán thành công!', EC: errorCode.SUCCESS, DT: paymentUrl };
+    } catch (error) {
+        console.error(">>> Lỗi getGuestVNPayPaymentUrl:", error);
+        return { EM: 'Lỗi server khi tạo link thanh toán cho khách', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
 
 const createOrder = async (userId, data) => {
     const t = await db.sequelize.transaction();
@@ -96,7 +170,6 @@ const createOrder = async (userId, data) => {
         let couponId = null;
 
         if (couponCode) {
-            // Logic xử lý coupon giữ nguyên...
             const coupon = await db.Coupon.findOne({ where: { code: couponCode, isActive: true } });
             if (!coupon) {
                 await t.rollback();
@@ -387,7 +460,7 @@ const getUserOrderDetail = async (userId, orderId) => {
         if (!order) {
             return { EM: 'Đơn hàng không tồn tại hoặc bạn không có quyền xem!', EC: errorCode.NOT_FOUND, DT: '' };
         }
-        console.log(">>> SOI DATA RAW:", JSON.stringify(order, null, 2));
+        // console.log(">>> SOI DATA RAW:", JSON.stringify(order, null, 2));
         currentStep = 'Data Shaping (Định dạng lại JSON cho Frontend dễ đọc)';
         // Gọt đẽo lại cấu trúc JSON
         const formattedData = {
@@ -461,7 +534,7 @@ const getAdminOrders = async (queryParams) => {
             order: [['createdAt', 'DESC']],
             limit: limit,
             offset: offset,
-            attributes: ['id', 'totalBeforeDiscount', 'shippingFee', 'discountAmount', 'finalAmount', 'paymentMethod', 'paymentStatus', 'deliveryMethod', 'status', 'createdAt'],
+            attributes: ['id', 'totalBeforeDiscount', 'shippingFee','shippingAddress', 'discountAmount', 'finalAmount', 'paymentMethod', 'paymentStatus', 'deliveryMethod', 'status', 'createdAt'],
             include: [
                 {
                     model: db.User,
@@ -642,6 +715,7 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
     }
 }
 const processVNPayPayment = async (orderId, amount, responseCode, fullQuery) => {
+    console.log(`>>> [SERVICE processVNPayPayment] Start: OrderID=${orderId}, Amount=${amount}, Code=${responseCode}`);
     const t = await db.sequelize.transaction();
     try {
         // 1. Tìm đơn hàng
@@ -652,24 +726,30 @@ const processVNPayPayment = async (orderId, amount, responseCode, fullQuery) => 
         });
 
         if (!order) {
+            console.error(`>>> [SERVICE processVNPayPayment] ERROR: Order ${orderId} not found`);
             await t.rollback();
             return { EM: 'Order not found', EC: '01', DT: '' };
         }
 
+        console.log(`>>> [SERVICE processVNPayPayment] Order Found: ID=${order.id}, DB_Amount=${order.finalAmount}, Current_PaymentStatus=${order.paymentStatus}`);
+
         // 2. Kiểm tra số tiền (VNPay amount đã được /100 ở controller)
-        if (order.finalAmount !== amount) {
+        if (Number(order.finalAmount) !== Number(amount)) {
+            console.error(`>>> [SERVICE processVNPayPayment] ERROR: Amount mismatch. DB=${order.finalAmount}, VNPay=${amount}`);
             await t.rollback();
             return { EM: 'Invalid amount', EC: '04', DT: '' };
         }
 
         // 3. Kiểm tra xem đơn hàng đã được xử lý thanh toán chưa (Tránh trùng lặp IPN)
         if (order.paymentStatus === true) {
+            console.warn(`>>> [SERVICE processVNPayPayment] WARNING: Order ${orderId} already paid. Skipping update.`);
             await t.rollback();
             return { EM: 'Order already confirmed', EC: '02', DT: '' };
         }
 
         // 4. Kiểm tra mã phản hồi thành công từ VNPay (00 là thành công)
         if (responseCode === '00') {
+            console.log(`>>> [SERVICE processVNPayPayment] Payment Success. Updating order ${orderId}...`);
             // Cập nhật trạng thái thanh toán và đơn hàng
             await order.update({
                 paymentStatus: true,
@@ -677,7 +757,7 @@ const processVNPayPayment = async (orderId, amount, responseCode, fullQuery) => 
             }, { transaction: t });
 
             // Ghi log giao dịch
-            await db.PaymentTransaction.create({
+            const trans = await db.PaymentTransaction.create({
                 orderId: order.id,
                 provider: 'VNPAY',
                 transactionId: fullQuery.vnp_TransactionNo,
@@ -685,18 +765,23 @@ const processVNPayPayment = async (orderId, amount, responseCode, fullQuery) => 
                 status: 'SUCCESS'
             }, { transaction: t });
 
+            console.log(`>>> [SERVICE processVNPayPayment] Transaction Logged:`, trans.id);
+
             await t.commit();
+            console.log(`>>> [SERVICE processVNPayPayment] Transaction Committed. Clearing cache...`);
+
             // Xóa cache
             await Promise.all([
                 redisHelper.delByPattern('dashboard:stats:*'),
                 redisHelper.delByPattern('order:list:admin:*'),
-                redisHelper.delByPattern(`order:list:user:${order.userId}:*`),
-                redisHelper.delCache(`order:detail:user:${order.userId}:${orderId}`),
-                redisHelper.delByPattern('order:payment:transactions:*') // Mới
+                redisHelper.delByPattern(`order:list:user:${order.userId || 'guest'}:*`),
+                redisHelper.delCache(`order:detail:user:${order.userId || 'guest'}:${orderId}`),
+                redisHelper.delByPattern('order:payment:transactions:*')
             ]);
 
             return { EM: 'Success', EC: '00', DT: '' };
         } else {
+            console.warn(`>>> [SERVICE processVNPayPayment] Payment Failed at VNPay. Code=${responseCode}. Logging failure...`);
             // Giao dịch thất bại tại VNPay
             await db.PaymentTransaction.create({
                 orderId: order.id,
@@ -712,10 +797,11 @@ const processVNPayPayment = async (orderId, amount, responseCode, fullQuery) => 
 
     } catch (error) {
         await t.rollback();
-        console.error(">>> Lỗi processVNPayPayment:", error);
+        console.error(">>> [SERVICE processVNPayPayment] CRITICAL ERROR:", error);
         return { EM: 'Internal server error', EC: '99', DT: '' };
     }
 };
+
 
 const getPaymentTransactionsAdmin = async (query) => {
     try {
@@ -793,7 +879,11 @@ const updateReturnStatus = async (id, status, adminId) => {
     try {
         const request = await db.ReturnRequest.findOne({
             where: { id: id },
-            include: [{ model: db.Order, as: 'order', include: [{ model: db.OrderDetail, as: 'orderDetails' }] }],
+            include: [{ 
+                model: db.Order, 
+                as: 'order', 
+                include: [{ model: db.OrderItem, as: 'orderItems' }] // Sửa lại thành as: 'orderItems' cho đúng model
+            }],
             transaction: t,
             lock: t.LOCK.UPDATE
         });
@@ -816,20 +906,47 @@ const updateReturnStatus = async (id, status, adminId) => {
             await db.Order.update({ status: 'returned' }, { where: { id: request.orderId }, transaction: t });
 
             // Hoàn kho cho từng sản phẩm trong đơn hàng
-            for (const item of request.order.orderDetails) {
-                await db.ProductVariant.increment('stock', { by: item.quantity, where: { id: item.variantId }, transaction: t });
-                
-                // Ghi log kho (RETURN)
-                await db.InventoryLog.create({
-                    variantId: item.variantId,
-                    userId: adminId, // Người duyệt
-                    type: 'RETURN',
-                    quantity: item.quantity,
-                    note: `Hoàn kho do duyệt trả hàng đơn #${request.orderId}`
-                }, { transaction: t });
+            if (request.order && request.order.orderItems) {
+                for (const item of request.order.orderItems) {
+                    await db.ProductVariant.increment('stock', { by: item.quantity, where: { id: item.variantId }, transaction: t });
+                    
+                    // Ghi log kho (RETURN)
+                    await db.InventoryLog.create({
+                        variantId: item.variantId,
+                        userId: adminId, 
+                        type: 'RETURN',
+                        quantity: item.quantity,
+                        note: `Hoàn kho do duyệt trả hàng đơn #${request.orderId}`
+                    }, { transaction: t });
+                }
+            }
+
+            // [SENIOR OPTIMIZATION] - Tự động hoàn tiền qua VNPAY nếu đơn thanh toán qua cổng này
+            if (request.order && request.order.paymentMethod === 'VNPAY' && request.order.paymentStatus === true) {
+                const lastSuccessTrans = await db.PaymentTransaction.findOne({
+                    where: { orderId: request.orderId, status: 'SUCCESS' },
+                    order: [['createdAt', 'DESC']]
+                });
+
+                if (lastSuccessTrans) {
+                    const refundRes = await vnpayService.refundTransaction({
+                        orderId: request.orderId,
+                        amount: lastSuccessTrans.amount,
+                        transDate: lastSuccessTrans.createdAt.toISOString().slice(0, 19).replace(/[-T:]/g, ""),
+                        user: 'SYSTEM_ADMIN_REFUND',
+                        vnp_TransactionNo: lastSuccessTrans.transactionId
+                    });
+
+                    await db.PaymentTransaction.create({
+                        orderId: request.orderId,
+                        provider: 'VNPAY',
+                        transactionId: refundRes.vnp_TransactionNo || 'REFUND_REQ',
+                        amount: lastSuccessTrans.amount,
+                        status: refundRes.vnp_ResponseCode === '00' ? 'REFUNDED' : 'REFUND_FAILED'
+                    }, { transaction: t });
+                }
             }
         } 
-        // Nếu TỪ CHỐI (REJECTED) -> Đổi trạng thái Đơn hàng quay lại 'delivered' (hoặc giữ nguyên returning tùy logic)
         else if (status === 'REJECTED') {
             await db.Order.update({ status: 'delivered' }, { where: { id: request.orderId }, transaction: t });
         }
@@ -960,9 +1077,50 @@ const createPaymentTransaction = async (orderId, paymentData) => {
     }
 }
 
+/**
+ * [SENIOR FEATURE] Đồng bộ trạng thái đơn hàng với VNPAY (QueryDR)
+ * Dành cho Admin tra soát khi IPN bị mất hoặc khách hàng tắt web quá sớm
+ */
+const syncOrderWithVNPay = async (orderId) => {
+    try {
+        const order = await db.Order.findOne({ where: { id: orderId } });
+        if (!order) return { EM: 'Đơn hàng không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
+        if (order.paymentStatus === true) return { EM: 'Đơn hàng đã được xác nhận thanh toán rồi!', EC: errorCode.SUCCESS, DT: '' };
+
+        // Tìm giao dịch khởi tạo gần nhất để lấy ngày tạo (VNPAY cần ngày tạo GD để query)
+        const lastTrans = await db.PaymentTransaction.findOne({
+            where: { orderId: orderId },
+            order: [['createdAt', 'DESC']]
+        });
+        
+        if (!lastTrans) return { EM: 'Không tìm thấy lịch sử thanh toán cho đơn này!', EC: errorCode.NOT_FOUND, DT: '' };
+
+        const createDate = lastTrans.createdAt.toISOString().slice(0, 19).replace(/[-T:]/g, "");
+        const queryRes = await vnpayService.queryTransaction(orderId, createDate);
+
+        // Kiểm tra mã phản hồi của VNPAY về trạng thái giao dịch
+        // vnp_TransactionStatus '00' là thành công
+        if (queryRes.vnp_ResponseCode === '00' && (queryRes.vnp_TransactionStatus === '00' || queryRes.vnp_TransactionStatus === '02')) {
+            const amount = parseInt(queryRes.vnp_Amount) / 100;
+            // Tiến hành cập nhật trạng thái đơn hàng như luồng IPN
+            return await processVNPayPayment(orderId, amount, '00', queryRes);
+        }
+
+        return { 
+            EM: `Kết quả từ VNPAY: ${queryRes.vnp_Message || 'Giao dịch không thành công hoặc chưa hoàn tất'}`, 
+            EC: errorCode.VALIDATION_ERROR, 
+            DT: queryRes 
+        };
+    } catch (error) {
+        console.error(">>> Lỗi syncOrderWithVNPay:", error);
+        return { EM: 'Lỗi server khi đối soát VNPAY', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+}
+
 module.exports = {
     createOrder, cancelOrder, getUserOrders, getUserOrderDetail,
     getAdminOrders, updateOrderStatus, updatePaymentStatus, getBestSellerProductIds,
     requestReturnOrder, createPaymentTransaction, processVNPayPayment,
-    getPaymentTransactionsAdmin, getReturnRequestsAdmin, updateReturnStatus
+    getPaymentTransactionsAdmin, getReturnRequestsAdmin, updateReturnStatus,
+    getVNPayPaymentUrl, syncOrderWithVNPay, getGuestVNPayPaymentUrl
 };

@@ -164,6 +164,80 @@ const deleteCoupon = async (id) => {
         return { EM: 'Lỗi server khi xóa mã giảm giá', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 }
+const checkCoupon = async (code, orderValue) => {
+    let currentStep = 'Khởi tạo checkCoupon';
+    try {
+        currentStep = 'Tìm kiếm mã giảm giá';
+        const coupon = await db.Coupon.findOne({
+            where: {
+                code: code,
+                isActive: true
+            }
+        });
+
+        if (!coupon) {
+            return {
+                EM: 'Mã giảm giá không tồn tại hoặc đã hết hạn!',
+                EC: errorCode.NOT_FOUND,
+                DT: ''
+            };
+        }
+
+        currentStep = 'Kiểm tra thời hạn sử dụng';
+        const now = new Date();
+        if (now < new Date(coupon.startDate)) {
+            return {
+                EM: `Mã giảm giá này bắt đầu có hiệu lực từ ngày ${new Date(coupon.startDate).toLocaleDateString('vi-VN')}`,
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ''
+            };
+        }
+        if (now > new Date(coupon.endDate)) {
+            return {
+                EM: 'Mã giảm giá đã quá hạn sử dụng!',
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ''
+            };
+        }
+
+        currentStep = 'Kiểm tra lượt sử dụng';
+        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+            return {
+                EM: 'Mã giảm giá đã hết lượt sử dụng!',
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ''
+            };
+        }
+
+        currentStep = 'Kiểm tra giá trị đơn hàng tối thiểu';
+        if (orderValue < coupon.minOrderValue) {
+            return {
+                EM: `Đơn hàng tối thiểu ${coupon.minOrderValue.toLocaleString()}đ mới được áp dụng mã này!`,
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ''
+            };
+        }
+
+        return {
+            EM: 'Áp dụng mã giảm giá thành công!',
+            EC: errorCode.SUCCESS,
+            DT: {
+                code: coupon.code,
+                discountType: coupon.discountType,
+                discountValue: coupon.discountValue,
+                maxDiscountAmount: coupon.maxDiscountAmount
+            }
+        };
+
+    } catch (error) {
+        console.error(`\n[CRITICAL ERROR] Lỗi tại checkCoupon!`);
+        console.error(`- Code: ${code} | OrderValue: ${orderValue}`);
+        console.error(`- CHẾT TẠI BƯỚC: ${currentStep} `);
+        console.error(`- Chi tiết lỗi: ${error.message}\n`);
+        return { EM: 'Lỗi server khi kiểm tra mã giảm giá', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+}
+
 module.exports = {
-    createCoupon, deleteCoupon, updateCoupon, getAdminCoupons
-};
+    createCoupon, deleteCoupon, updateCoupon, getAdminCoupons, checkCoupon
+};

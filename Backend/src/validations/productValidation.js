@@ -48,11 +48,24 @@ const getInventoryLogsSchema = Joi.object({
     variantId: Joi.number().integer().allow('', null)
 }).unknown(true);
 
+const variantSchema = Joi.object({
+    color: Joi.string().required().messages({ 'any.required': 'Vui lòng cung cấp Màu sắc!' }),
+    size: Joi.string().required().messages({ 'any.required': 'Vui lòng cung cấp Kích cỡ!' }),
+    sku: Joi.string().required().messages({ 'any.required': 'Vui lòng cung cấp mã SKU!' }),
+    stock: Joi.number().integer().min(0).required().messages({
+        'number.base': 'Số lượng kho phải là số!',
+        'number.min': 'Số lượng kho không được nhỏ hơn 0!',
+        'any.required': 'Vui lòng nhập số lượng tồn kho!'
+    }),
+    price: Joi.number().min(0).allow('', null)
+}).unknown(true);
+
 module.exports = {
     productIdSchema,
     imageIdSchema,
     productBodySchema,
     getAllProductsSchema,
     searchSchema,
-    getInventoryLogsSchema
+    getInventoryLogsSchema,
+    variantSchema
 };

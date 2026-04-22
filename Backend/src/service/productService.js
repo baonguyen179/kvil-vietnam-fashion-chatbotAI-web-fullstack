@@ -85,10 +85,11 @@ const getAllProducts = async (queryParams) => {
                 {
                     model: db.ProductVariant, // Bổ sung Join vào bảng Variant để lọc màu sắc/kích thước
                     as: 'variants',
-                    attributes: [], // Không cần in ra dữ liệu của variant, chỉ dùng để lọc (tiết kiệm băng thông)
+                    attributes: ['id', 'color', 'size', 'stock', 'price'], // Lấy thông tin biến thể để phục vụ lọc/hiện tồn kho ở Frontend
                     where: Object.keys(variantWhere).length > 0 ? variantWhere : undefined,
                     required: Object.keys(variantWhere).length > 0 // Nếu có lọc màu/size thì bắt buộc phải INNER JOIN
                 }
+
             ],
             distinct: true // Rất quan trọng khi dùng limit + include
         });
@@ -258,9 +259,9 @@ const addProductVariant = async (productId, variantData) => {
     try {
         const { color, size, stock, sku, price } = variantData;
 
-        if (!color || !size || stock === undefined) {
+        if (!color || !size || stock === undefined || !sku) {
             return {
-                EM: 'Vui lòng cung cấp đủ Màu sắc, Kích cỡ và Số lượng tồn kho!',
+                EM: 'Vui lòng cung cấp đủ Màu sắc, Kích cỡ, Số lượng và mã SKU!',
                 EC: errorCode.VALIDATION_ERROR,
                 DT: ''
             };
@@ -287,26 +288,12 @@ const addProductVariant = async (productId, variantData) => {
             };
         }
 
-        let finalSku = sku;
-
-        if (!finalSku) {
-            const variantCount = await db.ProductVariant.count({
-                where: { productId: productId }
-            });
-
-            const parentCode = parseInt(productId);
-
-            const variantSuffix = variantCount + 1;
-
-            finalSku = `${parentCode}-${variantSuffix}`;
-        }
-
         const newVariant = await db.ProductVariant.create({
             productId: productId,
             color: color,
             size: size,
             stock: stock,
-            sku: finalSku,
+            sku: sku,
             price: price ? price : product.basePrice
         });
 
@@ -497,7 +484,14 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
                     as: 'images',
                     attributes: ['id', 'imageUrl', 'isMain'],
                     required: false
+                },
+                {
+                    model: db.ProductVariant,
+                    as: 'variants',
+                    attributes: ['id', 'color', 'size', 'stock', 'price'],
+                    required: false
                 }
+
             ],
             limit: +limit,
             offset: +offset,
@@ -623,7 +617,14 @@ const getBestSellerProducts = async (limit = 10) => {
                         as: 'images',
                         attributes: ['imageUrl', 'isMain'],
                         required: false
+                    },
+                    {
+                        model: db.ProductVariant,
+                        as: 'variants',
+                        attributes: ['id', 'color', 'size', 'stock', 'price'],
+                        required: false
                     }
+
                 ],
                 distinct: true
             });
@@ -653,7 +654,14 @@ const getBestSellerProducts = async (limit = 10) => {
                         as: 'images',
                         attributes: ['imageUrl', 'isMain'],
                         required: false
+                    },
+                    {
+                        model: db.ProductVariant,
+                        as: 'variants',
+                        attributes: ['id', 'color', 'size', 'stock', 'price'],
+                        required: false
                     }
+
                 ],
                 order: [['createdAt', 'DESC']], // Ưu tiên hàng mới
                 limit: needed,

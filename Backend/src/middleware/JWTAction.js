@@ -163,20 +163,34 @@ const checkUserPermission = (...args) => {
 }
 
 const optionalAuth = (req, res, next) => {
-    try {
-        const token = extractToken(req);
-        if (token) {
-            const decoded = verifyAccessToken(token);
-            if (decoded && decoded !== "EXPIRED") {
-                req.user = decoded;
-            }
-        }
-    } catch (error) {
-        // Just log the error, don't block the request
-        console.error(">>> Optional Auth Error:", error.message);
+    const token = extractToken(req);
+    if (!token) {
+        return next();
     }
-    next();
+
+    const decoded = verifyAccessToken(token);
+
+    if (decoded === "EXPIRED") {
+        return res.status(401).json({
+            EC: errorCode.TOKEN_EXPIRED,
+            EM: 'Access Token is expired',
+            DT: ''
+        });
+    }
+
+    if (decoded) {
+        req.user = decoded;
+        req.token = token;
+        return next();
+    }
+
+    return res.status(401).json({
+        EC: errorCode.UNAUTHENTICATED,
+        EM: 'Access Token is invalid',
+        DT: ''
+    });
 };
+
 
 
 module.exports = {

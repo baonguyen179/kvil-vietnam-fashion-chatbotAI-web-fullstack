@@ -105,6 +105,9 @@ const handleAddProductVariant = async (req, res) => {
         const { error } = productValidation.productIdSchema.validate({ id: req.params.id });
         if (error) return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
 
+        const { error: variantError } = productValidation.variantSchema.validate(req.body);
+        if (variantError) return res.status(200).json({ EM: variantError.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+
         const rawId = req.params.id;
         const decodedId = decodeId(rawId);
 

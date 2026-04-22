@@ -17,12 +17,12 @@ const uploadCloud = require('../config/cloudinary.config');
 // Phải đăng nhập 
 router.use(JWTAction.checkUserJWT);
 
-// [ADMIN - USERS]
+// [ADMIN - USERS]-X
 router.get('/admin/users', JWTAction.checkUserPermission([], ['users.manage']), userController.handleGetAdminUsers);
 router.post('/admin/users', JWTAction.checkUserPermission([], ['users.manage']), userController.handleCreateAdminUser);
 router.patch('/admin/users/:id/role', JWTAction.checkUserPermission([], ['users.manage']), userController.handleUpdateUserRole);
 
-// [ADMIN - ROLES & PERMISSIONS]
+// [ADMIN - ROLES & PERMISSIONS]-X
 router.get('/admin/roles', JWTAction.checkUserPermission([], ['users.manage']), roleController.handleGetAllRoles);
 router.post('/admin/roles', JWTAction.checkUserPermission([], ['users.manage']), roleController.handleCreateRole);
 router.put('/admin/roles/:id', JWTAction.checkUserPermission([], ['users.manage']), roleController.handleUpdateRole);
@@ -30,20 +30,20 @@ router.delete('/admin/roles/:id', JWTAction.checkUserPermission([], ['users.mana
 router.post('/admin/roles/:id/permissions', JWTAction.checkUserPermission([], ['users.manage']), roleController.handleAssignPermissionsToRole);
 router.get('/admin/permissions', JWTAction.checkUserPermission([], ['users.manage']), roleController.handleGetAllPermissions);
 
-// [INVENTORY & TRANSACTIONS]
+// [INVENTORY & TRANSACTIONS]-X
 router.get('/admin/inventory/logs', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryLogs);
 router.get('/admin/payments/transactions', JWTAction.checkUserPermission([], ['payments.read']), orderController.handleGetPaymentTransactions);
 
-// [RETURN REQUESTS]
+// [RETURN REQUESTS]-X
 router.get('/admin/orders/returns', JWTAction.checkUserPermission([], ['orders.read']), orderController.handleGetReturnRequests);
 router.patch('/admin/orders/returns/:id/status', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdateReturnRequestStatus);
 
-// [ADMIN - CATEGORIES]
+// [ADMIN - CATEGORIES]-X
 router.post('/admin/categories', JWTAction.checkUserPermission([], ['categories.manage']), categoryController.handleCreateCategory);
 router.put('/admin/categories/:id', JWTAction.checkUserPermission([], ['categories.manage']), categoryController.handleUpdateCategory);
 router.delete('/admin/categories/:id', JWTAction.checkUserPermission([], ['categories.manage']), categoryController.handleDeleteCategory);
 
-// [ADMIN - PRODUCTS]
+// [ADMIN - PRODUCTS]-X
 router.post('/admin/products', JWTAction.checkUserPermission([], ['products.create']), productController.handleCreateProduct);
 router.put('/admin/products/:id', JWTAction.checkUserPermission([], ['products.update']), productController.handleUpdateProduct);
 router.delete('/admin/products/:id', JWTAction.checkUserPermission([], ['products.delete']), productController.handleDeleteProduct);
@@ -51,42 +51,34 @@ router.post('/admin/products/:id/variants', JWTAction.checkUserPermission([], ['
 router.post('/admin/products/:id/images', JWTAction.checkUserPermission([], ['products.update']), uploadCloud.array('images', 10), productController.handleAddProductImages);
 router.delete('/admin/products/images/:imageId', JWTAction.checkUserPermission([], ['products.update']), productController.handleDeleteProductImage);
 
-// [ADMIN - COLLECTIONS]
+// [ADMIN - COLLECTIONS]-X
 router.post('/admin/collections', JWTAction.checkUserPermission([], ['collections.manage']), uploadCloud.single('banner'), collectionController.handleCreateCollection);
 router.put('/admin/collections/:id', JWTAction.checkUserPermission([], ['collections.manage']), uploadCloud.single('banner'), collectionController.handleUpdateCollection);
 router.post('/admin/collections/:id/products', JWTAction.checkUserPermission([], ['collections.manage']), collectionController.handleAddProductsToCollection);
 router.delete('/admin/collections/:id/products', JWTAction.checkUserPermission([], ['collections.manage']), collectionController.handleRemoveProductsFromCollection);
 
-// [ADMIN - ORDERS]
+// [ADMIN - ORDERS]-X
 router.get('/admin/orders', JWTAction.checkUserPermission([], ['orders.read']), orderController.handleGetAdminOrders);
 router.patch('/admin/orders/:id/status', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdateOrderStatus);
 router.patch('/admin/orders/:id/payment', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdatePaymentStatus);
 
-// [ADMIN - COUPONS]
+// [ADMIN - VNPAY]
+router.patch('/admin/orders/:id/vnpay-sync', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleSyncVNPayStatus);
+
+// [ADMIN - COUPONS]-X
 router.post('/admin/coupons', JWTAction.checkUserPermission([], ['coupons.manage']), couponController.handleCreateCoupon);
 router.get('/admin/coupons', JWTAction.checkUserPermission([], ['coupons.manage']), couponController.handleGetAdminCoupons);
 router.put('/admin/coupons/:id', JWTAction.checkUserPermission([], ['coupons.manage']), couponController.handleUpdateCoupon);
 router.delete('/admin/coupons/:id', JWTAction.checkUserPermission([], ['coupons.manage']), couponController.handleDeleteCoupon);
 
-// [ADMIN - DASHBOARD]
+// [ADMIN - DASHBOARD]-X
 router.get('/admin/dashboard/stats', JWTAction.checkUserPermission([], ['dashboard.read']), dashboardController.handleGetDashboardStats);
 
-// ================================================================
-// [ADMIN - CHATBOT] QUẢN LÝ & GIÁM SÁT CHATBOT
-// ================================================================
-// Lấy thống kê tổng quan chatbot (tổng phiên, tin nhắn, hoạt động hôm nay...)
+// [ADMIN - CHATBOT] QUẢN LÝ & GIÁM SÁT CHATBOT-X
 router.get('/admin/chatbot/stats', JWTAction.checkUserPermission([], ['chatbot.read']), chatbotController.handleGetAdminChatStats);
-
-// Lấy danh sách phiên chat (phân trang, lọc: type=all|user|guest, search, startDate, endDate)
 router.get('/admin/chatbot/sessions', JWTAction.checkUserPermission([], ['chatbot.read']), chatbotController.handleGetAdminChatSessions);
-
-// Lấy chi tiết toàn bộ log của một phiên chat cụ thể
 router.get('/admin/chatbot/sessions/:sessionId', JWTAction.checkUserPermission([], ['chatbot.read']), chatbotController.handleGetAdminSessionDetail);
-
-// Xóa toàn bộ lịch sử chat theo sessionId
 router.delete('/admin/chatbot/sessions/:sessionId', JWTAction.checkUserPermission([], ['chatbot.manage']), chatbotController.handleDeleteAdminChatSession);
-
-// Xóa toàn bộ lịch sử chat của một user đăng nhập
 router.delete('/admin/chatbot/users/:userId', JWTAction.checkUserPermission([], ['chatbot.manage']), chatbotController.handleDeleteAdminUserChats);
 
 module.exports = router;

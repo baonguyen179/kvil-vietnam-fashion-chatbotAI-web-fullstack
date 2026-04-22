@@ -77,6 +77,26 @@ const handleDeleteCoupon = async (req, res) => {
         return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 }
+const handleCheckCoupon = async (req, res) => {
+    try {
+        const { code, orderValue } = req.query;
+        if (!code || !orderValue) {
+            return res.status(200).json({
+                EM: 'Thiếu thông tin mã giảm giá hoặc giá trị đơn hàng!',
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ''
+            });
+        }
+
+        const data = await couponService.checkCoupon(code, parseInt(orderValue));
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+
+    } catch (error) {
+        console.error(">>> Lỗi controller (handleCheckCoupon):", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+}
+
 module.exports = {
-    handleCreateCoupon, handleUpdateCoupon, handleDeleteCoupon, handleGetAdminCoupons
-};
+    handleCreateCoupon, handleUpdateCoupon, handleDeleteCoupon, handleGetAdminCoupons, handleCheckCoupon
+};

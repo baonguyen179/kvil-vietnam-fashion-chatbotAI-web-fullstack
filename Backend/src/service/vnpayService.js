@@ -33,8 +33,48 @@ const verifyReturnUrl = (query) => {
     return vnpay.verifyReturnUrl(query);
 };
 
+/**
+ * Truy vấn trạng thái giao dịch từ VNPay (QueryDR)
+ * Dùng để đối soát hoặc xử lý khi IPN không đến được hệ thống
+ */
+const queryTransaction = async (orderId, createDate, ipAddr) => {
+    return vnpay.queryDr({
+        vnp_TxnRef: orderId.toString(),
+        vnp_TransactionDate: createDate, // Phải lấy đúng ngày lúc tạo thanh toán (yyyyMMddHHmmss)
+        vnp_IpAddr: ipAddr || '127.0.0.1'
+    });
+};
+
+/**
+ * Hoàn tiền giao dịch (Refund API)
+ * Dùng khi Admin duyệt trả hàng
+ */
+const refundTransaction = async (params) => {
+    const { 
+        orderId, 
+        amount, 
+        transDate, 
+        refundType, // '02' (Hoàn tiền toàn phần), '03' (Hoàn tiền một phần)
+        user, 
+        ipAddr,
+        vnp_TransactionNo 
+    } = params;
+    
+    return vnpay.refund({
+        vnp_TxnRef: orderId.toString(),
+        vnp_Amount: amount,
+        vnp_TransactionType: refundType || '02',
+        vnp_TransactionDate: transDate,
+        vnp_TransactionNo: vnp_TransactionNo || '', // Mã GD từ VNPay trả về lúc thanh toán
+        vnp_CreateBy: user || 'ADMIN',
+        vnp_IpAddr: ipAddr || '127.0.0.1'
+    });
+};
+
 module.exports = {
     generatePaymentUrl,
     verifyIpnCall,
-    verifyReturnUrl
+    verifyReturnUrl,
+    queryTransaction,
+    refundTransaction
 };

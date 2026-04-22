@@ -162,20 +162,52 @@ const handleRequestReturnOrder = async (req, res) => {
 
 const vnpayService = require('../service/vnpayService');
 
+/**
+ * Lấy link thanh toán VNPAY (Hỗ trợ cả đơn mới và đơn cũ chưa thanh toán)
+ */
 const handleGetVNPayUrl = async (req, res) => {
     try {
         const orderId = req.params.id;
-        const order = await orderService.getUserOrderDetail(req.user.id, orderId);
+        const userId = req.user.id;
 
-        if (order.EC !== errorCode.SUCCESS) {
-            return res.status(200).json({ EM: order.EM, EC: order.EC, DT: '' });
-        }
-
-        const paymentUrl = vnpayService.generatePaymentUrl(req, orderId, order.DT.finalAmount, `Thanh toan don hang #${orderId}`);
-        return res.status(200).json({ EM: 'Lay link thanh toan thanh cong!', EC: errorCode.SUCCESS, DT: paymentUrl });
+        const data = await orderService.getVNPayPaymentUrl(req, orderId, userId);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
 
     } catch (error) {
         console.error(">>> Lỗi handleGetVNPayUrl:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+/**
+ * [PUBLIC] Lấy link thanh toán cho khách vãng lai (Xác thực qua SĐT)
+ */
+const handleGetGuestVNPayUrl = async (req, res) => {
+    try {
+        const { orderId, phone } = req.body;
+        if (!orderId || !phone) {
+            return res.status(200).json({ EM: 'Mã đơn hàng và Số điện thoại là bắt buộc!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const data = await orderService.getGuestVNPayPaymentUrl(req, orderId, phone);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+
+    } catch (error) {
+        console.error(">>> Lỗi handleGetGuestVNPayUrl:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+/**
+ * [ADMIN] Đồng bộ thủ công trạng thái đơn hàng từ VNPAY
+ */
+const handleSyncVNPayStatus = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const data = await orderService.syncOrderWithVNPay(orderId);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error(">>> Lỗi handleSyncVNPayStatus:", error);
         return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
     }
 };
@@ -185,9 +217,13 @@ const handleGetVNPayUrl = async (req, res) => {
  * Rất quan trọng để cập nhật đơn hàng chính xác
  */
 const handleVNPayIPN = async (req, res) => {
+    console.log(">>> [VNPAY IPN RECEIVED]:", req.query);
     try {
         const verify = vnpayService.verifyIpnCall(req.query);
+        console.log(">>> [VNPAY IPN VERIFY]:", verify);
+
         if (!verify.isSuccess) {
+            console.error(">>> [VNPAY IPN ERROR]: Invalid checksum");
             return res.status(200).json({ RspCode: '97', Message: 'Invalid checksum' });
         }
 
@@ -195,34 +231,72 @@ const handleVNPayIPN = async (req, res) => {
         const vnpAmount = parseInt(req.query.vnp_Amount) / 100;
         const vnpResponseCode = req.query.vnp_ResponseCode;
 
+        console.log(`>>> [PROCESSING VNPAY IPN] OrderID: ${orderId}, Amount: ${vnpAmount}, ResCode: ${vnpResponseCode}`);
+
         // Gọi service xử lý cập nhật đơn hàng
         const result = await orderService.processVNPayPayment(orderId, vnpAmount, vnpResponseCode, req.query);
         
-        // Trả về theo định nghĩa của VNPay (Map từ EC sang RspCode, EM sang Message)
+        console.log(">>> [VNPAY IPN PROCESS RESULT]:", result);
+
+        // Trả về theo định nghĩa của VNPay
         return res.status(200).json({
-            RspCode: result.EC,
+            RspCode: result.EC === 0 ? '00' : result.EC.toString(),
             Message: result.EM
         });
 
     } catch (error) {
-        console.error(">>> Lỗi handleVNPayIPN:", error);
+        console.error(">>> [CRITICAL ERROR handleVNPayIPN]:", error);
         return res.status(200).json({ RspCode: '99', Message: 'Unknown error' });
     }
 };
 
+
 const handleVNPayReturn = async (req, res) => {
+    // console.log(">>> [VNPAY RETURN RECEIVED]:", req.query);
     try {
         const verify = vnpayService.verifyReturnUrl(req.query);
-        if (verify.isSuccess) {
-            return res.status(200).json({ EM: 'Thanh toán thành công!', EC: errorCode.SUCCESS, DT: req.query });
+        // console.log(">>> [VNPAY RETURN VERIFY]:", verify);
+
+        // Senior Note: Library vnpay trả về Object { isSuccess, ... } nên if(verify) luôn đúng -> cần sửa
+        if (verify && (verify.isSuccess || verify.isVerified)) {
+            console.log(">>> [VNPAY RETURN] Checksum hợp lệ. Bắt đầu cập nhật đồng bộ...");
+            
+            const orderId = req.query.vnp_TxnRef;
+            const vnpAmount = parseInt(req.query.vnp_Amount) / 100;
+            const vnpResponseCode = req.query.vnp_ResponseCode;
+
+            // [SENIOR FALLBACK] Gọi cập nhật DB ngay tại đây để tránh lỗi mất IPN
+            const updateResult = await orderService.processVNPayPayment(orderId, vnpAmount, vnpResponseCode, req.query);
+            console.log(">>> [VNPAY RETURN] Kết quả cập nhật đồng bộ:", updateResult);
+
+            // Chuyển đổi mã '00' từ VNPay (String) thành mã thành công của hệ thống (Number 0)
+            const systemEC = updateResult.EC === '00' ? 0 : updateResult.EC;
+
+            return res.status(200).json({
+                EM: systemEC === 0 ? 'Thanh toán thành công!' : updateResult.EM,
+                EC: systemEC,
+                DT: req.query
+            });
+
         } else {
-            return res.status(200).json({ EM: 'Thanh toán thất bại hoặc chữ ký không hợp lệ!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+            console.error(">>> [VNPAY RETURN ERROR]: Invalid checksum");
+            return res.status(200).json({
+                EM: 'Chữ ký không hợp lệ hoặc thanh toán thất bại',
+                EC: -1,
+                DT: ''
+            });
         }
     } catch (error) {
-        console.error(">>> Lỗi handleVNPayReturn:", error);
-        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+        console.error(">>> [CRITICAL ERROR handleVNPayReturn]:", error);
+        return res.status(500).json({
+            EM: 'Lỗi server khi xử lý kết quả VNPay',
+            EC: -1,
+            DT: ''
+        });
     }
 };
+
+
 
 const handleGetPaymentTransactions = async (req, res) => {
     try {
@@ -279,5 +353,6 @@ module.exports = {
     handleUpdatePaymentStatus,
     handleRequestReturnOrder,
     handleGetVNPayUrl, handleVNPayIPN, handleVNPayReturn,
-    handleGetPaymentTransactions, handleGetReturnRequests, handleUpdateReturnRequestStatus
+    handleGetPaymentTransactions, handleGetReturnRequests, handleUpdateReturnRequestStatus,
+    handleSyncVNPayStatus, handleGetGuestVNPayUrl
 }
