@@ -1,8 +1,11 @@
 const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 const redisHelper = require('../helpers/redis.helper');
-const vnpayService = require('./vnpayService'); // Bổ sung service vnpay
+const vnpayService = require('./vnpayService'); 
+const emailHelper = require('../helpers/email.helper');
+const { Op } = require('sequelize');
 const ORDER_CACHE_TTL = process.env.ORDER_CACHE_TTL || 1800; // 30 phút
+
 
 
 /**
@@ -77,6 +80,82 @@ const getGuestVNPayPaymentUrl = async (req, orderId, phone) => {
         return { EM: 'Lỗi server khi tạo link thanh toán cho khách', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 };
+
+/**
+ * [SENIOR FEATURE] Lấy chi tiết đơn hàng cho khách vãng lai (Xác thực ID + Phone)
+ */
+const getGuestOrderDetail = async (orderId, phone) => {
+    try {
+        const order = await db.Order.findOne({
+            where: { id: orderId },
+            attributes: ['id', 'status', 'finalAmount', 'paymentMethod', 'paymentStatus', 'shippingAddress', 'createdAt']
+        });
+
+        if (!order) return { EM: 'Đơn hàng không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
+        
+        // Bảo mật: Nếu đơn hàng thuộc về một User đã login, yêu cầu dùng luồng login
+        if (order.userId) return { EM: 'Đơn hàng này yêu cầu đăng nhập để xem chi tiết!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+
+        // Kiểm tra khớp số điện thoại trong shippingAddress
+        if (!order.shippingAddress.includes(phone)) {
+            return { EM: 'Thông tin xác thực (Số điện thoại) không chính xác!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        // Return flattened data for frontend
+        const formattedData = {
+            orderId: order.id,
+            status: order.status,
+            finalAmount: order.finalAmount,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            orderDate: order.createdAt,
+            address: order.shippingAddress
+        };
+
+        return { EM: 'Lấy thông tin đơn hàng thành công!', EC: errorCode.SUCCESS, DT: formattedData };
+    } catch (error) {
+        console.error(">>> Lỗi getGuestOrderDetail:", error);
+        return { EM: 'Lỗi server khi tra cứu đơn hàng', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+
+/**
+ * [SENIOR FEATURE] Khôi phục danh sách mã đơn hàng qua Email cho khách vãng lai
+ */
+const recoverGuestOrderIds = async (email, phone) => {
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const orders = await db.Order.findAll({
+            where: {
+                userId: null, // Chỉ tìm đơn của khách
+                createdAt: { [Op.gte]: thirtyDaysAgo },
+                [Op.and]: [
+                    { shippingAddress: { [Op.like]: `%${phone}%` } },
+                    { shippingAddress: { [Op.like]: `%${email}%` } }
+                ]
+            },
+            attributes: ['id', 'status', 'finalAmount', 'createdAt'],
+            order: [['createdAt', 'DESC']],
+            limit: 10 // Giới hạn 10 đơn gần nhất để email gọn gàng
+        });
+
+        if (!orders || orders.length === 0) {
+            return { EM: 'Không tìm thấy đơn hàng nào khớp với thông tin này trong 30 ngày qua.', EC: errorCode.NOT_FOUND, DT: '' };
+        }
+
+        // Gửi email
+        await emailHelper.sendOrderIdListEmail(email, orders);
+
+        return { EM: 'Danh sách mã đơn đã được gửi vào Email của bạn!', EC: errorCode.SUCCESS, DT: '' };
+    } catch (error) {
+        console.error(">>> Lỗi recoverGuestOrderIds:", error);
+        return { EM: 'Lỗi server khi khôi phục mã đơn hàng', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+
+
 
 const createOrder = async (userId, data) => {
     const t = await db.sequelize.transaction();
@@ -241,7 +320,34 @@ const createOrder = async (userId, data) => {
         }
         await Promise.all(cacheClearTasks);
 
+        // [PROACTIVE UX] Gửi email xác nhận ngay lập tức cho cả User và Guest
+        try {
+            let userEmail = '';
+            let userPhone = '';
+
+            if (userId) {
+                const userData = await db.User.findByPk(userId);
+                userEmail = userData?.email;
+                userPhone = userData?.phone;
+            } else if (data.guestInfo) {
+                userEmail = data.guestInfo.email;
+                userPhone = data.guestInfo.phone;
+            }
+
+            if (userEmail) {
+                // Ta truyền thêm phone vào object đơn hàng để helper tạo link tra cứu chính xác
+                const orderForEmail = {
+                    ...newOrder.get({ plain: true }),
+                    phone: userPhone 
+                };
+                emailHelper.sendOrderConfirmationEmail(userEmail, orderForEmail);
+            }
+        } catch (emailError) {
+            console.error(">>> [UX Error] Không thể gửi email xác nhận ngay:", emailError);
+        }
+
         return { EM: 'Đặt hàng thành công!', EC: errorCode.SUCCESS, DT: newOrder };
+
 
     } catch (error) {
         await t.rollback();
@@ -1117,10 +1223,54 @@ const syncOrderWithVNPay = async (orderId) => {
     }
 }
 
+/**
+ * [CHATBOT TOOL] Lấy danh sách đơn hàng rút gọn kèm chi tiết sản phẩm cho chatbot
+ */
+const getUserOrdersShort = async (userId) => {
+    try {
+        const orders = await db.Order.findAll({
+            where: { userId },
+            limit: 3,
+            order: [['createdAt', 'DESC']],
+            include: [{
+                model: db.OrderItem,
+                as: 'orderItems',
+                include: [{
+                    model: db.Variant,
+                    as: 'variant',
+                    include: [{ model: db.Product, as: 'product' }]
+                }]
+            }],
+            attributes: ['id', 'status', 'finalAmount', 'paymentStatus', 'createdAt']
+        });
+
+        if (!orders || orders.length === 0) return null;
+
+        return orders.map(order => ({
+            orderId: order.id,
+            status: order.status,
+            paymentStatus: order.paymentStatus ? "Đã thanh toán" : "Chưa thanh toán",
+            total: order.finalAmount,
+            date: order.createdAt,
+            items: order.orderItems.map(item => ({
+                name: item.variant?.product?.name,
+                color: item.variant?.color,
+                size: item.variant?.size,
+                quantity: item.quantity
+            }))
+        }));
+    } catch (error) {
+        console.error(">>> Lỗi getUserOrdersShort:", error);
+        return null;
+    }
+};
+
 module.exports = {
     createOrder, cancelOrder, getUserOrders, getUserOrderDetail,
     getAdminOrders, updateOrderStatus, updatePaymentStatus, getBestSellerProductIds,
     requestReturnOrder, createPaymentTransaction, processVNPayPayment,
     getPaymentTransactionsAdmin, getReturnRequestsAdmin, updateReturnStatus,
-    getVNPayPaymentUrl, syncOrderWithVNPay, getGuestVNPayPaymentUrl
+    getVNPayPaymentUrl, syncOrderWithVNPay, getGuestVNPayPaymentUrl, getGuestOrderDetail, recoverGuestOrderIds,
+    getUserOrdersShort
 };
+

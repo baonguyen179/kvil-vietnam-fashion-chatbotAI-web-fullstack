@@ -1,12 +1,59 @@
+const orderService = require('../service/orderService');
 const productService = require('../service/productService');
 const collectionService = require('../service/collectionService');
 
-const executeAiAction = async (functionName, functionArgs = {}) => {
+const executeAiAction = async (functionName, functionArgs = {}, userId = null) => {
     let finalReply = "";
     let finalProducts = [];
 
     try {
         switch (functionName) {
+
+            // [NEW] Tra cứu đơn hàng
+            case "trackOrder": {
+                const { orderId, phone } = functionArgs;
+                let ordersInfo = [];
+
+                if (userId) {
+                    // Ưu tiên tra cứu đơn hàng của User đang login
+                    const userOrders = await orderService.getUserOrdersShort(userId);
+                    if (userOrders && userOrders.length > 0) {
+                        ordersInfo = userOrders;
+                    }
+                }
+
+                if (ordersInfo.length === 0 && orderId && phone) {
+                    // Nếu không phải user hoặc user chưa có đơn, tra cứu theo ID + Phone (Guest flow)
+                    const guestOrderRes = await orderService.getGuestOrderDetail(orderId, phone);
+                    if (guestOrderRes.EC === 0 && guestOrderRes.DT) {
+                        // Vì getGuestOrderDetail trả về 1 đơn, ta convert sang array để dùng chung logic
+                        ordersInfo = [{
+                            orderId: guestOrderRes.DT.orderId,
+                            status: guestOrderRes.DT.status,
+                            date: guestOrderRes.DT.orderDate,
+                            total: guestOrderRes.DT.finalAmount,
+                            // Note: getGuestOrderDetail hiện chưa trả về items chi tiết, 
+                            // ta có thể bổ sung nếu khách yêu cầu "chi tiết hơn" thực sự cho Guest.
+                        }];
+                    }
+                }
+
+                if (ordersInfo.length > 0) {
+                    const orderStrings = ordersInfo.map(o => {
+                        const dateStr = new Date(o.date).toLocaleDateString('vi-VN');
+                        let itemsStr = "";
+                        if (o.items && o.items.length > 0) {
+                            itemsStr = "\n   Sản phẩm: " + o.items.map(i => `${i.name} (${i.color}, ${i.size}) x${i.quantity}`).join(', ');
+                        }
+                        return `- Đơn #${o.orderId} [${o.status}] đặt ngày ${dateStr}.${itemsStr}`;
+                    }).join('\n\n');
+
+                    finalReply = `Dạ, mình tìm thấy thông tin đơn hàng của bạn đây ạ:\n\n${orderStrings}\n\nBạn cần hỗ trợ thêm gì về đơn hàng này không ạ?`;
+                } else {
+                    finalReply = "Dạ, mình vẫn chưa tìm thấy đơn hàng nào khớp với thông tin bạn cung cấp. Bạn kiểm tra lại mã đơn hoặc số điện thoại giúp mình nhé!";
+                }
+                break;
+            }
 
             case "searchProducts": {
                 const keyword = functionArgs.keyword || "";

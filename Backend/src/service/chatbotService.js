@@ -14,50 +14,64 @@ const ADMIN_SESSIONS_TTL = 60;  // 1 phút - dữ liệu thay đổi nhanh hơn
 const ADMIN_DETAIL_TTL = 180;   // 3 phút - chi tiết session ít thay đổi hơn
 
 const processChatbotMessage = async (userId, sessionId, message) => {
-    // 1. Lưu log tin nhắn của khách
-    await db.ChatLog.create({
+    // 1. [PERFORMANCE] Lưu log USER song song, không await để giảm latency
+    db.ChatLog.create({
         userId, sessionId, sender: 'USER', message, metadata: null
-    });
+    }).catch(err => console.error(">>> Lỗi lưu log USER (Silent):", err));
 
     let finalReply = "";
     let finalProducts = [];
+    const identifier = userId ? `user:${userId}` : `session:${sessionId}`;
+    const contextCacheKey = `chat:context:${identifier}`;
 
-    // 2. Lấy lịch sử hội thoại (Context)
-    let whereCondition = userId ? { userId } : { sessionId };
-    const recentLogs = await db.ChatLog.findAll({
-        where: whereCondition,
-        order: [['createdAt', 'DESC']],
-        limit: 10
-    });
-    recentLogs.reverse();
+    // 2. [OPTIMIZATION] Lấy Context từ Redis cache trước khi query DB
+    let aiMessages = [];
+    try {
+        const cachedContext = await redisHelper.getCache(contextCacheKey);
+        if (cachedContext && Array.isArray(cachedContext)) {
+            aiMessages = cachedContext;
+        } else {
+            // Nếu không có cache, mới query DB
+            let whereCondition = userId ? { userId } : { sessionId };
+            const recentLogs = await db.ChatLog.findAll({
+                where: whereCondition,
+                order: [['createdAt', 'DESC']],
+                limit: 10
+            });
+            recentLogs.reverse();
+            aiMessages = recentLogs.map(log => ({
+                role: log.sender === 'USER' ? 'user' : 'assistant',
+                content: log.message || ""
+            }));
+        }
+    } catch (cacheError) {
+        console.error(">>> Lỗi lấy context cache:", cacheError);
+    }
 
     const messages = [
         {
             role: "system",
-            content: `Bạn là trợ lý ảo tư vấn thời trang thông minh của shop Kvil.
-            Nhiệm vụ: Tư vấn sản phẩm, kiểm tra hàng, lọc giá.
+            content: `Bạn là trợ lý ảo tư vấn thời trang thông minh của shop Kvil (Kvil Fashion).
+            Thông tin Shop:
+            - CS1: Số 274B Lạch Tray, Quận Ngô Quyền, Hải Phòng.
+            - CS2: Số 123 Thái Hà, Đống Đa, Hà Nội.
+            - Hotline: 0225.3846.118 (8h00 - 22h00).
+            - Chính sách: Đổi trả trong 7 ngày nếu còn tem mác, miễn phí vận chuyển đơn từ 500k.
+
+            Nhiệm vụ: Tư vấn sản phẩm, kiểm tra hàng, lọc giá, TRA CỨU ĐƠN HÀNG.
             Phong cách: Thân thiện, chuyên nghiệp, dùng emoji nhẹ nhàng.
             QUY TẮC BÓC TÁCH GIÁ:
             - "Dưới X": maxPrice = X, không điền minPrice.
             - "Trên X": minPrice = X, không điền maxPrice.
             - "Từ X đến Y": minPrice = X, maxPrice = Y.
-            - "X k" hay "X nghìn": Tự động nhân với 1000 (Ví dụ: 700k -> 700000).
-            - LUÔN LUÔN phải giữ lại keyword (áo, quần...) khi khách nhắc tới.
-            LƯU Ý QUAN TRỌNG:
-            - Có con số cụ thể (ví dụ: 500k, 1 triệu) -> Dùng filterProductsAdvanced.
-            - Chỉ nói chung chung "rẻ", "đắt", "mới" -> Dùng searchProducts .
-            - Nếu khách muốn lọc theo giá (ví dụ: dưới 500k, từ 200-300k), hãy dùng 'filterProductsAdvanced'.
-            - Nếu khách hỏi hàng bán chạy/hot, hãy dùng 'getBestSellerProducts'.
-            - KHÔNG tự tiện đoán giá tiền (ví dụ: không được tự ý điền 1 triệu khi khách nói "rẻ").
-            - Nếu khách nói "rẻ", "giá tốt", "bình dân" -> Gọi 'searchProducts' với sort='price_asc'.
-            - Nếu khách có con số cụ thể (ví dụ: "dưới 500k") -> Mới được gọi 'filterProductsAdvanced'.
-            - Tuyệt đối không trả về tin nhắn rác trong tham số hàm.
-            - Luôn phản hồi bằng tiếng Việt.`
+            - "X k": Tự động nhân với 1000 (Ví dụ: 700k -> 700000).
+            - LUÔN LUÔN giữ lại keyword (áo, quần...) khi khách nhắc tới.
+            TRA CỨU ĐƠN HÀNG:
+            - Nếu khách hỏi "Đơn hàng của tôi đâu?", hãy lịch sự hỏi Mã đơn hàng.
+            - Nếu là khách vãng lai, cần thêm cả Số điện thoại.
+            - Khi có đủ thông tin hoặc đã đăng nhập, hãy gọi 'trackOrder'.`
         },
-        ...recentLogs.map(log => ({
-            role: log.sender === 'USER' ? 'user' : 'assistant',
-            content: log.message || ""
-        })),
+        ...aiMessages,
         { role: "user", content: message } // Thêm tin nhắn hiện tại
     ];
 
@@ -83,7 +97,7 @@ const processChatbotMessage = async (userId, sessionId, message) => {
             console.log("Tham số AI bóc tách được:", args);
             console.log("------------------------------------------");
             // Thực thi action từ handler (File 2)
-            const actionResult = await executeAiAction(functionName, args);
+            const actionResult = await executeAiAction(functionName, args, userId);
             finalReply = actionResult.finalReply;
             finalProducts = actionResult.finalProducts;
 
@@ -97,18 +111,24 @@ const processChatbotMessage = async (userId, sessionId, message) => {
         finalReply = "Dạ, hệ thống đang bận một chút, bạn đợi mình vài giây nhé!";
     }
 
-    // 4. Lưu log phản hồi của BOT
+    // 4. Cập nhật Context Cache (Giữ 10 tin nhắn mới nhất trong Redis)
+    const newContext = [
+        ...aiMessages,
+        { role: "user", content: message },
+        { role: "assistant", content: finalReply }
+    ].slice(-10); // Chỉ giữ 10 tin cuối
+    
+    // Lưu cache đồng thời với lưu log BOT
     const productIds = finalProducts.map(p => p.id);
-    await db.ChatLog.create({
-        userId,
-        sessionId,
-        sender: 'BOT',
-        message: finalReply,
-        metadata: productIds.length > 0 ? JSON.stringify(productIds) : null
-    });
+    await Promise.all([
+        db.ChatLog.create({
+            userId, sessionId, sender: 'BOT', message: finalReply,
+            metadata: productIds.length > 0 ? JSON.stringify(productIds) : null
+        }),
+        redisHelper.setCache(contextCacheKey, newContext, 1800), // Cache 30 phút
+        redisHelper.delByPattern(`chat:history:${identifier}:*`) // Clear history list cache
+    ]);
 
-    const identifier = userId ? `user:${userId}` : `session:${sessionId}`;
-    await redisHelper.delByPattern(`chat:history:${identifier}:*`);
     return {
         EM: 'Thành công',
         EC: errorCode.SUCCESS,

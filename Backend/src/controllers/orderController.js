@@ -199,6 +199,47 @@ const handleGetGuestVNPayUrl = async (req, res) => {
 };
 
 /**
+ * [PUBLIC] Tra cứu trạng thái đơn hàng khách vãng lai
+ */
+const handleGetGuestOrderDetail = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const phone = req.query.phone;
+        
+        if (!orderId || !phone) {
+            return res.status(200).json({ EM: 'Mã đơn hàng và Số điện thoại là bắt buộc!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const data = await orderService.getGuestOrderDetail(orderId, phone);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+
+    } catch (error) {
+        console.error(">>> Lỗi handleGetGuestOrderDetail:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+/**
+ * [PUBLIC] Yêu cầu khôi phục mã đơn hàng qua Email
+ */
+const handleRecoverGuestOrderIds = async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+        if (!email || !phone) {
+            return res.status(200).json({ EM: 'Email và Số điện thoại là bắt buộc!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const data = await orderService.recoverGuestOrderIds(email, phone);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+
+    } catch (error) {
+        console.error(">>> Lỗi handleRecoverGuestOrderIds:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+
+/**
  * [ADMIN] Đồng bộ thủ công trạng thái đơn hàng từ VNPAY
  */
 const handleSyncVNPayStatus = async (req, res) => {
@@ -354,5 +395,6 @@ module.exports = {
     handleRequestReturnOrder,
     handleGetVNPayUrl, handleVNPayIPN, handleVNPayReturn,
     handleGetPaymentTransactions, handleGetReturnRequests, handleUpdateReturnRequestStatus,
-    handleSyncVNPayStatus, handleGetGuestVNPayUrl
-}
+    handleSyncVNPayStatus, handleGetGuestVNPayUrl, handleGetGuestOrderDetail,
+    handleRecoverGuestOrderIds
+}

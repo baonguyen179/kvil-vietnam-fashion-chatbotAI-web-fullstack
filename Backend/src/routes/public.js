@@ -11,10 +11,14 @@ const orderController = require('../controllers/orderController');
 const couponController = require('../controllers/couponController');
 
 
-// [VNPAY CALLBACKS]
+// [VNPAY CALLBACKS]-X
 router.get('/vnpay/ipn', orderController.handleVNPayIPN);
 router.get('/vnpay/return', orderController.handleVNPayReturn);
 router.post('/order/vnpay-url/guest', orderController.handleGetGuestVNPayUrl);
+router.get('/order/guest/:id', orderController.handleGetGuestOrderDetail);
+router.post('/order/guest/recover', orderController.handleRecoverGuestOrderIds);
+
+
 
 // [AUTH]-X
 router.post('/auth/register', authController.handleRegister);
@@ -37,7 +41,7 @@ router.get('/collections/:slug', collectionController.handleGetCollectionBySlug)
 router.get('/coupons/check', couponController.handleCheckCoupon);
 
 
-// [PUBLIC - CHATBOT AI]-X
+// [PUBLIC - CHATBOT AI]
 router.post('/chatbot/message', chatbotController.handleChatbotMessage);
 router.get('/chatbot/history', chatbotController.handleGetChatHistory);
 

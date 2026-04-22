@@ -112,6 +112,13 @@ const userLogin = async (rawUserData, guestSessionId = null) => {
                             }
                         }
                     );
+                    // [CLEANUP] Xóa cache lịch sử và context của cả session cũ và user mới để AI nhận diện dữ liệu gộp
+                    await Promise.all([
+                        redisHelper.delByPattern(`chat:history:session:${guestSessionId}:*`),
+                        redisHelper.delByPattern(`chat:history:user:${user.id}:*`),
+                        redisHelper.delCache(`chat:context:session:${guestSessionId}`),
+                        redisHelper.delCache(`chat:context:user:${user.id}`)
+                    ]);
                 }
 
                 return {

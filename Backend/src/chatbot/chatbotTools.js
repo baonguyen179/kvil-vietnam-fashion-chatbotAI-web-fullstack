@@ -126,6 +126,21 @@ const aiFunctionDeclarations = [
                 required: ["keyword"]
             }
         }
+    },
+
+    {
+        type: "function",
+        function: {
+            name: "trackOrder",
+            description: "Tra cứu trạng thái và thông tin chi tiết đơn hàng (ngày đặt, sản phẩm, trạng thái giao hàng).",
+            parameters: {
+                type: "object",
+                properties: {
+                    orderId: { type: "number", description: "Mã đơn hàng (ví dụ: 123)" },
+                    phone: { type: "string", description: "Số điện thoại đặt đơn (bắt buộc nếu là khách vãng lai)" }
+                }
+            }
+        }
     }
 ];
 
