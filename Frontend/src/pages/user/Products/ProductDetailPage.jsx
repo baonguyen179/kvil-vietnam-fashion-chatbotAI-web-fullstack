@@ -280,7 +280,7 @@ const ProductDetailPage = () => {
                 <div className="flex flex-col gap-6">
                     <div className="flex flex-col gap-1">
                         <h1 className="text-2xl font-bold tracking-tight text-[#1c1c19] uppercase">{product.name}</h1>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">SKU: {currentSku}</p>
+                        <p className="text-xs text-gray-400 uppercase tracking-wider"> {currentSku}</p>
                     </div>
 
                     <div className="flex items-baseline gap-4">

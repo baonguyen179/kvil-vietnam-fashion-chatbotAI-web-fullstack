@@ -153,10 +153,10 @@ const AdminVariantDrawer = ({
 
                         <Form.Item
                             name="sku"
-                            label="Mã SKU (tùy chọn)"
+                            label="Mã SKU(Stock Keeping Unit)"
                             className="col-span-2"
                         >
-                            <Input placeholder="Ví dụ: SP01-RED-M. Bỏ trống sẽ tự động tạo" />
+                            <Input placeholder="Mã sản phẩm trong kho" />
                         </Form.Item>
 
                         <div className="col-span-2 flex justify-end">

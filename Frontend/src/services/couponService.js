@@ -38,6 +38,18 @@ const couponService = {
     deleteCoupon: async (id) => {
         return await axios.delete(`${BASE}/${id}`);
     },
+
+    /**
+     * [PUBLIC] Kiểm tra mã giảm giá
+     * @param {string} code 
+     * @param {number} orderValue 
+     */
+    applyCoupon: async (code, orderValue) => {
+        return await axios.get("/api/v1/coupons/check", {
+            params: { code, orderValue }
+        });
+    }
 };
+
 
 export default couponService;

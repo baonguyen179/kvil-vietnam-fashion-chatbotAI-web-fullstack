@@ -13,6 +13,7 @@ const formatCurrency = (val) => {
 
 const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdatePayment, updatingId }) => {
     if (!order) return null;
+    // console.log("order: ", order);
 
     const statusCfg = ORDER_STATUS_CONFIG[order.status] || {};
     const isCancelled = order.status === 'cancelled';

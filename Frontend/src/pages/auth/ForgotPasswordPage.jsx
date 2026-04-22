@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
-import { Eye, EyeOff, Mail, Lock, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, KeyRound, ChevronLeft } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
@@ -214,6 +214,16 @@ const ForgotPasswordPage = () => {
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-4 pt-0">
+          <Button 
+            variant="ghost" 
+            asChild 
+            className="w-full text-gray-500 hover:text-black"
+          >
+            <Link to="/" className="flex items-center gap-2">
+              <ChevronLeft size={18} />
+              Quay về trang chủ
+            </Link>
+          </Button>
           <div className="text-sm text-center text-gray-500">
             <Link to="/login" className="text-blue-600 hover:underline">
               Quay lại Đăng nhập

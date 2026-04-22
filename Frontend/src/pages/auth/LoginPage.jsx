@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
 import { setLoginData } from "@/redux/slices/authSlice";
-import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ChevronLeft } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
@@ -126,11 +126,7 @@ const LoginPage = () => {
                 </p>
               )}
 
-              <div className="flex items-center justify-between mt-1">
-                <Link to="/" className="text-sm text-gray-500 hover:text-black flex items-center gap-1 transition-colors">
-                  <ArrowLeft size={16} />
-                  Quay về trang chủ
-                </Link>
+              <div className="flex items-center justify-end mt-1">
                 <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
                   Quên mật khẩu?
                 </Link>
@@ -148,8 +144,18 @@ const LoginPage = () => {
         </CardContent>
         
         <CardFooter className="flex flex-col space-y-4">
+          <Button 
+            variant="ghost" 
+            asChild 
+            className="w-full text-gray-500 hover:text-black"
+          >
+            <Link to="/" className="flex items-center gap-2">
+              <ChevronLeft size={18} />
+              Quay về trang chủ
+            </Link>
+          </Button>
           <div className="text-sm text-center text-gray-500">
-            Chưa có tài khoản? <a href="/register" className="text-blue-600 hover:underline">Đăng ký ngay</a>
+            Chưa có tài khoản? <Link to="/register" className="text-blue-600 hover:underline">Đăng ký ngay</Link>
           </div>
         </CardFooter>
       </Card>

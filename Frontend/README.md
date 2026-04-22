@@ -1,16 +1,18 @@
-**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Trang Danh sách sản phẩm & Sửa lỗi Bộ lọc AQP)**
+**THÔNG BÁO BẢN CẬP NHẬT MỚI NHẤT (Frontend - Tối ưu Checkout & Thanh toán VNPay)**
 
-- **Trang Danh sách sản phẩm (Product Listing)**:
-  - Triển khai `ProductsLayout` và `ProductList` với giao diện 2 cột cao cấp, tương thích hoàn toàn trên Mobile (Sidebar chuyển thành Drawer).
-  - **Bộ lọc thông minh**: Tích hợp lọc theo Danh mục, Kích thước, Màu sắc và **Khoảng giá (Range Slider)** bằng Ant Design.
-  - **Đồng bộ URL**: Mọi trạng thái lọc được lưu trực tiếp vào URL Search Params, hỗ trợ SEO và cho phép chia sẻ liên kết kết quả lọc.
-- **Khắc phục lỗi Bộ lọc Giá (AQP Bug Fix)**:
-  - Chuyển đổi cơ chế gửi tham số lọc giá sang **Query String thủ công** để đảm bảo các toán tử `>=` và `<=` được gửi lên Backend chính xác tuyệt đối, không bị mã hóa sai định dạng.
-  - Cập nhật `productService.js` hỗ trợ nhận chuỗi truy vấn thô để tối ưu hóa việc giao tiếp với thư viện AQP (Adonis Query Parser) ở phía máy chủ.
-- **Nội dung Chính sách & Điều khoản**:
-  - Hoàn thiện 100% nội dung các trang: Chính sách đổi trả, Bảo mật, Điều khoản dịch vụ, Thanh toán và Giao nhận.
-- **Cải thiện điều hướng**:
-  - Kết nối menu "SẢN PHẨM" trên Header trực tiếp vào trang `/collections`.
+- **Tối ưu hóa quy trình Checkout (Checkout Optimization)**:
+  - Tái cấu trúc logic trang đặt hàng theo nguyên tắc **SRP (Single Responsibility)**, tách toàn bộ xử lý nghiệp vụ sang custom hook `useCheckout`.
+  - Triển khai cơ chế **Same-tab Redirection** cho thanh toán VNPay, giúp tăng tính ổn định trên di động và tránh bị trình duyệt chặn popup.
+- **Bảo mật trang kết quả (Order Success Security)**:
+  - Tích hợp xác thực quyền sở hữu đơn hàng bằng `sessionStorage` cho khách vãng lai, ngăn chặn việc truy cập trái phép bằng cách thay đổi ID đơn hàng trên URL.
+- **Xử lý phản hồi thanh toán (Payment Return Handling)**:
+  - Hoàn thiện trang `VNPayReturnPage` với khả năng xử lý **Đồng bộ trạng thái** đơn hàng ngay khi khách hàng quay lại từ cổng thanh toán (Fallback cho trường hợp IPN bị lỗi).
+  - Khắc phục triệt để lỗi hiển thị "Thanh toán thất bại" dù Database đã cập nhật (do lệch định dạng mã phản hồi `'00'` vs `0`).
+
+---
+
+**THÔNG BÁO BẢN CẬP NHẬT TRƯỚC (Frontend - Trang Danh sách sản phẩm & Sửa lỗi Bộ lọc AQP)**
+
 
 ---
 

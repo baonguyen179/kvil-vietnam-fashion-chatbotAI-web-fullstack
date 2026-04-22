@@ -15,14 +15,17 @@ import {
 import { useState, useEffect } from "react";
 import CartSheet from "./cart.sheet";
 import { toggleCartDrawer } from "@/redux/slices/cartSlice";
+import collectionService from "@/services/collectionService";
+import { ChevronDown } from "lucide-react";
 
 const navLinks = [
     { label: "TRANG CHỦ", href: "/" },
     { label: "GIỚI THIỆU", href: "/about" },
     { label: "SẢN PHẨM", href: "/collections" },
-    { label: "ALBUMS", href: "#albums" },
+    { label: "BỘ SƯU TẬP", href: "#", isDropdown: true },
     { label: "LIÊN HỆ", href: "#lien-he" },
 ];
+
 
 export const UserHeader = () => {
     const navigate = useNavigate();
@@ -35,6 +38,21 @@ export const UserHeader = () => {
     const [scrolled, setScrolled] = useState(false);
     const { cartItems } = useSelector((state) => state.cart);
     const cartCount = cartItems?.length || 0;
+    const [collections, setCollections] = useState([]);
+
+    useEffect(() => {
+        const fetchCollections = async () => {
+            try {
+                const res = await collectionService.getPublicCollections();
+                if (res && res.EC === 0) {
+                    setCollections(res.DT || []);
+                }
+            } catch (error) {
+                console.error(">>> Lỗi khi lấy danh sách bộ sưu tập:", error);
+            }
+        };
+        fetchCollections();
+    }, []);
 
     const handleLogout = async () => {
         await dispatch(performLogout());
@@ -61,8 +79,9 @@ export const UserHeader = () => {
         }
 
         return (
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
+
                     <Button 
                         variant="ghost" 
                         size="icon" 
@@ -181,6 +200,47 @@ export const UserHeader = () => {
                     <nav className="hidden md:flex items-center gap-10">
                         {navLinks.map((link) => {
                             const active = isLinkActive(link.label);
+                            
+                            if (link.isDropdown) {
+                                return (
+                                    <DropdownMenu key={link.label} modal={false}>
+                                        <DropdownMenuTrigger asChild>
+
+                                            <button
+                                                className={cn(
+                                                    "relative text-[11px] tracking-[0.15em] uppercase font-medium transition-colors flex items-center gap-1",
+                                                    active ? "text-[#785254]" : "text-[#504444] hover:text-[#785254]"
+                                                )}
+                                                style={{ fontFamily: "'Lora', serif" }}
+                                            >
+                                                {link.label}
+                                                <ChevronDown className="h-3 w-3" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start" className="w-56 rounded-none p-2 border-[#e8e0d8] shadow-sm" style={{ fontFamily: "'Lora', serif" }}>
+                                            {collections.length > 0 ? (
+                                                collections.map((item) => (
+                                                    <DropdownMenuItem 
+                                                        key={item.id} 
+                                                        onClick={() => {
+                                                            setActiveLink(link.label);
+                                                            navigate(`/collections/${item.slug}`);
+                                                        }}
+                                                        className="cursor-pointer text-xs uppercase tracking-wider py-2 hover:bg-[#fcfaf7]"
+                                                    >
+                                                        {item.name}
+                                                    </DropdownMenuItem>
+                                                ))
+                                            ) : (
+                                                <DropdownMenuItem disabled className="text-xs text-gray-400">
+                                                    Đang cập nhật...
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                );
+                            }
+
                             return (
                                 <Link
                                     key={link.label}
@@ -203,6 +263,7 @@ export const UserHeader = () => {
                             );
                         })}
                     </nav>
+
 
                     <div 
                         className={cn(
@@ -242,23 +303,50 @@ export const UserHeader = () => {
                 )}
             >
                 <nav className="flex flex-col px-10 py-6 gap-6">
-                    {navLinks.map((link) => (
-                        <Link
-                            key={link.label}
-                            to={link.href}
-                            onClick={() => {
-                                setActiveLink(link.label);
-                                setMobileOpen(false);
-                            }}
-                            className={cn(
-                                "text-[12px] tracking-widest uppercase font-medium",
-                                isLinkActive(link.label) ? "text-[#785254]" : "text-[#504444]"
-                            )}
-                        >
-                            {link.label}
-                        </Link>
-                    ))}
+                    {navLinks.map((link) => {
+                        if (link.isDropdown) {
+                            return (
+                                <div key={link.label} className="flex flex-col gap-4">
+                                    <span className="text-[12px] tracking-widest uppercase font-bold text-[#785254]">
+                                        {link.label}
+                                    </span>
+                                    <div className="flex flex-col gap-3 pl-4 border-l border-[#e8e0d8]">
+                                        {collections.map(item => (
+                                            <Link
+                                                key={item.id}
+                                                to={`/collections/${item.slug}`}
+                                                onClick={() => {
+                                                    setActiveLink(link.label);
+                                                    setMobileOpen(false);
+                                                }}
+                                                className="text-[11px] tracking-widest uppercase font-medium text-[#504444] hover:text-[#785254]"
+                                            >
+                                                {item.name}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return (
+                            <Link
+                                key={link.label}
+                                to={link.href}
+                                onClick={() => {
+                                    setActiveLink(link.label);
+                                    setMobileOpen(false);
+                                }}
+                                className={cn(
+                                    "text-[12px] tracking-widest uppercase font-medium",
+                                    isLinkActive(link.label) ? "text-[#785254]" : "text-[#504444]"
+                                )}
+                            >
+                                {link.label}
+                            </Link>
+                        );
+                    })}
                 </nav>
+
             </div>
             </header>
             <CartSheet />

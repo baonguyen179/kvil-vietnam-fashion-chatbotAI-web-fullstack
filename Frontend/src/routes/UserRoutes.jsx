@@ -10,6 +10,7 @@ import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import OrderHistory from '@/pages/user/Account/OrderHistory';
 import ProfilePage from '@/pages/user/Account/ProfilePage';
 import AddressPage from '@/pages/user/Account/AddressPage';
+import ChangePasswordPage from '@/pages/user/Account/ChangePasswordPage';
 import AboutPage from '@/pages/user/AboutPage';
 import AboutStory from '@/pages/user/About/AboutStory';
 import PolicyContent from '@/pages/user/About/PolicyContent';
@@ -19,6 +20,12 @@ import ProductDetailPage from '@/pages/user/Products/ProductDetailPage';
 import { lazy } from 'react';
 
 const CartPage = lazy(() => import('@/pages/user/Cart/CartPage'));
+const CheckoutPage = lazy(() => import('@/pages/user/Checkout/CheckoutPage'));
+const OrderSuccessPage = lazy(() => import('@/pages/user/Checkout/OrderSuccessPage'));
+const VNPayReturnPage = lazy(() => import('@/pages/user/Checkout/VNPayReturnPage'));
+
+
+
 
 const UserRoutes = ({ notFound }) => {
 
@@ -37,11 +44,18 @@ const UserRoutes = ({ notFound }) => {
 
                 <Route path="collections" element={<ProductsLayout />}>
                     <Route index element={<ProductList />} />
-                    <Route path=":categoryLabel" element={<ProductList />} />
+                    <Route path=":slug" element={<ProductList />} />
                 </Route>
+
 
                 <Route path="products/:id/:slug?" element={<ProductDetailPage />} />
                 <Route path="cart" element={<CartPage />} />
+                <Route path="checkout" element={<CheckoutPage />} />
+                <Route path="order-success/:orderId" element={<OrderSuccessPage />} />
+                <Route path="order/vnpay-return" element={<VNPayReturnPage />} />
+
+
+
                 
                 <Route 
                     path="account" 
@@ -54,7 +68,7 @@ const UserRoutes = ({ notFound }) => {
                     <Route index element={<OrderHistory />} />
                     <Route path="profile" element={<ProfilePage />} /> 
                     <Route path="addresses" element={<AddressPage />} />
-
+                    <Route path="change-password" element={<ChangePasswordPage />} />
                 </Route>
             </Route>
 

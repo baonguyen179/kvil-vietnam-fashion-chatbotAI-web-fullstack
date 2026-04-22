@@ -31,6 +31,59 @@ const orderService = {
     updatePaymentStatus: async (id, paymentStatus) => {
         return await axios.patch(`${BASE}/${id}/payment`, { paymentStatus });
     },
+
+    /**
+     * [ADMIN] Lấy danh sách yêu cầu trả hàng
+     * @param {Object} params - { page, limit, status }
+     */
+    getAdminReturnRequests: async (params = {}) => {
+        return await axios.get(`${BASE}/returns`, { params });
+    },
+
+    /**
+     * [ADMIN] Cập nhật trạng thái yêu cầu trả hàng
+     * @param {number} id - Request ID
+     * @param {'APPROVED'|'REJECTED'} status
+     */
+    updateReturnRequestStatus: async (id, status) => {
+        return await axios.patch(`${BASE}/returns/${id}/status`, { status });
+    },
+
+    /**
+     * Tạo đơn hàng mới (Dành cho cả User và Guest)
+     * @param {Object} orderData 
+     */
+    createOrder: async (orderData) => {
+        return await axios.post("/api/v1/user/orders", orderData);
+    },
+
+    /**
+     * Lấy link thanh toán VNPay cho User (Login)
+     * @param {number} orderId 
+     */
+    getVNPayUrl: async (orderId) => {
+        return await axios.get(`/api/v1/user/orders/${orderId}/payment-url`);
+    },
+
+    /**
+     * Lấy link thanh toán VNPay cho Guest
+     * @param {number} orderId 
+     * @param {string} phone 
+     */
+    getGuestVNPayUrl: async (orderId, phone) => {
+        return await axios.post("/api/v1/order/vnpay-url/guest", { orderId, phone });
+    },
+
+    /**
+     * Xác thực kết quả thanh toán trả về từ VNPay
+     * @param {Object} queryParams 
+     */
+    verifyVNPayReturn: async (queryParams) => {
+        return await axios.get("/api/v1/vnpay/return", { params: queryParams });
+    }
 };
+
+
+
 
 export default orderService;

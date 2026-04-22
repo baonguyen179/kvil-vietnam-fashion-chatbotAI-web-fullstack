@@ -70,11 +70,22 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
                 ],
             },
             {
-                key: "orders",
-                label: <Link to={"/admin/orders"}>Orders</Link>,
+                key: 'orders_parent',
+                label: 'Order',
                 icon: <ShoppingCartOutlined />,
-                permission: 'orders.read'
+                permission: 'orders.read',
+                children: [
+                    {
+                        key: "orders",
+                        label: <Link to={"/admin/orders"}>All Orders</Link>,
+                    },
+                    {
+                        key: "return_requests",
+                        label: <Link to={"/admin/orders/returns"}>Return Requests</Link>,
+                    },
+                ],
             },
+
             {
                 key: "coupons",
                 label: <Link to={"/admin/coupons"}>Coupons</Link>,

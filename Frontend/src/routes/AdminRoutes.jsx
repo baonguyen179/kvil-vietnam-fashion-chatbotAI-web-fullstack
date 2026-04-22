@@ -16,6 +16,7 @@ const ChatbotManagePage = lazy(() => import('@/pages/admin/ChatbotManagePage'));
 const InventoryLogPage = lazy(() => import('@/pages/admin/InventoryLogPage'));
 const TransactionPage = lazy(() => import('@/pages/admin/TransactionPage'));
 const RoleManagePage = lazy(() => import('@/pages/admin/RoleManagePage'));
+const ReturnManagePage = lazy(() => import('@/pages/admin/ReturnManagePage'));
 
 // Thành phần bảo vệ Route dựa trên Role
 // Thành phần bảo vệ Route dựa trên Role và Permission
@@ -28,15 +29,15 @@ const AdminGuard = ({ allowedRoles, requiredPermission, children }) => {
 
     const { roles = [], permissions = [] } = user || {};
 
-    // 1. Luôn cho phép SUPER_ADMIN truy cập mọi nơi (hoặc tùy biến nếu cần chặt chẽ hơn)
+    // Luôn cho phép SUPER_ADMIN truy cập mọi nơi (hoặc tùy biến nếu cần chặt chẽ hơn)
     if (roles.includes('SUPER_ADMIN')) return children;
 
-    // 2. Kiểm tra theo Quyền (Permission) - Ưu tiên hàng đầu
+    // Kiểm tra theo Quyền (Permission) - Ưu tiên hàng đầu
     if (requiredPermission && permissions.includes(requiredPermission)) {
         return children;
     }
 
-    // 3. Kiểm tra theo Vai trò (Role) - Dành cho các trang tổng quát
+    // Kiểm tra theo Vai trò (Role) - Dành cho các trang tổng quát
     if (allowedRoles && roles.some(role => allowedRoles.includes(role))) {
         return children;
     }
@@ -108,6 +109,11 @@ const AdminRoutes = ({ notFound }) => {
                     <Route path="orders" element={
                         <AdminGuard requiredPermission="orders.read">
                             <OrderManagePage />
+                        </AdminGuard>
+                    } />
+                    <Route path="orders/returns" element={
+                        <AdminGuard requiredPermission="orders.read">
+                            <ReturnManagePage />
                         </AdminGuard>
                     } />
 

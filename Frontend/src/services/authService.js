@@ -15,7 +15,11 @@ const authService = {
     },
     logout: async () => {
         return await axios.post("/api/v1/auth/logout");
+    },
+    changePassword: async (oldPassword, newPassword) => {
+        return await axios.patch("/api/v1/auth/change-password", { oldPassword, newPassword });
     }
 }
+
 
 export default authService;

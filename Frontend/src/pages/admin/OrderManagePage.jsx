@@ -115,7 +115,7 @@ const OrderManagePage = () => {
             setUpdatingId(null);
         }
     };
-
+// console.log(selectedOrder)
     const handleUpdatePayment = async (orderId, newPaymentStatus) => {
         setUpdatingId(orderId);
         try {

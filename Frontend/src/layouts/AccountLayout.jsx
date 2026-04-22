@@ -35,8 +35,14 @@ const AccountLayout = () => {
             label: 'Danh sách địa chỉ',
             path: '/account/addresses',
             icon: <MapPin className="w-4 h-4" />
+        },
+        {
+            label: 'Đổi mật khẩu',
+            path: '/account/change-password',
+            icon: <Lock className="w-4 h-4" />
         }
     ];
+
 
     return (
         <div className="w-full bg-white min-h-[600px] py-12 px-6 md:px-20">

@@ -40,7 +40,7 @@ export const PAYMENT_STATUS_OPTIONS = [
 export const PAYMENT_METHOD_OPTIONS = [
     { value: '',              label: 'Tất cả hình thức TT' },
     { value: 'COD',           label: 'Tiền mặt (COD)' },
-    { value: 'BANK_TRANSFER', label: 'Chuyển khoản' },
+    { value: 'VNPAY', label: 'VNPay' },
 ];
 
 export const DELIVERY_METHOD_OPTIONS = [

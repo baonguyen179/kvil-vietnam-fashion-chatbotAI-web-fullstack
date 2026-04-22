@@ -108,13 +108,16 @@ instance.interceptors.response.use(function (response) {
                 // Làm mới token thất bại (refresh token cũng đã hết hạn)
                 store?.dispatch(logout()); 
                 processQueue(new Error('Refresh token invalid'));
+                window.location.href = '/login'; // Chuyển về trang đăng nhập
                 return Promise.reject(error);
             }
         } catch (err) {
             store?.dispatch(logout());
             processQueue(err);
+            window.location.href = '/login'; // Chuyển về trang đăng nhập
             return Promise.reject(err);
         } finally {
+
             isRefreshing = false;
         }
     }

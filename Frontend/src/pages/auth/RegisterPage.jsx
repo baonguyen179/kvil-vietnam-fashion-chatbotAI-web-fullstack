@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import authService from "@/services/authService";
 import { toast } from "react-toastify";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ChevronLeft } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
@@ -176,12 +176,6 @@ const RegisterPage = () => {
                 <p className="text-sm text-red-500">Mật khẩu xác nhận không khớp!</p>
               )}
             </div>
-            <div className="flex justify-start py-1">
-              <Link to="/" className="text-sm text-gray-500 hover:text-black flex items-center gap-1 transition-colors">
-                <ArrowLeft size={16} />
-                Quay về trang chủ
-              </Link>
-            </div>
 
             <Button 
               type="submit" 
@@ -194,6 +188,16 @@ const RegisterPage = () => {
         </CardContent>
         
         <CardFooter className="flex flex-col space-y-4">
+          <Button 
+            variant="ghost" 
+            asChild 
+            className="w-full text-gray-500 hover:text-black"
+          >
+            <Link to="/" className="flex items-center gap-2">
+              <ChevronLeft size={18} />
+              Quay về trang chủ
+            </Link>
+          </Button>
           <div className="text-sm text-center text-gray-500">
             Đã có tài khoản? <Link to="/login" className="text-blue-600 hover:underline">Đăng nhập</Link>
           </div>
