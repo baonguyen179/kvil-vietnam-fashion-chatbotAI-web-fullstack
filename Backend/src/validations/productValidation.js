@@ -44,7 +44,7 @@ const searchSchema = Joi.object({
 const getInventoryLogsSchema = Joi.object({
     page: Joi.number().integer().min(1).allow('', null),
     limit: Joi.number().integer().min(1).allow('', null),
-    type: Joi.string().valid('IN', 'OUT', 'RETURN').allow('', null),
+    type: Joi.string().valid('IN', 'OUT', 'RETURN', 'HOLD', 'UNHOLD').allow('', null),
     variantId: Joi.number().integer().allow('', null),
     startDate: Joi.string().isoDate().allow('', null),
     endDate: Joi.string().isoDate().allow('', null)

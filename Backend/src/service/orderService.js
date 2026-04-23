@@ -298,14 +298,14 @@ const createOrder = async (userId, data) => {
         currentStep = 'Lưu chi tiết OrderItems & Ghi Log Kho';
         await db.OrderItem.bulkCreate(itemsToInsert, { transaction: t });
 
-        // [IMPROVED LOG] Ghi log kho kèm mã đơn hàng rõ ràng
+        // [IMPROVED LOG] Ghi log kho kèm mã đơn hàng rõ ràng (Trạng thái Tạm giữ)
         const logTasks = orderItemsData.map(item => {
             return db.InventoryLog.create({
                 variantId: item.variantId,
                 userId: userId,
-                type: 'OUT',
+                type: 'HOLD',
                 quantity: item.quantity,
-                note: `Xuất kho cho đơn hàng #${newOrder.id} - ${userId ? 'KH đăng nhập' : 'Khách vãng lai'}`
+                note: `Tạm giữ xuất kho cho đơn hàng #${newOrder.id} - ${userId ? 'KH đăng nhập' : 'Khách vãng lai'}`
             }, { transaction: t });
         });
         await Promise.all(logTasks);
@@ -425,13 +425,13 @@ const cancelOrder = async (userId, orderId) => {
             if (variant) {
                 await variant.increment('stock', { by: item.quantity, transaction: t });
 
-                // [IMPROVED LOG] Ghi log hoàn trả kho do hủy đơn kèm mã đơn
+                // [IMPROVED LOG] Ghi log hoàn trả kho do hủy đơn kèm mã đơn (Hủy tạm giữ)
                 await db.InventoryLog.create({
                     variantId: item.variantId,
                     userId: userId,
-                    type: 'RETURN',
+                    type: 'UNHOLD',
                     quantity: item.quantity,
-                    note: `Hoàn kho do khách hủy đơn hàng #${orderId}`
+                    note: `Hủy tạm giữ do khách hủy đơn hàng #${orderId}`
                 }, { transaction: t });
             }
         }
@@ -732,13 +732,20 @@ const updateOrderStatus = async (orderId, newStatus) => {
                 if (variant) {
                     await variant.increment('stock', { by: item.quantity, transaction: t });
 
+                    let logType = 'RETURN';
+                    let logNote = `Hoàn kho do Admin/Hệ thống hủy đơn hàng #${orderId}`;
+                    if (order.status === 'pending') {
+                        logType = 'UNHOLD';
+                        logNote = `Hủy tạm giữ do Admin/Hệ thống hủy đơn hàng #${orderId}`;
+                    }
+
                     // [IMPROVED LOG] Ghi log hoàn trả kho do Admin hủy đơn kèm mã đơn
                     await db.InventoryLog.create({
                         variantId: item.variantId,
                         userId: null, 
-                        type: 'RETURN',
+                        type: logType,
                         quantity: item.quantity,
-                        note: `Hoàn kho do Admin/Hệ thống hủy đơn hàng #${orderId}`
+                        note: logNote
                     }, { transaction: t });
                 }
             }
@@ -752,6 +759,21 @@ const updateOrderStatus = async (orderId, newStatus) => {
             }
         } else {
             currentStep = 'Cập nhật trạng thái luân chuyển bình thường';
+            
+            // Nếu đơn hàng chuyển từ pending sang trạng thái khác (trừ cancelled) -> Ghi log OUT
+            if (order.status === 'pending' && newStatus !== 'pending') {
+                const orderItems = await db.OrderItem.findAll({ where: { orderId: orderId }, transaction: t });
+                for (let item of orderItems) {
+                    await db.InventoryLog.create({
+                        variantId: item.variantId,
+                        userId: null,
+                        type: 'OUT',
+                        quantity: item.quantity,
+                        note: `Xuất kho chính thức cho đơn hàng #${orderId} (Đã xác nhận/vận chuyển)`
+                    }, { transaction: t });
+                }
+            }
+
             await order.update({ status: newStatus }, { transaction: t });
         }
 
@@ -773,6 +795,9 @@ const updateOrderStatus = async (orderId, newStatus) => {
             cacheClearTasks.push(redisHelper.delByPattern('products:list:*'));
             cacheClearTasks.push(redisHelper.delByPattern('product:bestsellers:*'));
             cacheClearTasks.push(redisHelper.delByPattern('product:inventory:logs:*')); // Mới: Cập nhật lịch sử kho
+        } else if (order.status === 'pending' && newStatus !== 'pending') {
+            // Cập nhật log kho khi chuyển trạng thái từ pending
+            cacheClearTasks.push(redisHelper.delByPattern('product:inventory:logs:*'));
         }
 
         await Promise.all(cacheClearTasks);
