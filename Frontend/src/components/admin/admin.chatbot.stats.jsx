@@ -64,7 +64,7 @@ const ChatbotStatsCards = ({ stats, loading }) => {
                         <Card
                             className="border-none shadow-sm rounded-xl h-full"
                             style={{ background: card.color }}
-                            bodyStyle={{ padding: '16px 18px' }}
+                            styles={{ body: { padding: '16px 18px' } }}
                         >
                             {loading ? (
                                 <Skeleton active paragraph={false} />
@@ -84,7 +84,7 @@ const ChatbotStatsCards = ({ stats, loading }) => {
                                                     {card.suffix}
                                                 </span>
                                             }
-                                            valueStyle={{ fontSize: 20, fontWeight: 700 }}
+                                            styles={{ content: { fontSize: 20, fontWeight: 700 } }}
                                         />
                                     </div>
                                 </div>

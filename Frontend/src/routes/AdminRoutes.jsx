@@ -12,6 +12,7 @@ const ProductManagePage = lazy(() => import('@/pages/admin/ProductManagePage'));
 const CollectionManagePage = lazy(() => import('@/pages/admin/CollectionManagePage'));
 const OrderManagePage = lazy(() => import('@/pages/admin/OrderManagePage'));
 const CouponManagePage = lazy(() => import('@/pages/admin/CouponManagePage'));
+const ColorSizeManagePage = lazy(() => import('@/pages/admin/ColorSizeManagePage'));
 const ChatbotManagePage = lazy(() => import('@/pages/admin/ChatbotManagePage'));
 const InventoryLogPage = lazy(() => import('@/pages/admin/InventoryLogPage'));
 const TransactionPage = lazy(() => import('@/pages/admin/TransactionPage'));
@@ -95,6 +96,11 @@ const AdminRoutes = ({ notFound }) => {
                     <Route path="collections" element={
                         <AdminGuard requiredPermission="products.read">
                             <CollectionManagePage />
+                        </AdminGuard>
+                    } />
+                    <Route path="attributes" element={
+                        <AdminGuard requiredPermission="products.read">
+                            <ColorSizeManagePage />
                         </AdminGuard>
                     } />
 

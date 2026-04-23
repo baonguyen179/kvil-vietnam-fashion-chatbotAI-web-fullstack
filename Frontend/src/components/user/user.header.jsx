@@ -20,12 +20,11 @@ import { ChevronDown } from "lucide-react";
 
 const navLinks = [
     { label: "TRANG CHỦ", href: "/" },
+    { label: "GIỚI THIỆU", href: "/about" },
     { label: "SẢN PHẨM", href: "/collections" },
     { label: "BỘ SƯU TẬP", href: "#", isDropdown: true },
     { label: "TRA CỨU ĐƠN", href: "/tra-cuu-don-hang" },
-    { label: "GIỚI THIỆU", href: "/about" },
     { label: "LIÊN HỆ", href: "#lien-he" },
-
 ];
 
 

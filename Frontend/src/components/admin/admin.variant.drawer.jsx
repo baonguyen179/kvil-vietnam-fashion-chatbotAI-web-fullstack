@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Drawer, Form, Input, InputNumber, Button, Table, Space, message, Spin, Typography, Card } from 'antd';
+import { Drawer, Form, Input, InputNumber, Button, Table, Space, message, Spin, Typography, Card, Select } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import productService from '@/services/productService';
+import colorService from '@/services/colorService';
+import sizeService from '@/services/sizeService';
 
 const { Title, Text } = Typography;
+const { Option } = Select;
 
 const AdminVariantDrawer = ({
     isDrawerVisible,
@@ -14,6 +17,8 @@ const AdminVariantDrawer = ({
     const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const [colors, setColors] = useState([]);
+    const [sizes, setSizes] = useState([]);
     const [form] = Form.useForm();
 
     const fetchProductVariants = async () => {
@@ -37,9 +42,23 @@ const AdminVariantDrawer = ({
     useEffect(() => {
         if (isDrawerVisible && manageVariantProduct) {
             fetchProductVariants();
+            fetchAttributes();
             form.resetFields();
         }
     }, [isDrawerVisible, manageVariantProduct]);
+
+    const fetchAttributes = async () => {
+        try {
+            const [colorRes, sizeRes] = await Promise.all([
+                colorService.getAllColors(),
+                sizeService.getAllSizes()
+            ]);
+            if (colorRes?.EC === 0) setColors(colorRes.DT);
+            if (sizeRes?.EC === 0) setSizes(sizeRes.DT);
+        } catch (error) {
+            console.error("Lỗi lấy attributes:", error);
+        }
+    };
 
     const handleClose = () => {
         setIsDrawerVisible(false);
@@ -73,12 +92,20 @@ const AdminVariantDrawer = ({
             title: 'Màu sắc (Color)',
             dataIndex: 'color',
             key: 'color',
-            render: (text) => <Text strong>{text}</Text>
+            render: (_, record) => (
+                <Space>
+                    {record.color?.hexCode && (
+                        <div style={{ width: 16, height: 16, background: record.color.hexCode, border: '1px solid #d9d9d9', borderRadius: 2 }} />
+                    )}
+                    <Text strong>{record.color?.name || 'N/A'}</Text>
+                </Space>
+            )
         },
         {
             title: 'Kích cỡ (Size)',
             dataIndex: 'size',
             key: 'size',
+            render: (_, record) => <Text>{record.size?.name || 'N/A'}</Text>
         },
         {
             title: 'Tồn kho',
@@ -115,19 +142,34 @@ const AdminVariantDrawer = ({
                         className="grid grid-cols-2 gap-x-4"
                     >
                         <Form.Item
-                            name="color"
+                            name="colorId"
                             label="Màu sắc"
-                            rules={[{ required: true, message: 'Vui lòng nhập màu sắc!' }]}
+                            rules={[{ required: true, message: 'Vui lòng chọn màu sắc!' }]}
                         >
-                            <Input placeholder="vd: Đỏ, Xanh, Trắng..." />
+                            <Select placeholder="Chọn màu sắc" showSearch optionFilterProp="children">
+                                {colors.map(c => (
+                                    <Option key={c.id} value={c.id}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <div style={{ width: 14, height: 14, background: c.hexCode, border: '1px solid #d9d9d9', borderRadius: 2 }} />
+                                            {c.name}
+                                        </div>
+                                    </Option>
+                                ))}
+                            </Select>
                         </Form.Item>
 
                         <Form.Item
-                            name="size"
+                            name="sizeId"
                             label="Kích cỡ"
-                            rules={[{ required: true, message: 'Vui lòng nhập kích cỡ!' }]}
+                            rules={[{ required: true, message: 'Vui lòng chọn kích cỡ!' }]}
                         >
-                            <Input placeholder="vd: S, M, L, XL..." />
+                            <Select placeholder="Chọn kích cỡ" showSearch optionFilterProp="children">
+                                {sizes.map(s => (
+                                    <Option key={s.id} value={s.id}>
+                                        {s.name} {s.description && `(${s.description})`}
+                                    </Option>
+                                ))}
+                            </Select>
                         </Form.Item>
 
                         <Form.Item

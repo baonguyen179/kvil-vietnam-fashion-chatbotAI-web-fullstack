@@ -3,6 +3,8 @@ import { NavLink, Outlet, useSearchParams, useParams } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
 import categoryService from '@/services/categoryService';
+import colorService from '@/services/colorService';
+import sizeService from '@/services/sizeService';
 import { ChevronDown, Filter, X, Loader2 } from 'lucide-react';
 
 const ProductsLayout = () => {
@@ -12,38 +14,27 @@ const ProductsLayout = () => {
     const [isChildLoading, setIsChildLoading] = useState(false); // [NEW] Sync loading state
     const { slug } = useParams();
 
-    // Lấy danh mục từ API
+    const [sizes, setSizes] = useState([]);
+    const [colors, setColors] = useState([]);
+
+    // Lấy dữ liệu từ API
     useEffect(() => {
-        const fetchCategories = async () => {
+        const fetchFiltersData = async () => {
             try {
-                const response = await categoryService.getAllCategories();
-                if (response && response.EC === 0) {
-                    setCategories(response.DT);
-                }
+                const [catRes, colorRes, sizeRes] = await Promise.all([
+                    categoryService.getAllCategories(),
+                    colorService.getAllColors(),
+                    sizeService.getAllSizes()
+                ]);
+                if (catRes?.EC === 0) setCategories(catRes.DT);
+                if (colorRes?.EC === 0) setColors(colorRes.DT);
+                if (sizeRes?.EC === 0) setSizes(sizeRes.DT);
             } catch (error) {
-                console.error("Lỗi khi lấy danh mục:", error);
+                console.error("Lỗi khi lấy dữ liệu bộ lọc:", error);
             }
         };
-        fetchCategories();
+        fetchFiltersData();
     }, []);
-
-    // Các tùy chọn Filter cố định
-    const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
-    const colors = [
-        { name: 'Đen', hex: '#000000', value: 'Đen' },
-        { name: 'Trắng', hex: '#FFFFFF', value: 'Trắng' },
-        { name: 'Đỏ', hex: '#FF0000', value: 'Đỏ' },
-        { name: 'Xanh', hex: '#0000FF', value: 'Xanh' },
-        { name: 'Vàng', hex: '#FFFF00', value: 'Vàng' },
-        { name: 'Xám', hex: '#808080', value: 'Xám' },
-        { name: 'Ghi', hex: '#C0C0C0', value: 'Ghi' },
-        { name: 'Hồng', hex: '#FFC0CB', value: 'Hồng' },
-        { 
-            name: 'Hồng sọc trắng', 
-            hex: 'repeating-linear-gradient(45deg, #FFC0CB, #FFC0CB 10px, #FFFFFF 10px, #FFFFFF 20px)', 
-            value: 'Hồng sọc trắng' 
-        }
-    ];
 
     // Helper: Cập nhật URL Search Params
     const updateFilter = (key, value) => {
@@ -148,18 +139,19 @@ const ProductsLayout = () => {
                                 <div className="grid grid-cols-4 gap-2">
                                     {sizes.map(size => (
                                         <button
-                                            key={size}
+                                            key={size.id}
                                             disabled={isChildLoading}
-                                            onClick={() => toggleFilter('size', size)}
+                                            onClick={() => toggleFilter('sizeId', size.id.toString())}
                                             className={cn(
                                                 "aspect-square flex items-center justify-center text-[11px] border rounded-sm transition-all",
-                                                isSelected('size', size)
+                                                isSelected('sizeId', size.id.toString())
                                                     ? "border-[#1c1c19] bg-[#1c1c19] text-white"
                                                     : "border-[#eeeeee] text-[#1c1c19] hover:border-[#1c1c19]",
                                                 isChildLoading && "opacity-50 cursor-wait"
                                             )}
+                                            title={size.description}
                                         >
-                                            {size}
+                                            {size.name}
                                         </button>
                                     ))}
                                 </div>
@@ -172,18 +164,18 @@ const ProductsLayout = () => {
                                 <div className="flex flex-wrap gap-3">
                                     {colors.map(color => (
                                         <button
-                                            key={color.value}
+                                            key={color.id}
                                             disabled={isChildLoading}
-                                            onClick={() => toggleFilter('color', color.value)}
+                                            onClick={() => toggleFilter('colorId', color.id.toString())}
                                             title={color.name}
                                             className={cn(
                                                 "w-6 h-6 rounded-full border border-[#eeeeee] relative transition-transform hover:scale-110",
-                                                isSelected('color', color.value) && "ring-2 ring-offset-2 ring-[#1c1c19]",
+                                                isSelected('colorId', color.id.toString()) && "ring-2 ring-offset-2 ring-[#1c1c19]",
                                                 isChildLoading && "opacity-50 cursor-wait"
                                             )}
-                                            style={{ background: color.hex }}
+                                            style={{ background: color.hexCode }}
                                         >
-                                            {color.value === 'White' && <div className="absolute inset-0 rounded-full border border-gray-200 pointer-events-none" />}
+                                            {color.hexCode?.toLowerCase() === '#ffffff' && <div className="absolute inset-0 rounded-full border border-gray-200 pointer-events-none" />}
                                         </button>
                                     ))}
                                 </div>

@@ -168,7 +168,7 @@ const AdminImageDrawer = ({
                             key={img.id} 
                             hoverable
                             cover={<div className="h-48 overflow-hidden bg-gray-100 flex items-center justify-center"><Image src={img.imageUrl} alt="product" className="object-cover w-full h-full" /></div>}
-                            bodyStyle={{ padding: '12px' }}
+                            styles={{ body: { padding: '12px' } }}
                             className="relative group border border-gray-200"
                         >
                             {img.isMain && (

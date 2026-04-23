@@ -108,7 +108,7 @@ const CartSheet = () => {
                                                 {item.variant?.product?.name || "SẢN PHẨM MỚI"}
                                             </h3>
                                             <p className="text-xs text-gray-400 font-light tracking-wide uppercase">
-                                                Kích cỡ {item.variant?.size || "S"}
+                                                Kích cỡ {item.variant?.size?.name || "S"}
                                             </p>
                                         </div>
                                         

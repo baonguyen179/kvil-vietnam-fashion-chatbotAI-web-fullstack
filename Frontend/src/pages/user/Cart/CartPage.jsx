@@ -133,10 +133,10 @@ const CartPage = () => {
                                             </Link>
                                             <div className="space-y-1">
                                                 <p className="text-[11px] text-gray-400 uppercase tracking-widest">
-                                                    Kích cỡ: <span className="text-black font-medium">{item.variant?.size || 'N/A'}</span>
+                                                    Kích cỡ: <span className="text-black font-medium">{item.variant?.size?.name || 'N/A'}</span>
                                                 </p>
                                                 <p className="text-[11px] text-gray-400 uppercase tracking-widest">
-                                                    Màu sắc: <span className="text-black font-medium">{item.variant?.color || 'N/A'}</span>
+                                                    Màu sắc: <span className="text-black font-medium">{item.variant?.color?.name || 'N/A'}</span>
                                                 </p>
                                             </div>
                                             <p className="text-xs font-medium md:hidden">

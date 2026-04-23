@@ -24,6 +24,40 @@ const chatbotService = {
         return await axios.get("/api/v1/chatbot/history", {
             params: { page, limit }
         });
+    },
+
+    // --- [ADMIN METHODS] ---
+
+    /**
+     * Lấy thống kê Chatbot AI (Chỉ Admin)
+     */
+    getAdminChatStats: async () => {
+        return await axios.get("/api/v1/admin/chatbot/stats");
+    },
+
+    /**
+     * Lấy danh sách phiên chat (Chỉ Admin)
+     * @param {object} params - { page, limit, search, type, startDate, endDate }
+     */
+    getAdminChatSessions: async (params) => {
+        return await axios.get("/api/v1/admin/chatbot/sessions", { params });
+    },
+
+    /**
+     * Lấy chi tiết một phiên chat (Chỉ Admin)
+     * @param {string} sessionId 
+     * @param {object} params - { page, limit }
+     */
+    getAdminSessionDetail: async (sessionId, params) => {
+        return await axios.get(`/api/v1/admin/chatbot/sessions/${sessionId}`, { params });
+    },
+
+    /**
+     * Xóa một phiên chat (Chỉ Admin)
+     * @param {string} sessionId 
+     */
+    deleteSession: async (sessionId) => {
+        return await axios.delete(`/api/v1/admin/chatbot/sessions/${sessionId}`);
     }
 };
 

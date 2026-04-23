@@ -53,8 +53,8 @@ const ProductList = () => {
                     setCollectionInfo(null);
                     const sort = searchParams.get('sort') || 'newest';
                     const categoryId = searchParams.get('categoryId');
-                    const color = searchParams.get('color');
-                    const size = searchParams.get('size');
+                    const colorId = searchParams.get('colorId');
+                    const sizeId = searchParams.get('sizeId');
                     const minPrice = searchParams.get('minPrice');
                     const maxPrice = searchParams.get('maxPrice');
 
@@ -64,8 +64,8 @@ const ProductList = () => {
                     queryParts.push(`sort=${sort}`);
                     
                     if (categoryId) queryParts.push(`categoryId=${categoryId}`);
-                    if (color) queryParts.push(`color=${color}`);
-                    if (size) queryParts.push(`size=${size}`);
+                    if (colorId) queryParts.push(`colorId=${colorId}`);
+                    if (sizeId) queryParts.push(`sizeId=${sizeId}`);
                     
                     if (minPrice) queryParts.push(`basePrice>=${minPrice}`);
                     if (maxPrice) queryParts.push(`basePrice<=${maxPrice}`);

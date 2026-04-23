@@ -43,8 +43,8 @@ const UserChatbotMessage = ({ message }) => {
                 {/* Suggested Products (If any) */}
                 {isBot && products && products.length > 0 && (
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2 snap-x">
-                        {products.map((id) => (
-                            <ProductCardMini key={id} productId={id} />
+                        {products.map((product, idx) => (
+                            <ProductCardMini key={product.id || idx} product={product} />
                         ))}
                     </div>
                 )}
@@ -60,16 +60,28 @@ const UserChatbotMessage = ({ message }) => {
 /**
  * Mini Product Card for chat suggestions
  */
-const ProductCardMini = ({ productId }) => {
+const ProductCardMini = ({ product }) => {
+    const isObject = typeof product === 'object' && product !== null;
+    const productId = isObject ? product.id : product;
+    const productName = isObject ? product.name : `Sản phẩm #${productId}`;
+    const productImage = isObject && product.images && product.images.length > 0 
+        ? (product.images[0].imageUrl || product.images[0]) 
+        : null;
+
     return (
         <Link 
-            to={`/product/${productId}`}
+            to={`/products/${productId}`}
             className="flex-none w-28 bg-white border border-gray-100 p-2 rounded-xl hover:border-black transition-all snap-start group"
+            title={productName}
         >
-            <div className="aspect-square bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
-                <span className="text-[10px] text-gray-300 font-bold group-hover:scale-110 transition-transform">#ID: {productId}</span>
+            <div className="aspect-square bg-gray-50 rounded-lg mb-2 overflow-hidden flex items-center justify-center relative">
+                {productImage ? (
+                    <img src={productImage} alt={productName} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                ) : (
+                    <span className="text-[10px] text-gray-300 font-bold group-hover:scale-110 transition-transform">#SP-{productId}</span>
+                )}
             </div>
-            <p className="text-[10px] font-bold truncate uppercase text-zinc-400 group-hover:text-black">Xem sản phẩm</p>
+            <p className="text-[10px] font-bold truncate uppercase text-zinc-400 group-hover:text-black">{productName}</p>
         </Link>
     );
 };

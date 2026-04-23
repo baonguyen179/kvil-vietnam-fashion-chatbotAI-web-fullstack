@@ -131,7 +131,7 @@ const ReturnManagePage = () => {
             dataIndex: 'user',
             key: 'user',
             render: (user) => (
-                <Space direction="vertical" size={0}>
+                <Space orientation="vertical" size={0}>
                     <Text strong>{user?.fullName || 'N/A'}</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>{user?.phone}</Text>
                 </Space>

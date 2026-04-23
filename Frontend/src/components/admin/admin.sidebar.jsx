@@ -63,6 +63,10 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
                         label: <Link to={"/admin/collections"}>Collections</Link>,
                     },
                     {
+                        key: 'attributes',
+                        label: <Link to={"/admin/attributes"}>Colors & Sizes</Link>,
+                    },
+                    {
                         key: 'inventory',
                         label: <Link to={"/admin/inventory"}>Inventory Logs</Link>,
                         icon: <HistoryOutlined />,

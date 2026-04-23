@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import productService from '@/services/productService';
 import cartService from '@/services/cartService';
+import sizeService from '@/services/sizeService';
 import { toggleCartDrawer, addToCartLocal } from '@/redux/slices/cartSlice';
 import ProductCard from '@/components/user/product.card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ const ProductDetailPage = () => {
     const [selectedSize, setSelectedSize] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [sizesData, setSizesData] = useState([]);
     
     // Related products state
     const [relatedProducts, setRelatedProducts] = useState([]);
@@ -51,8 +53,20 @@ const ProductDetailPage = () => {
 
     useEffect(() => {
         fetchProductDetail();
+        fetchSizesData();
         window.scrollTo(0, 0);
     }, [id]);
+
+    const fetchSizesData = async () => {
+        try {
+            const res = await sizeService.getAllSizes();
+            if (res && res.EC === 0) {
+                setSizesData(res.DT);
+            }
+        } catch (error) {
+            console.error("Lỗi khi tải dữ liệu bảng size:", error);
+        }
+    };
 
     const fetchProductDetail = async () => {
         setLoading(true);
@@ -66,7 +80,7 @@ const ProductDetailPage = () => {
                 
                 const firstAvailableVariant = res.DT.variants?.find(v => v.stock > 0);
                 if (firstAvailableVariant) {
-                    setSelectedSize(firstAvailableVariant.size);
+                    setSelectedSize(firstAvailableVariant.size?.name || null);
                 }
 
                 // Sau khi lấy được sản phẩm, tìm sản phẩm liên quan
@@ -120,7 +134,7 @@ const ProductDetailPage = () => {
     const pricing = useMemo(() => {
         if (!product) return { current: 0, original: 0, discount: 0 };
         
-        const variant = product.variants?.find(v => v.size === selectedSize);
+        const variant = product.variants?.find(v => v.size?.name === selectedSize);
         const original = variant?.price || product.basePrice;
         const discount = product.discountPercent || 0;
         const current = original * (1 - discount / 100);
@@ -144,7 +158,7 @@ const ProductDetailPage = () => {
             return;
         }
         
-        const variant = product.variants?.find(v => v.size === selectedSize);
+        const variant = product.variants?.find(v => v.size?.name === selectedSize);
         if (!variant) return;
 
         if (isAuthenticated) {
@@ -167,6 +181,7 @@ const ProductDetailPage = () => {
                 variant: {
                     id: variant.id,
                     size: variant.size,
+                    color: variant.color,
                     price: pricing.current,
                     product: {
                         id: product.id,
@@ -215,7 +230,7 @@ const ProductDetailPage = () => {
         );
     }
 
-    const currentSku = product.variants?.find(v => v.size === selectedSize)?.sku || product.variants?.[0]?.sku || "N/A";
+    const currentSku = product.variants?.find(v => v.size?.name === selectedSize)?.sku || product.variants?.[0]?.sku || "N/A";
 
     return (
         <div className="max-w-[1300px] mx-auto px-4 py-10 bg-white">
@@ -301,7 +316,7 @@ const ProductDetailPage = () => {
                         <span className="text-sm font-bold uppercase mb-3 block tracking-tight">Chọn Size:</span>
                         <div className="flex flex-wrap gap-2">
                             {['S', 'M', 'L', 'XL'].map(size => {
-                                const variant = product.variants?.find(v => v.size === size);
+                                const variant = product.variants?.find(v => v.size?.name === size);
                                 const isAvailable = variant && variant.stock > 0;
                                 
                                 return (
@@ -368,39 +383,36 @@ const ProductDetailPage = () => {
             </div>
 
             {/* Middle Section: Size Chart */}
-            <div className="mt-20 pt-10 border-t border-gray-100">
-                <h2 className="text-xl font-bold uppercase mb-8 tracking-tight">Bảng thông số kích thước</h2>
-                <div className="w-full overflow-x-auto border border-gray-100 rounded-sm">
-                    <table className="w-full text-left text-sm border-collapse min-w-[600px]">
-                        <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
-                                <th className="p-4 font-bold text-black">Size</th>
-                                <th className="p-4 font-bold text-black">Ngực (cm)</th>
-                                <th className="p-4 font-bold text-black">Eo (cm)</th>
-                                <th className="p-4 font-bold text-black">Mông (cm)</th>
-                                <th className="p-4 font-bold text-black">Chiều dài (cm)</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {[
-                                { size: 'S', chest: '82-84', waist: '64-66', hip: '88-90', length: '110' },
-                                { size: 'M', chest: '86-88', waist: '68-70', hip: '92-94', length: '112' },
-                                { size: 'L', chest: '90-92', waist: '72-74', hip: '96-98', length: '114' },
-                                { size: 'XL', chest: '94-96', waist: '76-78', hip: '100-102', length: '116' },
-                            ].map((row) => (
-                                <tr key={row.size} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="p-4 font-bold text-black">{row.size}</td>
-                                    <td className="p-4 font-light text-gray-600">{row.chest}</td>
-                                    <td className="p-4 font-light text-gray-600">{row.waist}</td>
-                                    <td className="p-4 font-light text-gray-600">{row.hip}</td>
-                                    <td className="p-4 font-light text-gray-600">{row.length}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <div className="mt-16 pt-10 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-black">Bảng thông số gợi ý</h2>
+                    <span className="text-[10px] text-gray-400 uppercase tracking-tighter">* Đơn vị: cm & kg</span>
                 </div>
-                <p className="mt-4 text-gray-400 text-[11px] italic">
-                    * Lưu ý: Thông số trên chỉ mang tính chất tham khảo. Tùy thuộc vào thiết kế và chất liệu vải mà sẽ có sự sai lệch nhỏ.
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {sizesData.map((row) => (
+                        <div key={row.id} className="border border-gray-100 p-4 rounded-sm hover:border-black transition-all group bg-gray-50/30">
+                            <div className="text-sm font-bold mb-3 pb-2 border-b border-gray-100 group-hover:border-black/10 transition-colors text-center uppercase tracking-widest">
+                                Size {row.name}
+                            </div>
+                            <div className="space-y-1.5">
+                                {row.description ? row.description.split('\n').map((line, idx) => (
+                                    <div key={idx} className="text-[11px] leading-relaxed text-gray-500 font-light flex items-start gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-gray-300 mt-1.5 shrink-0" />
+                                        <span>{line}</span>
+                                    </div>
+                                )) : <span className="text-[10px] text-gray-300 italic">Đang cập nhật...</span>}
+                            </div>
+                        </div>
+                    ))}
+                    {sizesData.length === 0 && (
+                        <div className="col-span-full py-10 text-center border border-dashed border-gray-200 rounded-sm">
+                            <p className="text-xs text-gray-400 italic tracking-wide">Đang tải dữ liệu thông số kích cỡ...</p>
+                        </div>
+                    )}
+                </div>
+                <p className="mt-6 text-gray-400 text-[10px] italic leading-relaxed max-w-2xl">
+                    * Lưu ý: Các thông số trên chỉ mang tính chất gợi ý dựa trên form dáng chuẩn. Tùy thuộc vào thiết kế (ôm sát hoặc rộng rãi) và chất liệu vải mà cảm giác mặc sẽ có sự khác biệt nhỏ.
                 </p>
             </div>
 
