@@ -23,6 +23,8 @@ const { RangePicker } = DatePicker;
 const TYPE_CONFIG = {
     'IN': { color: 'green', label: 'Nhập kho', icon: <ArrowUpOutlined /> },
     'OUT': { color: 'volcano', label: 'Xuất kho', icon: <ArrowDownOutlined /> },
+    'HOLD': { color: 'gold', label: 'Tạm giữ', icon: <HistoryOutlined /> },
+    'UNHOLD': { color: 'default', label: 'Hủy tạm giữ', icon: <ReloadOutlined /> },
     'RETURN': { color: 'blue', label: 'Hoàn trả', icon: <ReloadOutlined /> },
 };
 
@@ -129,13 +131,21 @@ const InventoryLogPage = () => {
 
                 // 4. Đổ dữ liệu vào hàng
                 exportData.forEach((log, index) => {
-                    const isPositive = log.type === 'IN' || log.type === 'RETURN';
+                    const isPositive = log.type === 'IN' || log.type === 'RETURN' || log.type === 'UNHOLD';
                     const quantityText = `${isPositive ? '+' : '-'}${log.quantity}`;
                     
+                    const typeLabels = {
+                        'IN': 'NHẬP KHO',
+                        'OUT': 'XUẤT KHO',
+                        'HOLD': 'TẠM GIỮ',
+                        'UNHOLD': 'HỦY TẠM GIỮ',
+                        'RETURN': 'HOÀN TRẢ'
+                    };
+
                     const row = worksheet.addRow({
                         stt: index + 1,
                         time: dayjs(log.createdAt).format('DD/MM/YYYY HH:mm:ss'),
-                        type: log.type === 'IN' ? 'NHẬP KHO' : log.type === 'OUT' ? 'XUẤT KHO' : 'HOÀN TRẢ',
+                        type: typeLabels[log.type] || log.type,
                         product: log.variant?.product?.name || 'N/A',
                         sku: log.variant?.sku || '',
                         quantity: quantityText,
@@ -228,7 +238,7 @@ const InventoryLogPage = () => {
             key: 'quantity',
             align: 'center',
             render: (qty, record) => {
-                const isPositive = record.type === 'IN' || record.type === 'RETURN';
+                const isPositive = record.type === 'IN' || record.type === 'RETURN' || record.type === 'UNHOLD';
                 return (
                     <Text strong style={{ color: isPositive ? '#52c41a' : '#f5222d' }}>
                         {isPositive ? '+' : '-'}{qty}
@@ -292,6 +302,8 @@ const InventoryLogPage = () => {
                             >
                                 <Option value="IN"><ArrowUpOutlined style={{ color: '#52c41a' }} /> Nhập kho</Option>
                                 <Option value="OUT"><ArrowDownOutlined style={{ color: '#f5222d' }} /> Xuất kho</Option>
+                                <Option value="HOLD"><HistoryOutlined style={{ color: '#faad14' }} /> Tạm giữ</Option>
+                                <Option value="UNHOLD"><ReloadOutlined style={{ color: '#d9d9d9' }} /> Hủy tạm giữ</Option>
                                 <Option value="RETURN"><ReloadOutlined style={{ color: '#1890ff' }} /> Hoàn trả</Option>
                             </Select>
                             <Button 
