@@ -71,9 +71,18 @@ const getCartByUserId = async (userId) => {
 
         if (cartData.cartItems && cartData.cartItems.length > 0) {
             cartData.cartItems.forEach(item => {
-                const itemPrice = item.variant.price || item.variant.product.basePrice;
-
-                totalPrice += (itemPrice * item.quantity);
+                const product = item.variant?.product;
+                const basePrice = item.variant.price || product?.basePrice || 0;
+                const discountPercent = product?.discountPercent || 0;
+                
+                // Calculate discounted price
+                const discountedPrice = basePrice * (1 - discountPercent / 100);
+                
+                // Store the calculated price back into the object for the frontend to use
+                item.variant.discountedPrice = discountedPrice;
+                item.variant.originalPrice = basePrice;
+                
+                totalPrice += (discountedPrice * item.quantity);
             });
         }
 

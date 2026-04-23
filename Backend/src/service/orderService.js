@@ -201,6 +201,11 @@ const createOrder = async (userId, data) => {
         for (let item of cartItems) {
             const lockedVariant = await db.ProductVariant.findOne({
                 where: { id: item.variantId },
+                include: [{
+                    model: db.Product,
+                    as: 'product',
+                    attributes: ['id', 'basePrice', 'discountPercent']
+                }],
                 transaction: t,
                 lock: t.LOCK.UPDATE
             });
@@ -219,16 +224,18 @@ const createOrder = async (userId, data) => {
                 };
             }
 
-            const price = lockedVariant.price;
-            totalBeforeDiscount += (price * item.quantity);
+            // [SENIOR] Calculate actual purchase price considering discounts
+            const basePrice = lockedVariant.price || lockedVariant.product?.basePrice || 0;
+            const discountPercent = lockedVariant.product?.discountPercent || 0;
+            const purchasePrice = basePrice * (1 - discountPercent / 100);
+
+            totalBeforeDiscount += (purchasePrice * item.quantity);
 
             orderItemsData.push({
                 variantId: item.variantId,
                 quantity: item.quantity,
-                price: price
+                price: purchasePrice // Save the discounted price as the historical purchase price
             });
-
-            await lockedVariant.decrement('stock', { by: item.quantity, transaction: t });
 
             await lockedVariant.decrement('stock', { by: item.quantity, transaction: t });
         }
