@@ -31,8 +31,10 @@ const getCartByUserId = async (userId) => {
                         {
                             model: db.ProductVariant,
                             as: 'variant',
-                            attributes: ['id', 'size', 'color', 'price', 'stock'],
+                            attributes: ['id', 'price', 'stock', 'colorId', 'sizeId'],
                             include: [
+                                { model: db.Color, as: 'color', attributes: ['id', 'name', 'hexCode'] },
+                                { model: db.Size, as: 'size', attributes: ['id', 'name'] },
                                 {
                                     model: db.Product,
                                     as: 'product',

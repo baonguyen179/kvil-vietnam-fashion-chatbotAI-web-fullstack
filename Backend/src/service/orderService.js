@@ -540,8 +540,10 @@ const getUserOrderDetail = async (userId, orderId) => {
                         {
                             model: db.ProductVariant,
                             as: 'variant',
-                            attributes: ['size', 'color'], // Chỉ lấy size và màu
+                            attributes: ['colorId', 'sizeId'], // Chỉ lấy id để ánh xạ
                             include: [
+                                { model: db.Color, as: 'color', attributes: ['name'] },
+                                { model: db.Size, as: 'size', attributes: ['name'] },
                                 {
                                     model: db.Product,
                                     as: 'product',
@@ -587,8 +589,8 @@ const getUserOrderDetail = async (userId, orderId) => {
 
                 return {
                     productName: product?.name || 'Sản phẩm không còn tồn tại',
-                    size: item.variant?.size || 'N/A',
-                    color: item.variant?.color || 'N/A',
+                    size: item.variant?.size?.name || 'N/A',
+                    color: item.variant?.color?.name || 'N/A',
                     quantity: item.quantity,
                     originalPrice: item.price,
                     imageUrl: mainImage // Trả về 1 link ảnh duy nhất
@@ -1236,9 +1238,13 @@ const getUserOrdersShort = async (userId) => {
                 model: db.OrderItem,
                 as: 'orderItems',
                 include: [{
-                    model: db.Variant,
+                    model: db.ProductVariant,
                     as: 'variant',
-                    include: [{ model: db.Product, as: 'product' }]
+                    include: [
+                        { model: db.Product, as: 'product' },
+                        { model: db.Color, as: 'color', attributes: ['name'] },
+                        { model: db.Size, as: 'size', attributes: ['name'] }
+                    ]
                 }]
             }],
             attributes: ['id', 'status', 'finalAmount', 'paymentStatus', 'createdAt']
@@ -1254,8 +1260,8 @@ const getUserOrdersShort = async (userId) => {
             date: order.createdAt,
             items: order.orderItems.map(item => ({
                 name: item.variant?.product?.name,
-                color: item.variant?.color,
-                size: item.variant?.size,
+                color: item.variant?.color?.name,
+                size: item.variant?.size?.name,
                 quantity: item.quantity
             }))
         }));

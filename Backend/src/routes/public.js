@@ -9,7 +9,8 @@ const collectionController = require('../controllers/collectionController');
 const chatbotController = require('../controllers/chatbotController');
 const orderController = require('../controllers/orderController');
 const couponController = require('../controllers/couponController');
-
+const colorController = require('../controllers/colorController');
+const sizeController = require('../controllers/sizeController');
 
 // [VNPAY CALLBACKS]-X
 router.get('/vnpay/ipn', orderController.handleVNPayIPN);
@@ -17,6 +18,10 @@ router.get('/vnpay/return', orderController.handleVNPayReturn);
 router.post('/order/vnpay-url/guest', orderController.handleGetGuestVNPayUrl);
 router.get('/order/guest/:id', orderController.handleGetGuestOrderDetail);
 router.post('/order/guest/recover', orderController.handleRecoverGuestOrderIds);
+
+// [COLORS & SIZES]
+router.get('/colors', colorController.handleGetAllColors);
+router.get('/sizes', sizeController.handleGetAllSizes);
 
 
 
@@ -41,7 +46,7 @@ router.get('/collections/:slug', collectionController.handleGetCollectionBySlug)
 router.get('/coupons/check', couponController.handleCheckCoupon);
 
 
-// [PUBLIC - CHATBOT AI]
+// [PUBLIC - CHATBOT AI]-X
 router.post('/chatbot/message', chatbotController.handleChatbotMessage);
 router.get('/chatbot/history', chatbotController.handleGetChatHistory);
 

@@ -10,6 +10,8 @@ const couponController = require('../controllers/couponController');
 const dashboardController = require('../controllers/dashboardController');
 const chatbotController = require('../controllers/chatbotController');
 const roleController = require('../controllers/roleController');
+const colorController = require('../controllers/colorController');
+const sizeController = require('../controllers/sizeController');
 
 const JWTAction = require('../middleware/JWTAction');
 const uploadCloud = require('../config/cloudinary.config');
@@ -50,6 +52,14 @@ router.delete('/admin/products/:id', JWTAction.checkUserPermission([], ['product
 router.post('/admin/products/:id/variants', JWTAction.checkUserPermission([], ['products.update']), productController.handleAddProductVariant);
 router.post('/admin/products/:id/images', JWTAction.checkUserPermission([], ['products.update']), uploadCloud.array('images', 10), productController.handleAddProductImages);
 router.delete('/admin/products/images/:imageId', JWTAction.checkUserPermission([], ['products.update']), productController.handleDeleteProductImage);
+
+// [ADMIN - COLORS & SIZES]
+router.post('/admin/colors', JWTAction.checkUserPermission([], ['products.update']), colorController.handleCreateColor);
+router.put('/admin/colors/:id', JWTAction.checkUserPermission([], ['products.update']), colorController.handleUpdateColor);
+router.delete('/admin/colors/:id', JWTAction.checkUserPermission([], ['products.update']), colorController.handleDeleteColor);
+router.post('/admin/sizes', JWTAction.checkUserPermission([], ['products.update']), sizeController.handleCreateSize);
+router.put('/admin/sizes/:id', JWTAction.checkUserPermission([], ['products.update']), sizeController.handleUpdateSize);
+router.delete('/admin/sizes/:id', JWTAction.checkUserPermission([], ['products.update']), sizeController.handleDeleteSize);
 
 // [ADMIN - COLLECTIONS]-X
 router.post('/admin/collections', JWTAction.checkUserPermission([], ['collections.manage']), uploadCloud.single('banner'), collectionController.handleCreateCollection);

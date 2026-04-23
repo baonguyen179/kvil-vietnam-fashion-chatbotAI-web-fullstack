@@ -47,7 +47,7 @@ const getAllProducts = async (queryParams) => {
             }
 
             // Phân loại: Lọc theo Color/Size  Bảng ProductVariant, còn lại đẩy vào Bảng Product
-            if (key === 'color' || key === 'size') {
+            if (key === 'colorId' || key === 'sizeId') {
                 variantWhere[key] = value;
             } else {
                 productWhere[key] = value;
@@ -85,9 +85,13 @@ const getAllProducts = async (queryParams) => {
                 {
                     model: db.ProductVariant, // Bổ sung Join vào bảng Variant để lọc màu sắc/kích thước
                     as: 'variants',
-                    attributes: ['id', 'color', 'size', 'stock', 'price'], // Lấy thông tin biến thể để phục vụ lọc/hiện tồn kho ở Frontend
+                    attributes: ['id', 'stock', 'price', 'colorId', 'sizeId'],
                     where: Object.keys(variantWhere).length > 0 ? variantWhere : undefined,
-                    required: Object.keys(variantWhere).length > 0 // Nếu có lọc màu/size thì bắt buộc phải INNER JOIN
+                    required: Object.keys(variantWhere).length > 0, // Nếu có lọc màu/size thì bắt buộc phải INNER JOIN
+                    include: [
+                        { model: db.Color, as: 'color', attributes: ['id', 'name', 'hexCode'] },
+                        { model: db.Size, as: 'size', attributes: ['id', 'name'] }
+                    ]
                 }
 
             ],
@@ -257,9 +261,9 @@ const deleteProduct = async (productId) => {
 }
 const addProductVariant = async (productId, variantData) => {
     try {
-        const { color, size, stock, sku, price } = variantData;
+        const { colorId, sizeId, stock, sku, price } = variantData;
 
-        if (!color || !size || stock === undefined || !sku) {
+        if (!colorId || !sizeId || stock === undefined || !sku) {
             return {
                 EM: 'Vui lòng cung cấp đủ Màu sắc, Kích cỡ, Số lượng và mã SKU!',
                 EC: errorCode.VALIDATION_ERROR,
@@ -277,12 +281,12 @@ const addProductVariant = async (productId, variantData) => {
         }
 
         const existingVariant = await db.ProductVariant.findOne({
-            where: { productId: productId, color: color, size: size }
+            where: { productId: productId, colorId: colorId, sizeId: sizeId }
         });
 
         if (existingVariant) {
             return {
-                EM: `Biến thể Màu ${color} - Size ${size} đã tồn tại!`,
+                EM: `Biến thể với Màu sắc và Kích cỡ này đã tồn tại!`,
                 EC: errorCode.VALIDATION_ERROR,
                 DT: ''
             };
@@ -290,8 +294,8 @@ const addProductVariant = async (productId, variantData) => {
 
         const newVariant = await db.ProductVariant.create({
             productId: productId,
-            color: color,
-            size: size,
+            colorId: colorId,
+            sizeId: sizeId,
             stock: stock,
             sku: sku,
             price: price ? price : product.basePrice
@@ -425,7 +429,11 @@ const getProductById = async (productId) => {
                 {
                     model: db.ProductVariant,
                     as: 'variants',
-                    attributes: ['id', 'color', 'size', 'stock', 'price', 'sku']
+                    attributes: ['id', 'stock', 'price', 'sku', 'colorId', 'sizeId'],
+                    include: [
+                        { model: db.Color, as: 'color', attributes: ['id', 'name', 'hexCode'] },
+                        { model: db.Size, as: 'size', attributes: ['id', 'name'] }
+                    ]
                 }
             ],
             order: [
@@ -492,8 +500,12 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
                 {
                     model: db.ProductVariant,
                     as: 'variants',
-                    attributes: ['id', 'color', 'size', 'stock', 'price'],
-                    required: false
+                    attributes: ['id', 'stock', 'price', 'colorId', 'sizeId'],
+                    required: false,
+                    include: [
+                        { model: db.Color, as: 'color', attributes: ['id', 'name', 'hexCode'] },
+                        { model: db.Size, as: 'size', attributes: ['id', 'name'] }
+                    ]
                 }
 
             ],
@@ -625,8 +637,12 @@ const getBestSellerProducts = async (limit = 10) => {
                     {
                         model: db.ProductVariant,
                         as: 'variants',
-                        attributes: ['id', 'color', 'size', 'stock', 'price'],
-                        required: false
+                        attributes: ['id', 'stock', 'price', 'colorId', 'sizeId'],
+                        required: false,
+                        include: [
+                            { model: db.Color, as: 'color', attributes: ['id', 'name', 'hexCode'] },
+                            { model: db.Size, as: 'size', attributes: ['id', 'name'] }
+                        ]
                     }
 
                 ],
@@ -662,8 +678,12 @@ const getBestSellerProducts = async (limit = 10) => {
                     {
                         model: db.ProductVariant,
                         as: 'variants',
-                        attributes: ['id', 'color', 'size', 'stock', 'price'],
-                        required: false
+                        attributes: ['id', 'stock', 'price', 'colorId', 'sizeId'],
+                        required: false,
+                        include: [
+                            { model: db.Color, as: 'color', attributes: ['id', 'name', 'hexCode'] },
+                            { model: db.Size, as: 'size', attributes: ['id', 'name'] }
+                        ]
                     }
 
                 ],
@@ -713,6 +733,11 @@ const getBestSellerProducts = async (limit = 10) => {
 };
 const checkProductAvailability = async (keyword, size, color) => {
     try {
+        let sizeWhere = undefined;
+        let colorWhere = undefined;
+        if (size) sizeWhere = { name: { [Op.like]: `%${size}%` } };
+        if (color) colorWhere = { name: { [Op.like]: `%${color}%` } };
+
         const variants = await db.ProductVariant.findAll({
             include: [
                 {
@@ -723,12 +748,20 @@ const checkProductAvailability = async (keyword, size, color) => {
                             [Op.like]: `%${keyword}%`
                         }
                     }
+                },
+                {
+                    model: db.Size,
+                    as: 'size',
+                    where: sizeWhere,
+                    required: !!sizeWhere
+                },
+                {
+                    model: db.Color,
+                    as: 'color',
+                    where: colorWhere,
+                    required: !!colorWhere
                 }
-            ],
-            where: {
-                ...(size && { size }),
-                ...(color && { color })
-            }
+            ]
         });
 
         if (!variants.length) {

@@ -49,8 +49,8 @@ const getInventoryLogsSchema = Joi.object({
 }).unknown(true);
 
 const variantSchema = Joi.object({
-    color: Joi.string().required().messages({ 'any.required': 'Vui lòng cung cấp Màu sắc!' }),
-    size: Joi.string().required().messages({ 'any.required': 'Vui lòng cung cấp Kích cỡ!' }),
+    colorId: Joi.number().integer().required().messages({ 'any.required': 'Vui lòng cung cấp Màu sắc (ID)!' }),
+    sizeId: Joi.number().integer().required().messages({ 'any.required': 'Vui lòng cung cấp Kích cỡ (ID)!' }),
     sku: Joi.string().required().messages({ 'any.required': 'Vui lòng cung cấp mã SKU!' }),
     stock: Joi.number().integer().min(0).required().messages({
         'number.base': 'Số lượng kho phải là số!',
