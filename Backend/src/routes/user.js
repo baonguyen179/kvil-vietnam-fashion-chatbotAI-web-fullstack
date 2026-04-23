@@ -7,6 +7,7 @@ const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
 
 const JWTAction = require('../middleware/JWTAction');
+const uploadCloud = require('../config/cloudinary.config');
 
 
 // Route để tạo order, cho phép cả user đã login và khách vãng lai
@@ -39,7 +40,7 @@ router.delete('/user/carts/:id', cartController.handleDeleteCartItem);
 router.put('/user/orders/:id/cancel', orderController.handleCancelOrder);
 router.get('/user/orders', orderController.handleGetUserOrders);
 router.get('/user/orders/:id', orderController.handleGetUserOrderDetail);
-router.post('/user/orders/:id/return', orderController.handleRequestReturnOrder);
+router.post('/user/orders/:id/return', uploadCloud.array('images', 5), orderController.handleRequestReturnOrder);
 
 // [PAYMENT] - CÁC ROUTE LIÊN QUAN ĐẾN THANH TOÁN
 router.get('/user/orders/:id/payment-url', orderController.handleGetVNPayUrl);

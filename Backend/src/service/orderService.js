@@ -88,16 +88,19 @@ const getGuestOrderDetail = async (orderId, phone) => {
     try {
         const order = await db.Order.findOne({
             where: { id: orderId },
-            attributes: ['id', 'status', 'finalAmount', 'paymentMethod', 'paymentStatus', 'shippingAddress', 'createdAt']
+            attributes: ['id', 'status', 'finalAmount', 'paymentMethod', 'paymentStatus', 'shippingAddress', 'createdAt', 'userId']
         });
 
         if (!order) return { EM: 'Đơn hàng không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
         
         // Bảo mật: Nếu đơn hàng thuộc về một User đã login, yêu cầu dùng luồng login
-        if (order.userId) return { EM: 'Đơn hàng này yêu cầu đăng nhập để xem chi tiết!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        if (order.userId) return { EM: 'Đơn hàng này được đặt bởi thành viên. Vui lòng đăng nhập để xem chi tiết!', EC: errorCode.VALIDATION_ERROR, DT: '' };
 
-        // Kiểm tra khớp số điện thoại trong shippingAddress
-        if (!order.shippingAddress.includes(phone)) {
+        // [SENIOR] Chuẩn hóa số điện thoại để so khớp (Loại bỏ mọi ký tự không phải số)
+        const normalizedInputPhone = phone.replace(/\D/g, '');
+        const normalizedAddress = order.shippingAddress.replace(/\D/g, '');
+
+        if (!normalizedInputPhone || !normalizedAddress.includes(normalizedInputPhone)) {
             return { EM: 'Thông tin xác thực (Số điện thoại) không chính xác!', EC: errorCode.VALIDATION_ERROR, DT: '' };
         }
 
@@ -132,7 +135,7 @@ const recoverGuestOrderIds = async (email, phone) => {
                 userId: null, // Chỉ tìm đơn của khách
                 createdAt: { [Op.gte]: thirtyDaysAgo },
                 [Op.and]: [
-                    { shippingAddress: { [Op.like]: `%${phone}%` } },
+                    { shippingAddress: { [Op.like]: `%${phone.replace(/\D/g, '')}%` } },
                     { shippingAddress: { [Op.like]: `%${email}%` } }
                 ]
             },
@@ -912,7 +915,8 @@ const processVNPayPayment = async (orderId, amount, responseCode, fullQuery) => 
             }, { transaction: t });
 
             await t.commit();
-            return { EM: 'Transaction Failed Logged', EC: '00', DT: '' };
+            // [SENIOR FIX] Trả về mã lỗi thực tế của VNPay thay vì ép về '00'
+            return { EM: 'Giao dịch không thành công tại VNPay', EC: responseCode, DT: '' };
         }
 
     } catch (error) {

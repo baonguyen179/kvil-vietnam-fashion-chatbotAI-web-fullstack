@@ -146,12 +146,23 @@ const handleRequestReturnOrder = async (req, res) => {
         const userId = req.user.id;
         const orderId = req.params.id;
 
-        const { error, value } = orderValidation.returnOrderRequestSchema.validate(req.body);
-        if (error) {
-            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+        // [SENIOR] Handle both JSON and FormData (for image upload)
+        const reason = req.body.reason;
+        let images = [];
+
+        // If files are uploaded via multer
+        if (req.files && req.files.length > 0) {
+            images = req.files.map(file => file.path);
+        } else if (req.body.images) {
+            // Fallback for JSON body if already uploaded or using links
+            images = Array.isArray(req.body.images) ? req.body.images : [req.body.images];
         }
 
-        const data = await orderService.requestReturnOrder(userId, orderId, value);
+        if (!reason) {
+            return res.status(200).json({ EM: 'Vui lòng cung cấp lý do trả hàng!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const data = await orderService.requestReturnOrder(userId, orderId, { reason, images });
         return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
 
     } catch (error) {
@@ -308,13 +319,28 @@ const handleVNPayReturn = async (req, res) => {
 
             // [SENIOR FALLBACK] Gọi cập nhật DB ngay tại đây để tránh lỗi mất IPN
             const updateResult = await orderService.processVNPayPayment(orderId, vnpAmount, vnpResponseCode, req.query);
-            console.log(">>> [VNPAY RETURN] Kết quả cập nhật đồng bộ:", updateResult);
+            
+            // Map thông báo lỗi thân thiện dựa trên vnp_ResponseCode
+            const vnpMsgMap = {
+                '07': 'Giao dịch bị nghi ngờ (liên quan tới lừa đảo, giao dịch bất thường).',
+                '09': 'Thẻ/Tài khoản của bạn chưa đăng ký dịch vụ InternetBanking.',
+                '10': 'Xác thực thông tin thẻ/tài khoản không đúng quá 3 lần.',
+                '11': 'Hết hạn chờ thanh toán. Vui lòng thực hiện lại.',
+                '12': 'Thẻ/Tài khoản của bạn đang bị khóa.',
+                '13': 'Sai mật khẩu OTP. Vui lòng thực hiện lại.',
+                '24': 'Giao dịch đã bị hủy bởi người dùng.',
+                '51': 'Tài khoản của bạn không đủ số dư để thực hiện giao dịch.',
+                '65': 'Tài khoản đã vượt quá hạn mức giao dịch trong ngày.',
+                '75': 'Ngân hàng thanh toán đang bảo trì.',
+                '99': 'Lỗi không xác định tại cổng thanh toán.'
+            };
 
             // Chuyển đổi mã '00' từ VNPay (String) thành mã thành công của hệ thống (Number 0)
-            const systemEC = updateResult.EC === '00' ? 0 : updateResult.EC;
+            const systemEC = vnpResponseCode === '00' ? 0 : vnpResponseCode;
+            const systemEM = vnpResponseCode === '00' ? 'Thanh toán thành công!' : (vnpMsgMap[vnpResponseCode] || updateResult.EM);
 
             return res.status(200).json({
-                EM: systemEC === 0 ? 'Thanh toán thành công!' : updateResult.EM,
+                EM: systemEM,
                 EC: systemEC,
                 DT: req.query
             });

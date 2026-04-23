@@ -81,7 +81,10 @@ const sendOrderIdListEmail = async (userEmail, orders) => {
 
 const sendOrderConfirmationEmail = async (userEmail, order) => {
     try {
-        const trackingUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/tra-cuu-don-hang?orderId=${order.id}&phone=${order.phone}`;
+        const baseUrl = process.env.REACT_URL || 'http://localhost:3000';
+        const trackingUrl = order.userId 
+            ? `${baseUrl}/account` 
+            : `${baseUrl}/tra-cuu-don-hang?orderId=${order.id}&phone=${order.phone}`;
         
         const mailOptions = {
             from: '"Kvil Fashion" <no-reply@kvilfashion.com>',
