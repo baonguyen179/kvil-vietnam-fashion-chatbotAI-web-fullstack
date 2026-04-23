@@ -30,7 +30,7 @@ const formatDate = (val) =>
     val ? new Date(val).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
 const OrderManagePage = () => {
-    const { message } = App.useApp();
+    const { message, modal } = App.useApp();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [updatingId, setUpdatingId] = useState(null); 
@@ -93,16 +93,47 @@ const OrderManagePage = () => {
     };
 
     const handleUpdateStatus = async (orderId, newStatus) => {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        // [Yêu cầu 3] Xử lý Hủy đơn với Confirm Dialog
+        if (newStatus === 'cancelled') {
+            modal.confirm({
+                title: 'Xác nhận hủy đơn',
+                content: `Bạn có chắc chắn muốn hủy đơn hàng #${orderId} không?`,
+                okText: 'Hủy đơn',
+                cancelText: 'Quay lại',
+                okButtonProps: { danger: true },
+                onOk: () => performUpdateStatus(orderId, newStatus)
+            });
+            return;
+        }
+
+        // [Yêu cầu 2] Ràng buộc logic chuyển trạng thái
+        // COD: Chỉ cho phép chuyển sang 'delivered' khi đã thanh toán
+        if (order.paymentMethod === 'COD' && newStatus === 'delivered' && !order.paymentStatus) {
+            message.warning('Phải xác nhận đã thanh toán trên hệ thống trước khi chuyển sang Đã giao!');
+            return;
+        }
+
+        // VNPAY: Không cho phép đổi sang bất kỳ trạng thái nào (trừ hủy) nếu chưa thanh toán
+        if (order.paymentMethod === 'VNPAY' && !order.paymentStatus) {
+            message.warning('Đơn VNPAY chưa hoàn tất thanh toán! Bạn chỉ có thể Hủy đơn.');
+            return;
+        }
+
+        performUpdateStatus(orderId, newStatus);
+    };
+
+    const performUpdateStatus = async (orderId, newStatus) => {
         setUpdatingId(orderId);
         try {
             const res = await orderService.updateOrderStatus(orderId, newStatus);
             if (res && res.EC === 0) {
                 message.success(res.EM || 'Cập nhật trạng thái thành công!');
-                // Cập nhật local state thay vì refetch toàn bộ → UX mượt hơn
                 setOrders(prev =>
                     prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o)
                 );
-                // Nếu drawer đang mở → cập nhật order trong drawer
                 if (selectedOrder?.id === orderId) {
                     setSelectedOrder(prev => ({ ...prev, status: newStatus }));
                 }
@@ -252,11 +283,6 @@ const OrderManagePage = () => {
                                     disabled={isUpdating}
                                     popupMatchSelectWidth={false}
                                     onChange={(val) => {
-                                        // Cảnh báo riêng cho hành động hủy
-                                        if (val === 'cancelled') {
-                                            // Xử lý qua Popconfirm ở dưới
-                                            return;
-                                        }
                                         handleUpdateStatus(record.id, val);
                                     }}
                                     options={Object.entries(ORDER_STATUS_CONFIG)

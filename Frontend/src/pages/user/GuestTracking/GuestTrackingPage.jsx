@@ -105,13 +105,15 @@ const GuestTrackingPage = () => {
 
     const getStatusLabel = (status) => {
         const labels = {
-            'pending': { text: 'Chờ xử lý', color: 'text-amber-500 bg-amber-50 border-amber-100' },
+            'pending': { text: 'Chờ xác nhận', color: 'text-amber-500 bg-amber-50 border-amber-100' },
             'confirmed': { text: 'Đã xác nhận', color: 'text-blue-500 bg-blue-50 border-blue-100' },
             'shipping': { text: 'Đang giao hàng', color: 'text-indigo-500 bg-indigo-50 border-indigo-100' },
             'delivered': { text: 'Đã giao hàng', color: 'text-green-500 bg-green-50 border-green-100' },
+            'returning': { text: 'Yêu cầu trả hàng', color: 'text-orange-500 bg-orange-50 border-orange-100' },
+            'returned': { text: 'Đã hoàn trả', color: 'text-gray-500 bg-gray-50 border-gray-100' },
             'cancelled': { text: 'Đã hủy', color: 'text-red-500 bg-red-50 border-red-100' },
         };
-        return labels[status] || { text: status, color: 'text-gray-500 bg-gray-50' };
+        return labels[status] || { text: status, color: 'text-gray-500 bg-gray-50 border-gray-100' };
     };
 
     return (

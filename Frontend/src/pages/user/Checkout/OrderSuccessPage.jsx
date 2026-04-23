@@ -149,7 +149,7 @@ const OrderSuccessPage = () => {
                 <div className="flex flex-col gap-3">
                     {isAuthenticated ? (
                         <Button asChild className="h-14 bg-black text-white hover:bg-zinc-800 rounded-none w-full uppercase tracking-widest text-xs font-bold">
-                            <Link to="/account/orders" className="flex items-center justify-center gap-2">
+                            <Link to="/account" className="flex items-center justify-center gap-2">
                                 Xem lịch sử đơn hàng
                                 <ArrowRight size={16} />
                             </Link>

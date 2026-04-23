@@ -7,12 +7,15 @@ import UserOrderTabs from '@/components/user/user.order-tabs';
 import UserOrderCard from '@/components/user/user.order-card';
 import UserOrderDetailModal from '@/components/user/user.order-detail-modal';
 import UserOrderCancelDialog from '@/components/user/user.order-cancel-dialog';
+import UserReturnModal from '@/components/user/user.return-modal';
+import orderService from '@/services/orderService';
 
 const statusTabs = [
     { label: 'Tất cả', value: '' },
     { label: 'Chờ thanh toán', value: 'pending' },
     { label: 'Vận chuyển', value: 'shipping' },
     { label: 'Hoàn thành', value: 'delivered' },
+    { label: 'Trả hàng', value: 'returning' },
     { label: 'Đã hủy', value: 'cancelled' },
 ];
 
@@ -21,6 +24,7 @@ const OrderHistory = () => {
     const [orders, setOrders] = useState([]);
     const [pagination, setPagination] = useState({ page: 1, limit: 10, totalPages: 0 });
     const [loading, setLoading] = useState(false);
+    const [repayLoadingId, setRepayLoadingId] = useState(null);
 
     // Detail Modal State
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -29,6 +33,9 @@ const OrderHistory = () => {
 
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [orderIdToCancel, setOrderIdToCancel] = useState(null);
+
+    const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+    const [orderIdToReturn, setOrderIdToReturn] = useState(null);
 
     const fetchOrders = useCallback(async (page = 1, currentStatus = status) => {
         setLoading(true);
@@ -69,9 +76,32 @@ const OrderHistory = () => {
         }
     };
 
-    const handleCancelOrder = async (orderId) => {
+    const handleRePay = async (orderId) => {
+        if (repayLoadingId) return; // Ngăn double click
+        setRepayLoadingId(orderId);
+        try {
+            const res = await orderService.getVNPayUrl(orderId);
+            if (res && res.EC === 0 && res.DT) {
+                window.location.href = res.DT;
+            } else {
+                toast.error(res.EM || 'Không thể tạo link thanh toán');
+            }
+        } catch (error) {
+            toast.error('Lỗi kết nối khi tạo link thanh toán');
+        } finally {
+            // Không set null ngay nếu redirect thành công để giữ loading state
+            setTimeout(() => setRepayLoadingId(null), 1000);
+        }
+    };
+
+    const handleCancelOrder = (orderId) => {
         setOrderIdToCancel(orderId);
         setIsCancelDialogOpen(true);
+    };
+
+    const handleReturnOrder = (orderId) => {
+        setOrderIdToReturn(orderId);
+        setIsReturnModalOpen(true);
     };
 
     const confirmCancelOrder = async () => {
@@ -114,6 +144,8 @@ const OrderHistory = () => {
             confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
             shipping: 'bg-indigo-50 text-indigo-700 border-indigo-200',
             delivered: 'bg-green-50 text-green-700 border-green-200',
+            returning: 'bg-orange-50 text-orange-700 border-orange-200',
+            returned: 'bg-gray-50 text-gray-700 border-gray-200',
             cancelled: 'bg-red-50 text-red-700 border-red-200',
         };
         const labels = {
@@ -121,6 +153,8 @@ const OrderHistory = () => {
             confirmed: 'Đã xác nhận',
             shipping: 'Đang giao hàng',
             delivered: 'Đã hoàn thành',
+            returning: 'Yêu cầu trả hàng',
+            returned: 'Đã hoàn trả',
             cancelled: 'Đã hủy',
         };
         return (
@@ -153,6 +187,9 @@ const OrderHistory = () => {
                             order={order}
                             onViewDetail={handleViewDetail}
                             onCancel={handleCancelOrder}
+                            onRePay={handleRePay}
+                            onReturn={handleReturnOrder}
+                            repayLoadingId={repayLoadingId}
                             formatCurrency={formatCurrency}
                             formatDate={formatDate}
                             getStatusBadge={getStatusBadge}
@@ -205,6 +242,12 @@ const OrderHistory = () => {
                 isOpen={isCancelDialogOpen}
                 onOpenChange={setIsCancelDialogOpen}
                 onConfirm={confirmCancelOrder}
+            />
+            <UserReturnModal 
+                isOpen={isReturnModalOpen}
+                onClose={() => setIsReturnModalOpen(false)}
+                orderId={orderIdToReturn}
+                onSuccess={() => fetchOrders(pagination.page, status)}
             />
         </div>
     );

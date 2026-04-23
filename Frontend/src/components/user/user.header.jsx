@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingBag, User, Menu, X, Search, LayoutDashboard, LogOut } from "lucide-react";
+import { ShoppingBag, User, Menu, X, Search, LayoutDashboard, LogOut, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDispatch, useSelector } from "react-redux";
@@ -102,9 +102,13 @@ export const UserHeader = () => {
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/account")} className="cursor-pointer">
+                    <DropdownMenuItem onClick={() => navigate("/account/profile")} className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
                         <span>Thông tin tài khoản</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/account")} className="cursor-pointer">
+                        <ClipboardList className="mr-2 h-4 w-4" />
+                        <span>Lịch sử đơn hàng</span>
                     </DropdownMenuItem>
                     {["SUPER_ADMIN", "SALES", "ACCOUNTANT"].includes(user?.role) && (
                         <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
@@ -199,7 +203,9 @@ export const UserHeader = () => {
                     </div>
 
                     <nav className="hidden md:flex items-center gap-10">
-                        {navLinks.map((link) => {
+                        {navLinks
+                            .filter(link => !(link.label === "TRA CỨU ĐƠN" && isAuthenticated))
+                            .map((link) => {
                             const active = isLinkActive(link.label);
                             
                             if (link.isDropdown) {
@@ -304,7 +310,9 @@ export const UserHeader = () => {
                 )}
             >
                 <nav className="flex flex-col px-10 py-6 gap-6">
-                    {navLinks.map((link) => {
+                    {navLinks
+                        .filter(link => !(link.label === "TRA CỨU ĐƠN" && isAuthenticated))
+                        .map((link) => {
                         if (link.isDropdown) {
                             return (
                                 <div key={link.label} className="flex flex-col gap-4">

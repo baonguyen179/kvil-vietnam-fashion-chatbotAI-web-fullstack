@@ -65,6 +65,14 @@ const userService = {
 
     setDefaultAddress: async (addressId) => {
         return await axios.patch(`/api/v1/user/addresses/${addressId}/default`);
+    },
+
+    requestReturnOrder: async (orderId, formData) => {
+        return await axios.post(`/api/v1/user/orders/${orderId}/return`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            }
+        });
     }
 }
 
