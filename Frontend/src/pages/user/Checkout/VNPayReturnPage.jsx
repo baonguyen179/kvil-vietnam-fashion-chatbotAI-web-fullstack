@@ -57,8 +57,8 @@ const VNPayReturnPage = () => {
         // Lấy phone từ sessionStorage đã lưu lúc checkout
         const phone = sessionStorage.getItem('KOISAN_LAST_ORDER_PHONE') || '';
         
-        // Chuyển hướng về trang tra cứu với các params để auto-fill
-        navigate(`/tra-cuu-don-hang?orderId=${orderInfo.id}&phone=${phone}`);
+        // Chuyển hướng về trang chủ sản xuất từ biến môi trường
+        window.location.href = import.meta.env.VITE_SITE_URL || "/";
     };
 
     if (status === 'verifying') {
