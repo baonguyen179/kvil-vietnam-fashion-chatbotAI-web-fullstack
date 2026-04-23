@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, splitVendorChunkPlugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
@@ -7,7 +7,11 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(), 
+    tailwindcss(),
+    splitVendorChunkPlugin() // [SENIOR] Sử dụng plugin chính thức để tách vendor an toàn
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -18,36 +22,20 @@ export default defineConfig({
     strictPort: true
   },
   build: {
-    // [SENIOR OPTIMIZATION] Tối ưu hóa Chunking để tránh lỗi Runtime
-    chunkSizeWarningLimit: 1000,
+    // [SENIOR] Ưu tiên sự ổn định trên môi trường Production
+    chunkSizeWarningLimit: 2000, 
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // CHỈ tách các thư viện cực nặng và không phụ thuộc trực tiếp vào runtime của React
           if (id.includes('node_modules')) {
-            // [CRITICAL FIX] Gộp React và Ant Design vào cùng một chunk
-            // Điều này đảm bảo antd luôn tìm thấy React.createContext khi khởi tạo
-            if (
-              id.includes('react') || 
-              id.includes('react-dom') || 
-              id.includes('react-router-dom') ||
-              id.includes('antd') ||
-              id.includes('@ant-design')
-            ) {
-              return 'vendor-framework';
+            if (id.includes('exceljs') || id.includes('file-saver')) {
+              return 'vendor-excel-processing';
             }
-            
-            // Tách các thư viện quản lý State
-            if (id.includes('redux') || id.includes('@reduxjs')) {
-              return 'vendor-state';
+            if (id.includes('recharts')) {
+              return 'vendor-analytics-charts';
             }
-
-            // Tách các thư viện nặng không dùng thường xuyên (chỉ dùng ở Admin/Charts)
-            if (id.includes('exceljs') || id.includes('recharts') || id.includes('file-saver')) {
-              return 'vendor-heavy';
-            }
-
-            // Các thư viện nhỏ khác
-            return 'vendor-others';
+            // Để các thư viện React, Antd, Lucide... cho splitVendorChunkPlugin tự xử lý an toàn
           }
         }
       }
