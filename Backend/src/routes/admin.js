@@ -33,7 +33,16 @@ router.post('/admin/roles/:id/permissions', JWTAction.checkUserPermission([], ['
 router.get('/admin/permissions', JWTAction.checkUserPermission([], ['users.manage']), roleController.handleGetAllPermissions);
 
 // [INVENTORY & TRANSACTIONS]-X
+const multer = require('multer');
+const uploadMemory = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 } // Giới hạn 5MB
+});
+
 router.get('/admin/inventory/logs', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryLogs);
+router.get('/admin/inventory/import/template', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryTemplate);
+router.post('/admin/inventory/import', JWTAction.checkUserPermission([], ['inventory.update', 'products.update']), uploadMemory.single('file'), productController.handleImportInventory);
+
 router.get('/admin/payments/transactions', JWTAction.checkUserPermission([], ['payments.read']), orderController.handleGetPaymentTransactions);
 
 // [RETURN REQUESTS]-X

@@ -230,14 +230,7 @@ const createOrder = async (userId, data) => {
 
             await lockedVariant.decrement('stock', { by: item.quantity, transaction: t });
 
-            // [NEW] Ghi log xuất hàng
-            await db.InventoryLog.create({
-                variantId: item.variantId,
-                userId: userId, // Có thể null nếu là khách
-                type: 'OUT',
-                quantity: item.quantity,
-                note: `Xuất kho cho đơn hàng mới của ${userId ? 'User ID: ' + userId : 'Khách vãng lai'}`
-            }, { transaction: t });
+            await lockedVariant.decrement('stock', { by: item.quantity, transaction: t });
         }
 
         let shippingFee = 0;
@@ -292,8 +285,20 @@ const createOrder = async (userId, data) => {
             ...item,
             orderId: newOrder.id
         }));
-        currentStep = 'Lưu chi tiết OrderItems';
+        currentStep = 'Lưu chi tiết OrderItems & Ghi Log Kho';
         await db.OrderItem.bulkCreate(itemsToInsert, { transaction: t });
+
+        // [IMPROVED LOG] Ghi log kho kèm mã đơn hàng rõ ràng
+        const logTasks = orderItemsData.map(item => {
+            return db.InventoryLog.create({
+                variantId: item.variantId,
+                userId: userId,
+                type: 'OUT',
+                quantity: item.quantity,
+                note: `Xuất kho cho đơn hàng #${newOrder.id} - ${userId ? 'KH đăng nhập' : 'Khách vãng lai'}`
+            }, { transaction: t });
+        });
+        await Promise.all(logTasks);
 
         if (userId && cartId) {
             currentStep = 'Xóa dữ liệu Giỏ hàng của User';
@@ -410,13 +415,13 @@ const cancelOrder = async (userId, orderId) => {
             if (variant) {
                 await variant.increment('stock', { by: item.quantity, transaction: t });
 
-                // [NEW] Ghi log hoàn trả kho do hủy đơn
+                // [IMPROVED LOG] Ghi log hoàn trả kho do hủy đơn kèm mã đơn
                 await db.InventoryLog.create({
                     variantId: item.variantId,
                     userId: userId,
                     type: 'RETURN',
                     quantity: item.quantity,
-                    note: `Hoàn kho do khách hủy đơn #${orderId}`
+                    note: `Hoàn kho do khách hủy đơn hàng #${orderId}`
                 }, { transaction: t });
             }
         }
@@ -717,13 +722,13 @@ const updateOrderStatus = async (orderId, newStatus) => {
                 if (variant) {
                     await variant.increment('stock', { by: item.quantity, transaction: t });
 
-                    // [NEW] Ghi log hoàn trả kho do Admin hủy đơn
+                    // [IMPROVED LOG] Ghi log hoàn trả kho do Admin hủy đơn kèm mã đơn
                     await db.InventoryLog.create({
                         variantId: item.variantId,
-                        userId: null, // Admin thực hiện, nếu có req.user.id thì nên truyền vào, nhưng hiện tại hàm này chưa nhận adminId
+                        userId: null, 
                         type: 'RETURN',
                         quantity: item.quantity,
-                        note: `Hoàn kho do hệ thống/Admin hủy đơn #${orderId}`
+                        note: `Hoàn kho do Admin/Hệ thống hủy đơn hàng #${orderId}`
                     }, { transaction: t });
                 }
             }

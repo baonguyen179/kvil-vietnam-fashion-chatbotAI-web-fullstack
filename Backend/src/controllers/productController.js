@@ -205,11 +205,46 @@ const handleGetInventoryLogs = async (req, res) => {
     }
 };
 
+const handleImportInventory = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(200).json({ EM: 'Vui lòng chọn file Excel để tải lên!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const adminId = req.user?.id || null;
+        const fileBuffer = req.file.buffer;
+
+        const data = await productService.importInventory(fileBuffer, adminId);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+
+    } catch (error) {
+        console.error(">>> Lỗi handleImportInventory:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+const handleGetInventoryTemplate = async (req, res) => {
+    try {
+        const excelHelper = require('../helpers/excel.helper');
+        const buffer = await excelHelper.generateTemplateBuffer();
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=Mau_Nhap_Kho.xlsx');
+        
+        return res.status(200).send(buffer);
+    } catch (error) {
+        console.error(">>> Lỗi handleGetInventoryTemplate:", error);
+        return res.status(500).json({ EM: 'Lỗi server khi tạo file mẫu', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
 module.exports = {
     handleGetAllProducts, handleCreateProduct, handleUpdateProduct, handleDeleteProduct,
     handleGetProductById, handleSearchProducts,
     handleAddProductVariant,
     handleAddProductImages, handleDeleteProductImage,
     handleGetBestSellerProducts,
-    handleGetInventoryLogs
+    handleGetInventoryLogs,
+    handleImportInventory,
+    handleGetInventoryTemplate
 }

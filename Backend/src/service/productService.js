@@ -848,7 +848,7 @@ const filterProductsAdvanced = async (keyword, minPrice, maxPrice, limit = 5) =>
 };
 const getInventoryLogs = async (query) => {
     try {
-        const { page, limit, variantId, type } = query;
+        const { page, limit, variantId, type, startDate, endDate } = query;
         const cacheKey = `product:inventory:logs:${JSON.stringify(query)}`;
         const cached = await redisHelper.getCache(cacheKey);
         if (cached) return { EM: 'Lấy lịch sử kho hàng (Cache) thành công', EC: errorCode.SUCCESS, DT: cached };
@@ -858,6 +858,16 @@ const getInventoryLogs = async (query) => {
         const whereCondition = {};
         if (variantId) whereCondition.variantId = variantId;
         if (type) whereCondition.type = type;
+
+        if (startDate || endDate) {
+            whereCondition.createdAt = {};
+            if (startDate) whereCondition.createdAt[Op.gte] = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                whereCondition.createdAt[Op.lte] = end;
+            }
+        }
 
         const { count, rows } = await db.InventoryLog.findAndCountAll({
             where: whereCondition,
@@ -894,9 +904,110 @@ const getInventoryLogs = async (query) => {
         return { EM: 'Lỗi server khi lấy lịch sử kho hàng', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 };
+
+const importInventory = async (fileBuffer, adminId) => {
+    let t;
+    try {
+        const excelHelper = require('../helpers/excel.helper');
+        
+        // 1. Đọc và lấy data từ Excel
+        const data = await excelHelper.parseExcelBuffer(fileBuffer);
+        if (!data || data.length === 0) {
+            return { EM: 'File Excel trống hoặc không đúng định dạng mẫu.', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+        if (data.length > 1000) {
+            return { EM: 'File quá lớn. Vui lòng upload tối đa 1000 dòng mỗi lần.', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        // 2. Lấy toàn bộ mã SKU từ DB để kiểm tra (Tối ưu performance: O(1) Lookup)
+        const skusInExcel = data.map(item => item.sku);
+        const variantsInDb = await db.ProductVariant.findAll({
+            where: { sku: { [Op.in]: skusInExcel } },
+            attributes: ['id', 'sku', 'stock', 'productId']
+        });
+
+        const variantMap = new Map();
+        variantsInDb.forEach(v => variantMap.set(v.sku, v));
+
+        // 3. Validation: Option A (All-or-Nothing) - Bắt lỗi tất cả các dòng sai
+        const errors = [];
+        data.forEach(item => {
+            if (!item.quantity || isNaN(item.quantity) || item.quantity <= 0) {
+                errors.push(`Dòng ${item.rowNumber}: Số lượng nhập (${item.quantity}) không hợp lệ.`);
+            }
+            if (!variantMap.has(item.sku)) {
+                errors.push(`Dòng ${item.rowNumber}: Mã SKU '${item.sku}' không tồn tại trong hệ thống.`);
+            }
+        });
+
+        if (errors.length > 0) {
+            return { 
+                EM: 'Dữ liệu không hợp lệ. Vui lòng sửa lại file Excel.', 
+                EC: errorCode.VALIDATION_ERROR, 
+                DT: { errors } // Trả về mảng lỗi để hiển thị ở Frontend
+            };
+        }
+
+        // 4. Mở Transaction: Update kho và Ghi Log an toàn
+        t = await db.sequelize.transaction();
+
+        const logTasks = [];
+        const updateTasks = [];
+        const updatedProductIds = new Set(); // Dùng để xóa cache
+
+        for (const item of data) {
+            const variant = variantMap.get(item.sku);
+            
+            // Increment an toàn với Transaction, tự động lock row (Race Condition Prevention)
+            updateTasks.push(variant.increment('stock', { by: item.quantity, transaction: t }));
+            updatedProductIds.add(variant.productId);
+
+            // Gom array để bulkCreate
+            logTasks.push({
+                variantId: variant.id,
+                userId: adminId,
+                type: 'IN', // Option: Cộng dồn
+                quantity: item.quantity,
+                note: `Nhập kho hàng loạt qua file Excel.`
+            });
+        }
+
+        await Promise.all(updateTasks);
+        await db.InventoryLog.bulkCreate(logTasks, { transaction: t });
+
+        await t.commit();
+
+        // 5. Xóa Cache (Batching Cache Invalidation)
+        const cacheTasks = [
+            redisHelper.delByPattern('product:inventory:logs:*'),
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('products:search:*'),
+            redisHelper.delByPattern('collection:detail:*')
+        ];
+        // Xóa cache chi tiết của từng sản phẩm bị ảnh hưởng
+        updatedProductIds.forEach(pid => {
+            cacheTasks.push(redisHelper.delCache(`product:detail:${pid}`));
+        });
+        
+        await Promise.all(cacheTasks);
+
+        return {
+            EM: `Nhập kho thành công ${data.length} dòng!`,
+            EC: errorCode.SUCCESS,
+            DT: { successCount: data.length }
+        };
+
+    } catch (error) {
+        if (t) await t.rollback();
+        console.error(">>> Lỗi importInventory:", error);
+        return { EM: error.message || 'Lỗi hệ thống khi import kho hàng', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+
 module.exports = {
     getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, searchProducts,
     addProductVariant,
     addMultipleProductImages, deleteProductImage, getBestDiscountProducts,
-    getBestSellerProducts, checkProductAvailability, filterProductsAdvanced, getInventoryLogs
+    getBestSellerProducts, checkProductAvailability, filterProductsAdvanced, getInventoryLogs,
+    importInventory
 }
