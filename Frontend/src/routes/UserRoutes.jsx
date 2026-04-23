@@ -3,31 +3,27 @@ import UserLayout from '@/layouts/UserLayout';
 import AccountLayout from '@/layouts/AccountLayout';
 import PrivateRoute from '@/routes/PrivateRoute';
 import PublicRoute from '@/routes/PublicRoute';
-import LoginPage from '@/pages/auth/LoginPage'; 
-import HomePage from '@/pages/user/HomePage';
-import RegisterPage from '@/pages/auth/RegisterPage';
-import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
-import OrderHistory from '@/pages/user/Account/OrderHistory';
-import ProfilePage from '@/pages/user/Account/ProfilePage';
-import AddressPage from '@/pages/user/Account/AddressPage';
-import ChangePasswordPage from '@/pages/user/Account/ChangePasswordPage';
-import AboutPage from '@/pages/user/AboutPage';
-import AboutStory from '@/pages/user/About/AboutStory';
-import PolicyContent from '@/pages/user/About/PolicyContent';
-import ProductsLayout from '@/pages/user/Products/ProductsLayout';
-import ProductList from '@/pages/user/Products/ProductList';
-import ProductDetailPage from '@/pages/user/Products/ProductDetailPage';
 import { lazy } from 'react';
 
+const HomePage = lazy(() => import('@/pages/user/HomePage'));
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
+const OrderHistory = lazy(() => import('@/pages/user/Account/OrderHistory'));
+const ProfilePage = lazy(() => import('@/pages/user/Account/ProfilePage'));
+const AddressPage = lazy(() => import('@/pages/user/Account/AddressPage'));
+const ChangePasswordPage = lazy(() => import('@/pages/user/Account/ChangePasswordPage'));
+const AboutPage = lazy(() => import('@/pages/user/AboutPage'));
+const AboutStory = lazy(() => import('@/pages/user/About/AboutStory'));
+const PolicyContent = lazy(() => import('@/pages/user/About/PolicyContent'));
+const ProductsLayout = lazy(() => import('@/pages/user/Products/ProductsLayout'));
+const ProductList = lazy(() => import('@/pages/user/Products/ProductList'));
+const ProductDetailPage = lazy(() => import('@/pages/user/Products/ProductDetailPage'));
 const CartPage = lazy(() => import('@/pages/user/Cart/CartPage'));
 const CheckoutPage = lazy(() => import('@/pages/user/Checkout/CheckoutPage'));
 const OrderSuccessPage = lazy(() => import('@/pages/user/Checkout/OrderSuccessPage'));
 const VNPayReturnPage = lazy(() => import('@/pages/user/Checkout/VNPayReturnPage'));
 const GuestTrackingPage = lazy(() => import('@/pages/user/GuestTracking/GuestTrackingPage'));
-
-
-
-
 
 const UserRoutes = ({ notFound }) => {
 
@@ -57,9 +53,6 @@ const UserRoutes = ({ notFound }) => {
                 <Route path="order/vnpay-return" element={<VNPayReturnPage />} />
                 <Route path="tra-cuu-don-hang" element={<GuestTrackingPage />} />
 
-
-
-                
                 <Route 
                     path="account" 
                     element={

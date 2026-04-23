@@ -139,9 +139,22 @@ const CartPage = () => {
                                                     Màu sắc: <span className="text-black font-medium">{item.variant?.color?.name || 'N/A'}</span>
                                                 </p>
                                             </div>
-                                            <p className="text-xs font-medium md:hidden">
-                                                {formatCurrency(item.variant?.price)}
-                                            </p>
+                                            <div className="flex flex-col">
+                                                {item.variant?.product?.discountPercent > 0 ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-red-600">
+                                                            {formatCurrency((item.variant?.price || item.variant?.product?.basePrice) * (1 - item.variant.product.discountPercent / 100))}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400 line-through">
+                                                            {formatCurrency(item.variant?.price || item.variant?.product?.basePrice)}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-xs font-medium">
+                                                        {formatCurrency(item.variant?.price || item.variant?.product?.basePrice)}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -170,7 +183,12 @@ const CartPage = () => {
                                     <div className="col-span-1 md:col-span-3 flex justify-between md:justify-end items-center">
                                         <span className="md:hidden text-[10px] uppercase tracking-widest text-gray-400">Thành tiền:</span>
                                         <p className="text-sm font-bold tracking-tight">
-                                            {formatCurrency(item.variant?.price * item.quantity)}
+                                            {(() => {
+                                                const base = item.variant?.price || item.variant?.product?.basePrice || 0;
+                                                const discount = item.variant?.product?.discountPercent || 0;
+                                                const finalPrice = base * (1 - discount / 100);
+                                                return formatCurrency(finalPrice * item.quantity);
+                                            })()}
                                         </p>
                                     </div>
 

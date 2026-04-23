@@ -11,6 +11,13 @@ export const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
+    // Helper to calculate item price locally
+    calculatePrice: (item) => {
+        const base = item.variant?.price || item.variant?.product?.basePrice || 0;
+        const discount = item.variant?.product?.discountPercent || 0;
+        return base * (1 - discount / 100);
+    },
+
     // Lấy bộ dữ liệu từ API vào Redux
     setCartData: (state, action) => {
       // payload chính là biến DT trả về từ API getCartByUserId của Backend
@@ -42,7 +49,10 @@ export const cartSlice = createSlice({
       
       // Tính lại tổng tiền
       state.totalPrice = state.cartItems.reduce((total, item) => {
-        return total + (item.variant.price * item.quantity);
+        const price = item.variant?.price || item.variant?.product?.basePrice || 0;
+        const discount = item.variant?.product?.discountPercent || 0;
+        const discountedPrice = price * (1 - discount / 100);
+        return total + (discountedPrice * item.quantity);
       }, 0);
     },
 
@@ -52,7 +62,10 @@ export const cartSlice = createSlice({
       
       // Tính lại tổng tiền
       state.totalPrice = state.cartItems.reduce((total, item) => {
-        return total + (item.variant.price * item.quantity);
+        const price = item.variant?.price || item.variant?.product?.basePrice || 0;
+        const discount = item.variant?.product?.discountPercent || 0;
+        const discountedPrice = price * (1 - discount / 100);
+        return total + (discountedPrice * item.quantity);
       }, 0);
     },
 
@@ -65,7 +78,10 @@ export const cartSlice = createSlice({
       
       // Tính lại tổng tiền
       state.totalPrice = state.cartItems.reduce((total, item) => {
-        return total + (item.variant.price * item.quantity);
+        const price = item.variant?.price || item.variant?.product?.basePrice || 0;
+        const discount = item.variant?.product?.discountPercent || 0;
+        const discountedPrice = price * (1 - discount / 100);
+        return total + (discountedPrice * item.quantity);
       }, 0);
     },
 

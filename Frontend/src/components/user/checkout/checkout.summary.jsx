@@ -67,7 +67,12 @@ const CheckoutSummary = ({
                             <p className="text-xs text-gray-500 uppercase tracking-wider">{item.variant?.sku}</p>
                         </div>
                         <p className="text-sm font-medium">
-                            {(item.variant?.price * item.quantity).toLocaleString()}₫
+                            {(() => {
+                                const base = item.variant?.price || item.variant?.product?.basePrice || 0;
+                                const discount = item.variant?.product?.discountPercent || 0;
+                                const discountedPrice = base * (1 - discount / 100);
+                                return (discountedPrice * item.quantity).toLocaleString();
+                            })()}₫
                         </p>
                     </div>
                 ))}
