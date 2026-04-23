@@ -458,10 +458,14 @@ const getProductById = async (productId) => {
 }
 const searchProducts = async (keyword, page = 1, limit = 10) => {
     try {
-        const cacheKey = `products:search:${keyword}:${page}:${limit}`;
+        // [SAFETY] Đảm bảo keyword là string và không trống
+        const safeKeyword = (typeof keyword === 'string' ? keyword : '').trim();
+
+        const cacheKey = `products:search:${safeKeyword}:${page}:${limit}`;
         const cached = await redisHelper.getCache(cacheKey);
-        if (cached) return { EM: `Tìm thấy (Cache) '${keyword}'`, EC: errorCode.SUCCESS, DT: cached };
-        if (!keyword) {
+        if (cached) return { EM: `Tìm thấy (Cache) '${safeKeyword}'`, EC: errorCode.SUCCESS, DT: cached };
+
+        if (!safeKeyword) {
             return {
                 EM: 'Vui lòng nhập từ khóa tìm kiếm!',
                 EC: errorCode.VALIDATION_ERROR,

@@ -127,7 +127,6 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                 const limitBest = functionArgs.limit || 5;
 
                 const bestSellerRes = await productService.getBestSellerProducts(
-                    functionArgs.keyword,
                     limitBest
                 );
 
