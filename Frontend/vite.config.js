@@ -18,31 +18,36 @@ export default defineConfig({
     strictPort: true
   },
   build: {
-    // [SENIOR OPTIMIZATION] Giải quyết cảnh báo "large chunks"
-    chunkSizeWarningLimit: 1000, // Tăng giới hạn cảnh báo lên 1000kB
+    // [SENIOR OPTIMIZATION] Tối ưu hóa Chunking để tránh lỗi Runtime
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // Tách nhỏ các thư viện lớn để trình duyệt cache hiệu quả hơn
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Tách Ant Design vì nó rất nặng
-            if (id.includes('antd') || id.includes('@ant-design')) {
-              return 'vendor-antd';
+            // [CRITICAL FIX] Gộp React và Ant Design vào cùng một chunk
+            // Điều này đảm bảo antd luôn tìm thấy React.createContext khi khởi tạo
+            if (
+              id.includes('react') || 
+              id.includes('react-dom') || 
+              id.includes('react-router-dom') ||
+              id.includes('antd') ||
+              id.includes('@ant-design')
+            ) {
+              return 'vendor-framework';
             }
-            // Tách các thư viện xử lý File/Excel (thường chỉ dùng ở trang Admin)
-            if (id.includes('exceljs') || id.includes('file-saver')) {
-              return 'vendor-excel';
+            
+            // Tách các thư viện quản lý State
+            if (id.includes('redux') || id.includes('@reduxjs')) {
+              return 'vendor-state';
             }
-            // Tách Recharts (đồ thị)
-            if (id.includes('recharts')) {
-              return 'vendor-charts';
+
+            // Tách các thư viện nặng không dùng thường xuyên (chỉ dùng ở Admin/Charts)
+            if (id.includes('exceljs') || id.includes('recharts') || id.includes('file-saver')) {
+              return 'vendor-heavy';
             }
-            // Các thư viện core của React/Redux
-            if (id.includes('react') || id.includes('redux')) {
-              return 'vendor-core';
-            }
-            // Mặc định gom các thư viện nhỏ khác vào 'vendor'
-            return 'vendor';
+
+            // Các thư viện nhỏ khác
+            return 'vendor-others';
           }
         }
       }
