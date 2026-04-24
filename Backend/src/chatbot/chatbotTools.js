@@ -3,13 +3,13 @@ const aiFunctionDeclarations = [
         type: "function",
         function: {
             name: "searchProducts",
-            description: "Tìm kiếm sản phẩm theo tên hoặc loại. Dùng khi khách hỏi 'váy rẻ', 'áo thun mới' (không có số tiền cụ thể).",
+            description: "Tìm kiếm sản phẩm theo tên, loại hoặc tên BỘ SƯU TẬP (như 'Hello Summer', 'Sweet Lady'). Dùng khi khách muốn xem các mẫu trong một bộ sưu tập cụ thể.",
             parameters: {
                 type: "object",
                 properties: {
                     keyword: {
                         type: "string",
-                        description: "Từ khóa sản phẩm (ví dụ: áo, quần, váy)"
+                        description: "Tên riêng của sản phẩm hoặc bộ sưu tập (Ví dụ: 'Dạ hội' thay vì 'Bộ sưu tập dạ hội', 'Áo dài' thay vì 'các mẫu áo dài')."
                     },
                     sort: {
                         type: "string",
