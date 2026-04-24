@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,19 +18,46 @@ const UserReturnModal = ({ isOpen, onClose, orderId, onSuccess }) => {
     const [previews, setPreviews] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // [PROACTIVE] Cleanup memory leaks khi component unmount
+    useEffect(() => {
+        return () => {
+            previews.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [previews]);
+
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
+        
+        // [PROACTIVE] Validate số lượng ảnh
         if (files.length + selectedFiles.length > 5) {
             toast.warning('Bạn chỉ có thể tải lên tối đa 5 ảnh');
             return;
         }
 
-        const newFiles = [...selectedFiles, ...files];
+        // [PROACTIVE] Validate File Type & Size (Max 5MB)
+        const validFiles = files.filter(file => {
+            if (!file.type.startsWith('image/')) {
+                toast.error(`'${file.name}' không phải là định dạng ảnh hợp lệ.`);
+                return false;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error(`Ảnh '${file.name}' vượt quá dung lượng cho phép (5MB).`);
+                return false;
+            }
+            return true;
+        });
+
+        if (validFiles.length === 0) return;
+
+        const newFiles = [...selectedFiles, ...validFiles];
         setSelectedFiles(newFiles);
 
         // Generate previews
-        const newPreviews = files.map(file => URL.createObjectURL(file));
+        const newPreviews = validFiles.map(file => URL.createObjectURL(file));
         setPreviews([...previews, ...newPreviews]);
+        
+        // Reset input value to allow selecting the same file again if needed
+        e.target.value = null;
     };
 
     const removeFile = (index) => {
@@ -64,10 +91,12 @@ const UserReturnModal = ({ isOpen, onClose, orderId, onSuccess }) => {
                 onSuccess();
                 handleClose();
             } else {
-                toast.error(res.EM || 'Lỗi khi gửi yêu cầu');
+                toast.error(res?.EM || 'Lỗi khi gửi yêu cầu. Vui lòng thử lại.');
             }
         } catch (error) {
-            toast.error('Lỗi kết nối server');
+            // [PROACTIVE] Catch Axios Error format
+            const errorMsg = error.response?.data?.EM || 'Lỗi kết nối máy chủ khi tải ảnh lên.';
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }
@@ -155,13 +184,13 @@ const UserReturnModal = ({ isOpen, onClose, orderId, onSuccess }) => {
                     </Button>
                     <Button 
                         onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        className="rounded-none bg-[#785254] hover:bg-[#5a3d3f] text-white px-8 h-11 transition-all"
+                        disabled={isSubmitting || !reason.trim()}
+                        className="rounded-none bg-[#785254] hover:bg-[#5a3d3f] text-white px-8 h-11 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Đang xử lý...
+                                Đang tải lên...
                             </>
                         ) : 'Gửi yêu cầu'}
                     </Button>
