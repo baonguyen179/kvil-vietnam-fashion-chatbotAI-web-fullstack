@@ -226,7 +226,13 @@ const CartPage = () => {
                                 <div className="space-y-3">
                                     <Button 
                                         className="w-full h-14 bg-zinc-900 hover:bg-black text-white rounded-xl uppercase text-[11px] tracking-[0.25em] font-bold shadow-lg shadow-zinc-100 transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
-                                        onClick={() => navigate('/checkout')}
+                                        onClick={() => {
+                                            if (!cartItems || cartItems.length === 0) {
+                                                toast.warning("Giỏ hàng của bạn đang trống!");
+                                                return;
+                                            }
+                                            navigate('/checkout');
+                                        }}
                                     >
                                         TIẾN HÀNH THANH TOÁN
                                     </Button>

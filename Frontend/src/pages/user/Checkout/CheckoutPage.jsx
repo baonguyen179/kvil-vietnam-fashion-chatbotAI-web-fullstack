@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
@@ -29,6 +29,15 @@ const CheckoutPage = () => {
         locationData,
         handleSubmitOrder
     } = useCheckout();
+
+    const navigate = useNavigate();
+
+    // Guard: Nếu giỏ hàng trống -> Chuyển về trang giỏ hàng
+    useEffect(() => {
+        if (!isVerifyingSession && cartItems.length === 0) {
+            navigate('/cart', { replace: true });
+        }
+    }, [cartItems, isVerifyingSession, navigate]);
 
     // 1. Verify Session on Mount
     useEffect(() => {

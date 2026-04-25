@@ -17,6 +17,7 @@ import CartSheet from "./cart.sheet";
 import { toggleCartDrawer } from "@/redux/slices/cartSlice";
 import collectionService from "@/services/collectionService";
 import { ChevronDown } from "lucide-react";
+import UserSearchModal from "./user.search-modal";
 
 const navLinks = [
     { label: "TRANG CHỦ", href: "/" },
@@ -24,7 +25,7 @@ const navLinks = [
     { label: "SẢN PHẨM", href: "/collections" },
     { label: "BỘ SƯU TẬP", href: "#", isDropdown: true },
     { label: "TRA CỨU ĐƠN", href: "/tra-cuu-don-hang" },
-    { label: "LIÊN HỆ", href: "#lien-he" },
+    { label: "LIÊN HỆ", href: "/lien-he" },
 ];
 
 
@@ -40,6 +41,7 @@ export const UserHeader = () => {
     const { cartItems } = useSelector((state) => state.cart);
     const cartCount = cartItems?.length || 0;
     const [collections, setCollections] = useState([]);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
 
     useEffect(() => {
         const fetchCollections = async () => {
@@ -167,7 +169,12 @@ export const UserHeader = () => {
                     </Link>
 
                     <div className="flex flex-1 items-center justify-end gap-5">
-                        <Button variant="ghost" size="icon" className="text-[#504444] hover:bg-[#f3ede6]">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-[#504444] hover:bg-[#f3ede6]"
+                            onClick={() => setIsSearchOpen(true)}
+                        >
                             <Search className="h-5 w-5" strokeWidth={1.5} />
                         </Button>
                         <Button 
@@ -359,6 +366,7 @@ export const UserHeader = () => {
             </div>
             </header>
             <CartSheet />
+            <UserSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         </>
     );
 };

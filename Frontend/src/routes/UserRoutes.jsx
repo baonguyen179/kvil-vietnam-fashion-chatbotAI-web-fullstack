@@ -24,6 +24,7 @@ const CheckoutPage = lazy(() => import('@/pages/user/Checkout/CheckoutPage'));
 const OrderSuccessPage = lazy(() => import('@/pages/user/Checkout/OrderSuccessPage'));
 const VNPayReturnPage = lazy(() => import('@/pages/user/Checkout/VNPayReturnPage'));
 const GuestTrackingPage = lazy(() => import('@/pages/user/GuestTracking/GuestTrackingPage'));
+const ContactPage = lazy(() => import('@/pages/user/ContactPage'));
 
 const UserRoutes = ({ notFound }) => {
 
@@ -52,6 +53,7 @@ const UserRoutes = ({ notFound }) => {
                 <Route path="order-success/:orderId" element={<OrderSuccessPage />} />
                 <Route path="order/vnpay-return" element={<VNPayReturnPage />} />
                 <Route path="tra-cuu-don-hang" element={<GuestTrackingPage />} />
+                <Route path="lien-he" element={<ContactPage />} />
 
                 <Route 
                     path="account" 

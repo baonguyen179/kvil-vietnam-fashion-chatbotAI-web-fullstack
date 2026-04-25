@@ -2,6 +2,8 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { MessageSquare, X, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 
 // Lazy load ChatWindow to optimize initial page load
 const UserChatbotWindow = lazy(() => import('./user.chatbot-window'));
@@ -17,6 +19,16 @@ const UserChatbotWindow = lazy(() => import('./user.chatbot-window'));
 const UserChatbotWidget = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
+
+    const location = useLocation();
+    const isCartOpen = useSelector((state) => state.cart?.isOpen);
+
+    // Xác định các trang liên quan đến thanh toán/giỏ hàng
+    const hiddenRoutes = ['/cart', '/checkout', '/order-success', '/order/vnpay-return'];
+    const isHiddenRoute = hiddenRoutes.some(route => location.pathname.includes(route));
+    
+    // Nếu đang mở giỏ hàng hoặc ở trang thanh toán -> Ẩn chatbot
+    const isHidden = isCartOpen || isHiddenRoute;
 
     // Auto-open logic after 10 seconds
     useEffect(() => {
@@ -36,7 +48,12 @@ const UserChatbotWidget = () => {
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-9999 flex flex-col items-end gap-4 pointer-events-none">
+        <div 
+            className={cn(
+                "fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4 pointer-events-none transition-all duration-500",
+                isHidden ? "opacity-0 scale-50 translate-y-10" : "opacity-100 scale-100 translate-y-0"
+            )}
+        >
             {/* Chat Window Container */}
             <div className={cn(
                 "transition-all duration-300 transform origin-bottom-right pointer-events-auto",
