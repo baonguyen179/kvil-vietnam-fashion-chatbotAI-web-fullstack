@@ -1,6 +1,6 @@
-const orderService = require('../service/orderService');
-const productService = require('../service/productService');
-const collectionService = require('../service/collectionService');
+const orderService = require('../serviceForChatbot/orderService');
+const productService = require('../serviceForChatbot/productService');
+const collectionService = require('../serviceForChatbot/collectionService');
 
 const executeAiAction = async (functionName, functionArgs = {}, userId = null) => {
     let finalReply = "";
@@ -58,16 +58,22 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
             case "searchProducts": {
                 const keyword = functionArgs.keyword || "";
 
+                // Gọi service với các tham số mặc định page=1, limit=5
                 const searchRes = await productService.searchProducts(keyword, 1, 5);
+
+                // Lấy đúng mảng products từ cấu trúc DT mới của bạn
                 finalProducts = searchRes.DT?.products || [];
 
                 if (finalProducts.length > 0) {
-                    finalReply =
-                        functionArgs.replyMessage ||
-                        `Dạ, mình tìm thấy một số mẫu '${keyword}' phù hợp với bạn đây ạ!`;
+                    // Trả lời linh hoạt nếu là BST
+                    const isCollection = ["summer", "lady", "dạ hội", "áo dài"].some(c => keyword.toLowerCase().includes(c));
+
+                    finalReply = functionArgs.replyMessage ||
+                        (isCollection
+                            ? `Dạ, shop mời bạn xem các mẫu trong bộ sưu tập '${keyword}' mới nhất đây ạ! ✨`
+                            : `Dạ, mình tìm thấy một số mẫu '${keyword}' phù hợp với bạn đây ạ!`);
                 } else {
-                    finalReply =
-                        `Dạ tiếc quá, hiện tại bên mình chưa có mẫu '${keyword}' rồi ạ. Bạn muốn mình gợi ý mẫu khác không?`;
+                    finalReply = `Dạ tiếc quá, hiện tại shop chưa có mẫu nào khớp với '${keyword}' rồi ạ. Bạn thử tìm từ khóa khác nhé!`;
                 }
                 break;
             }
@@ -124,19 +130,20 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
             }
 
             case "getBestSellerProducts": {
-                const limitBest = functionArgs.limit || 5;
+                // Gán mặc định là chuỗi rỗng nếu AI không bóc tách được keyword
+                const keyword = functionArgs.keyword || "";
+                const limit = functionArgs.limit || 5;
 
-                const bestSellerRes = await productService.getBestSellerProducts(
-                    limitBest
-                );
+                const res = await productService.getBestSellerProducts(keyword, limit);
+                finalProducts = res.DT?.products || [];
 
-                finalProducts = bestSellerRes.DT?.products || [];
-
-                finalReply =
-                    finalProducts.length > 0
-                        ? (functionArgs.replyMessage || "Dạ, đây là các sản phẩm bán chạy nhất ạ!")
-                        : "Dạ hiện chưa có dữ liệu bán chạy ạ.";
-
+                if (finalProducts.length > 0) {
+                    finalReply = keyword
+                        ? `Dạ, đây là các mẫu ${keyword} bán chạy nhất tại shop mình ạ!`
+                        : "Dạ, đây là danh sách những sản phẩm đang dẫn đầu xu hướng và bán chạy nhất tại Kvil ạ! ✨";
+                } else {
+                    finalReply = "Dạ hiện tại các mẫu này đang cháy hàng mất rồi, bạn xem thử các bộ sưu tập mới nhé!";
+                }
                 break;
             }
 
