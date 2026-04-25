@@ -27,6 +27,9 @@ const productService = {
     addProductVariant: async (id, data) => {
         return await axios.post(`/api/v1/admin/products/${id}/variants`, data);
     },
+    updateProductVariant: async (variantId, data) => {
+        return await axios.put(`/api/v1/admin/variants/${variantId}`, data);
+    },
     addProductImages: async (id, files) => {
         const formData = new FormData();
         // Assume 'files' is an array of File objects

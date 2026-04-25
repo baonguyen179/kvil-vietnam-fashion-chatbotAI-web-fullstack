@@ -19,6 +19,7 @@ const AdminVariantDrawer = ({
     const [submitLoading, setSubmitLoading] = useState(false);
     const [colors, setColors] = useState([]);
     const [sizes, setSizes] = useState([]);
+    const [editingVariant, setEditingVariant] = useState(null);
     const [form] = Form.useForm();
 
     const fetchProductVariants = async () => {
@@ -64,21 +65,52 @@ const AdminVariantDrawer = ({
         setIsDrawerVisible(false);
         form.resetFields();
         setVariants([]);
+        setEditingVariant(null);
     };
 
-    const handleAddVariant = async () => {
+    const handleEditClick = (record) => {
+        setEditingVariant(record);
+        form.setFieldsValue({
+            colorId: record.colorId,
+            sizeId: record.sizeId,
+            stock: record.stock, // Disabled in UI
+            price: record.price,
+            sku: record.sku
+        });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingVariant(null);
+        form.resetFields();
+    };
+
+    const handleSubmitVariant = async () => {
         try {
             const values = await form.validateFields();
             setSubmitLoading(true);
             
-            const res = await productService.addProductVariant(manageVariantProduct.id, values);
-            if (res && res.EC === 0) {
-                message.success(res.EM || "Thêm biến thể thành công!");
-                form.resetFields();
-                fetchProductVariants(); // Tải lại danh sách biến thể
-                if (fetchProducts) fetchProducts(); // Gọi API cập nhật bảng chính ở ngoài
+            if (editingVariant) {
+                // Cập nhật biến thể
+                const res = await productService.updateProductVariant(editingVariant.id, values);
+                if (res && res.EC === 0) {
+                    message.success("Cập nhật thông tin biến thể thành công!");
+                    handleCancelEdit();
+                    fetchProductVariants();
+                    if (fetchProducts) fetchProducts();
+                } else {
+                    message.error(res.EM || "Cập nhật thất bại!");
+                }
             } else {
-                message.error(res.EM || "Thêm biến thể thất bại!");
+                // Thêm biến thể mới
+                const res = await productService.addProductVariant(manageVariantProduct.id, values);
+                if (res && res.EC === 0) {
+                    message.success(res.EM || "Thêm biến thể thành công!");
+                    form.resetFields();
+                    fetchProductVariants();
+                    if (fetchProducts) fetchProducts();
+                } else {
+                    message.error(res.EM || "Thêm biến thể thất bại!");
+                }
             }
         } catch (error) {
             console.log('Validation Failed:', error);
@@ -123,6 +155,21 @@ const AdminVariantDrawer = ({
             dataIndex: 'sku',
             key: 'sku',
             render: (val) => val ? val : <Text type="secondary">Auto</Text>
+        },
+        {
+            title: 'Hành động',
+            key: 'action',
+            render: (_, record) => (
+                <Space>
+                    <Button 
+                        type="link" 
+                        onClick={() => handleEditClick(record)}
+                        disabled={editingVariant?.id === record.id}
+                    >
+                        Sửa
+                    </Button>
+                </Space>
+            )
         }
     ];
 
@@ -135,7 +182,11 @@ const AdminVariantDrawer = ({
             open={isDrawerVisible}
         >
             <Spin spinning={loading}>
-                <Card title="Thêm biến thể mới" size="small" className="mb-6 bg-gray-50 border border-gray-200">
+                <Card 
+                    title={editingVariant ? "Chỉnh sửa biến thể" : "Thêm biến thể mới"} 
+                    size="small" 
+                    className={`mb-6 border ${editingVariant ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}
+                >
                     <Form
                         form={form}
                         layout="vertical"
@@ -177,7 +228,17 @@ const AdminVariantDrawer = ({
                             label="Số lượng (Tồn kho)"
                             rules={[{ required: true, message: 'Vui lòng nhập tồn kho!' }]}
                         >
-                            <InputNumber min={0} placeholder="vd: 100" style={{ width: '100%' }} />
+                            <InputNumber 
+                                min={0} 
+                                placeholder="vd: 100" 
+                                style={{ width: '100%' }} 
+                                disabled={!!editingVariant} // Khóa không cho sửa trực tiếp để đảm bảo tính toàn vẹn Log kho
+                            />
+                            {editingVariant && (
+                                <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginTop: 4 }}>
+                                    * Không thể sửa trực tiếp. Vui lòng nhập/xuất kho để thay đổi số lượng.
+                                </Text>
+                            )}
                         </Form.Item>
 
                         <Form.Item
@@ -201,15 +262,23 @@ const AdminVariantDrawer = ({
                             <Input placeholder="Mã sản phẩm trong kho" />
                         </Form.Item>
 
-                        <div className="col-span-2 flex justify-end">
+                        <div className="col-span-2 flex justify-end gap-2">
+                            {editingVariant && (
+                                <Button 
+                                    onClick={handleCancelEdit}
+                                    disabled={submitLoading}
+                                >
+                                    Hủy
+                                </Button>
+                            )}
                             <Button 
                                 type="primary" 
-                                icon={<PlusOutlined />} 
-                                onClick={handleAddVariant}
+                                icon={editingVariant ? null : <PlusOutlined />} 
+                                onClick={handleSubmitVariant}
                                 loading={submitLoading}
-                                className="bg-blue-600 hover:bg-blue-700"
+                                className={editingVariant ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"}
                             >
-                                Thêm Biến thể
+                                {editingVariant ? "Cập nhật Biến thể" : "Thêm Biến thể"}
                             </Button>
                         </div>
                     </Form>
