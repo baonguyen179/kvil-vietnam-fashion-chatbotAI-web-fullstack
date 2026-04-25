@@ -62,6 +62,14 @@ const variantSchema = Joi.object({
     price: Joi.number().min(0).allow('', null)
 }).unknown(true);
 
+const updateVariantSchema = Joi.object({
+    colorId: Joi.number().integer().allow('', null),
+    sizeId: Joi.number().integer().allow('', null),
+    sku: Joi.string().allow('', null),
+    price: Joi.number().min(0).allow('', null)
+    // Cố ý bỏ qua trường 'stock' vì stock phải được quản lý thông qua InventoryLogs
+}).unknown(true);
+
 module.exports = {
     productIdSchema,
     imageIdSchema,
@@ -69,5 +77,6 @@ module.exports = {
     getAllProductsSchema,
     searchSchema,
     getInventoryLogsSchema,
-    variantSchema
+    variantSchema,
+    updateVariantSchema
 };

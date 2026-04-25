@@ -119,6 +119,24 @@ const handleAddProductVariant = async (req, res) => {
     }
 };
 
+const handleUpdateProductVariant = async (req, res) => {
+    try {
+        const variantId = req.params.variantId;
+        if (!variantId) {
+            return res.status(200).json({ EM: 'Thiếu ID biến thể!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const { error } = productValidation.updateVariantSchema.validate(req.body);
+        if (error) return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+
+        const data = await productService.updateProductVariant(variantId, req.body);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error(">>> Lỗi controller (handleUpdateProductVariant):", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
 const handleAddProductImages = async (req, res) => {
     try {
         const { error } = productValidation.productIdSchema.validate({ id: req.params.id });
@@ -239,10 +257,14 @@ const handleGetInventoryTemplate = async (req, res) => {
 };
 
 module.exports = {
-    handleGetAllProducts, handleCreateProduct, handleUpdateProduct, handleDeleteProduct,
-    handleGetProductById, handleSearchProducts,
+    handleGetAllProducts, handleCreateProduct, handleUpdateProduct,
+    handleDeleteProduct,
+    handleGetProductById,
+    handleSearchProducts,
     handleAddProductVariant,
-    handleAddProductImages, handleDeleteProductImage,
+    handleUpdateProductVariant,
+    handleAddProductImages,
+    handleDeleteProductImage,
     handleGetBestSellerProducts,
     handleGetInventoryLogs,
     handleImportInventory,

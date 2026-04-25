@@ -59,6 +59,7 @@ router.post('/admin/products', JWTAction.checkUserPermission([], ['products.crea
 router.put('/admin/products/:id', JWTAction.checkUserPermission([], ['products.update']), productController.handleUpdateProduct);
 router.delete('/admin/products/:id', JWTAction.checkUserPermission([], ['products.delete']), productController.handleDeleteProduct);
 router.post('/admin/products/:id/variants', JWTAction.checkUserPermission([], ['products.update']), productController.handleAddProductVariant);
+router.put('/admin/variants/:variantId', JWTAction.checkUserPermission([], ['products.update']), productController.handleUpdateProductVariant);
 router.post('/admin/products/:id/images', JWTAction.checkUserPermission([], ['products.update']), uploadCloud.array('images', 10), productController.handleAddProductImages);
 router.delete('/admin/products/images/:imageId', JWTAction.checkUserPermission([], ['products.update']), productController.handleDeleteProductImage);
 

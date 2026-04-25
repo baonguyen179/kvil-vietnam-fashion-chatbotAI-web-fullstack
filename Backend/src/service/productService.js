@@ -326,6 +326,63 @@ const addProductVariant = async (productId, variantData) => {
         return { EM: 'Lỗi server khi thêm biến thể', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 }
+
+const updateProductVariant = async (variantId, updateData) => {
+    try {
+        const variant = await db.ProductVariant.findOne({ where: { id: variantId } });
+        if (!variant) {
+            return { EM: 'Biến thể không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
+        }
+
+        const { colorId, sizeId, sku, price } = updateData;
+
+        // Check unique constraint if color/size changed
+        if ((colorId && colorId !== variant.colorId) || (sizeId && sizeId !== variant.sizeId)) {
+            const checkColor = colorId || variant.colorId;
+            const checkSize = sizeId || variant.sizeId;
+            const existingVariant = await db.ProductVariant.findOne({
+                where: { 
+                    productId: variant.productId, 
+                    colorId: checkColor, 
+                    sizeId: checkSize,
+                    id: { [Op.ne]: variantId }
+                }
+            });
+
+            if (existingVariant) {
+                return {
+                    EM: `Biến thể với Màu sắc và Kích cỡ này đã tồn tại trong sản phẩm!`,
+                    EC: errorCode.VALIDATION_ERROR,
+                    DT: ''
+                };
+            }
+        }
+
+        await variant.update({
+            colorId: colorId !== undefined ? colorId : variant.colorId,
+            sizeId: sizeId !== undefined ? sizeId : variant.sizeId,
+            sku: sku !== undefined ? sku : variant.sku,
+            price: price !== undefined ? price : variant.price,
+        });
+
+        await Promise.all([
+            redisHelper.delCache(`product:detail:${variant.productId}`),
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('collection:detail:*')
+        ]);
+
+        return {
+            EM: 'Cập nhật biến thể thành công!',
+            EC: errorCode.SUCCESS,
+            DT: variant
+        };
+
+    } catch (error) {
+        console.error(">>> Lỗi tại productService (updateProductVariant):", error);
+        return { EM: 'Lỗi server khi cập nhật biến thể', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+}
+
 const addMultipleProductImages = async (productId, imagesDataInput) => {
     try {
         const product = await db.Product.findOne({ where: { id: productId } });
@@ -1006,7 +1063,7 @@ const importInventory = async (fileBuffer, adminId) => {
 
 module.exports = {
     getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, searchProducts,
-    addProductVariant,
+    addProductVariant, updateProductVariant,
     addMultipleProductImages, deleteProductImage, getBestDiscountProducts,
     getBestSellerProducts, checkProductAvailability, filterProductsAdvanced, getInventoryLogs,
     importInventory
