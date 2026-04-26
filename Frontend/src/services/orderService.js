@@ -100,7 +100,16 @@ const orderService = {
      */
     verifyVNPayReturn: async (queryParams) => {
         return await axios.get("/api/v1/vnpay/return", { params: queryParams });
-    }
+    },
+
+    /**
+     * [ADMIN] Đồng bộ trạng thái đơn hàng với VNPay (QueryDR)
+     * Dùng khi IPN bị mất hoặc khách tắt trình duyệt quá sớm
+     * @param {number} orderId - Order ID cần kiểm tra
+     */
+    syncVNPayStatus: async (orderId) => {
+        return await axios.patch(`${BASE}/${orderId}/vnpay-sync`);
+    },
 };
 
 

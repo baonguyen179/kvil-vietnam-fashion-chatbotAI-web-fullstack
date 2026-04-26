@@ -169,6 +169,19 @@ const OrderManagePage = () => {
         }
     };
 
+    /**
+     * Callback từ AdminOrderDetailDrawer sau khi sync VNPay thành công.
+     * Cập nhật paymentStatus = true cho đơn trong local state mà không reload.
+     */
+    const handleSyncSuccess = (orderId) => {
+        setOrders(prev =>
+            prev.map(o => o.id === orderId ? { ...o, paymentStatus: true } : o)
+        );
+        if (selectedOrder?.id === orderId) {
+            setSelectedOrder(prev => ({ ...prev, paymentStatus: true }));
+        }
+    };
+
     const columns = [
         {
             title: '#',
@@ -417,6 +430,7 @@ const OrderManagePage = () => {
                 onUpdateStatus={handleUpdateStatus}
                 onUpdatePayment={handleUpdatePayment}
                 updatingId={updatingId}
+                onSyncSuccess={handleSyncSuccess}
             />
         </Card>
     );

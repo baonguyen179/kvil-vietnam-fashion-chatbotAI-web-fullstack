@@ -1,7 +1,8 @@
-import React from 'react';
-import { Drawer, Descriptions, Tag, Badge, Divider, Space, Typography, Button, Popconfirm, Select } from 'antd';
-import { UserOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Drawer, Descriptions, Tag, Badge, Divider, Space, Typography, Button, Popconfirm, Select, App, Alert } from 'antd';
+import { UserOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined, SyncOutlined } from '@ant-design/icons';
 import { ORDER_STATUS_CONFIG, PAYMENT_METHOD_LABELS, DELIVERY_METHOD_LABELS } from '@/constants/orderConstants';
+import orderService from '@/services/orderService';
 
 const { Text, Title } = Typography;
 
@@ -11,8 +12,52 @@ const formatCurrency = (val) => {
     return isNaN(num) ? '—' : `${num.toLocaleString('vi-VN')}đ`;
 };
 
-const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdatePayment, updatingId }) => {
+const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdatePayment, updatingId, onSyncSuccess }) => {
+    const { message } = App.useApp();
+    const [syncing, setSyncing] = useState(false);
+    const [syncResult, setSyncResult] = useState(null); // { type: 'success'|'error'|'info', text: string }
+
     if (!order) return null;
+
+    // Reset kết quả cũ mỗi khi mở đơn mới
+    // (Drawer không unmount nên cần reset thủ công khi order thay đổi)
+
+    const isVNPayPending = order.paymentMethod === 'VNPAY' && !order.paymentStatus;
+
+    const handleSyncVNPay = async () => {
+        setSyncing(true);
+        setSyncResult(null);
+        try {
+            const res = await orderService.syncVNPayStatus(order.id);
+
+            if (res && res.EC === 0) {
+                // Thành công: VNPay xác nhận giao dịch đã thanh toán
+                setSyncResult({ type: 'success', text: res.EM || 'Đồng bộ thành công! Đơn hàng đã được xác nhận thanh toán.' });
+                message.success(res.EM || 'Đồng bộ VNPay thành công!');
+                // Cập nhật paymentStatus lên parent để bảng phản ánh ngay, không cần reload
+                if (typeof onSyncSuccess === 'function') {
+                    onSyncSuccess(order.id);
+                }
+            } else {
+                // VNPay trả về nhưng GD chưa thành công hoặc còn pending
+                const info = res?.DT;
+                const statusText = info?.vnp_TransactionStatus
+                    ? ` (Mã trạng thái GD: ${info.vnp_TransactionStatus})`
+                    : '';
+                setSyncResult({
+                    type: 'warning',
+                    text: (res?.EM || 'Giao dịch chưa hoàn tất theo VNPay.') + statusText,
+                });
+                message.warning(res?.EM || 'VNPay chưa ghi nhận thanh toán.');
+            }
+        } catch (err) {
+            console.error('>>> handleSyncVNPay error:', err);
+            setSyncResult({ type: 'error', text: 'Lỗi kết nối. Vui lòng thử lại sau.' });
+            message.error('Lỗi kết nối đến máy chủ khi đồng bộ VNPay.');
+        } finally {
+            setSyncing(false);
+        }
+    };
     // console.log("order: ", order);
 
     const statusCfg = ORDER_STATUS_CONFIG[order.status] || {};
@@ -190,6 +235,68 @@ const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdate
                     </Popconfirm>
                 </div>
             </div>
+
+            {/* === [VNPay QueryDR] Đồng bộ trạng thái từ cổng thanh toán === */}
+            {isVNPayPending && (
+                <>
+                    <Divider dashed className="my-4" />
+                    <Title level={5} className="mb-1 flex items-center gap-2">
+                        <SyncOutlined className="text-blue-500" />
+                        Đồng bộ trạng thái VNPay
+                    </Title>
+                    <p className="text-xs text-gray-500 mb-3">
+                        Truy vấn trực tiếp lên cổng VNPay (QueryDR) để kiểm tra giao dịch.
+                        Dùng khi IPN bị mất hoặc khách tắt trình duyệt quá sớm.
+                    </p>
+
+                    {/* Hiển thị kết quả của lần sync gần nhất */}
+                    {syncResult && (
+                        <Alert
+                            type={syncResult.type === 'warning' ? 'warning' : syncResult.type}
+                            title={
+                                syncResult.type === 'success' ? 'Đồng bộ thành công'
+                                : syncResult.type === 'warning' ? 'Chưa xác nhận thanh toán'
+                                : 'Lỗi kết nối'
+                            }
+                            description={syncResult.text}
+                            showIcon
+                            className="mb-3"
+                            closable
+                            onClose={() => setSyncResult(null)}
+                        />
+                    )}
+
+                    <Popconfirm
+                        title="Đồng bộ với VNPay?"
+                        description={
+                            <span className="text-xs">
+                                Hệ thống sẽ truy vấn lịch sử giao dịch của đơn{' '}
+                                <strong>#{order.id}</strong> từ VNPay.<br />
+                                Nếu giao dịch thành công, đơn sẽ được tự động xác nhận.
+                            </span>
+                        }
+                        onConfirm={handleSyncVNPay}
+                        okText="Đồng bộ ngay"
+                        cancelText="Hủy"
+                        disabled={syncing}
+                    >
+                        <Button
+                            block
+                            icon={<SyncOutlined spin={syncing} />}
+                            loading={syncing}
+                            disabled={syncing}
+                            style={{
+                                background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+                                borderColor: '#1677ff',
+                                color: '#fff',
+                                fontWeight: 500,
+                            }}
+                        >
+                            {syncing ? 'Đang truy vấn VNPay...' : 'Kiểm tra & Đồng bộ VNPay'}
+                        </Button>
+                    </Popconfirm>
+                </>
+            )}
         </Drawer>
     );
 };
