@@ -1,6 +1,6 @@
-const orderService = require('../serviceForChatbot/orderService');
-const productService = require('../serviceForChatbot/productService');
-const collectionService = require('../serviceForChatbot/collectionService');
+const orderService = require('../serviceForChatBot/orderService');
+const productService = require('../serviceForChatBot/productService');
+const collectionService = require('../serviceForChatBot/collectionService');
 
 const executeAiAction = async (functionName, functionArgs = {}, userId = null) => {
     let finalReply = "";
