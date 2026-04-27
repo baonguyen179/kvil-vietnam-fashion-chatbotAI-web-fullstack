@@ -962,6 +962,77 @@ const getInventoryLogs = async (query) => {
     }
 };
 
+/**
+ * [SENIOR] Điều chỉnh kho theo nguyên tắc "Bút toán đảo" (Compensating Transaction).
+ * TUYỆT ĐỐI KHÔNG XÓA log cũ - chỉ tạo log mới type ADJUST để bù trừ.
+ * @param {number} variantId - ID biến thể cần điều chỉnh
+ * @param {number} delta - Số lượng thay đổi (có thể âm hoặc dương)
+ * @param {string} note - Lý do điều chỉnh bắt buộc ghi rõ
+ * @param {number} adminId - ID admin thực hiện
+ */
+const adjustInventory = async (variantId, delta, note, adminId) => {
+    let t;
+    try {
+        t = await db.sequelize.transaction();
+
+        const variant = await db.ProductVariant.findOne({
+            where: { id: variantId },
+            include: [{ model: db.Product, as: 'product', attributes: ['id', 'name'] }],
+            transaction: t,
+            lock: true // Lock row để tránh Race Condition
+        });
+
+        if (!variant) {
+            await t.rollback();
+            return { EM: 'Biến thể sản phẩm không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
+        }
+
+        const newStock = variant.stock + delta;
+
+        // Guard: Không cho phép tồn kho về số âm
+        if (newStock < 0) {
+            await t.rollback();
+            return {
+                EM: `Không thể điều chỉnh! Tồn kho hiện tại là ${variant.stock}, điều chỉnh ${delta} sẽ làm kho về ${newStock} (âm).`,
+                EC: errorCode.VALIDATION_ERROR,
+                DT: { currentStock: variant.stock }
+            };
+        }
+
+        // Cập nhật tồn kho trong 1 transaction an toàn
+        await variant.update({ stock: newStock }, { transaction: t });
+
+        // Ghi log ADJUST - không bao giờ xóa log cũ
+        await db.InventoryLog.create({
+            variantId: variant.id,
+            userId: adminId,
+            type: 'ADJUST',
+            quantity: Math.abs(delta),
+            note: `[${delta > 0 ? 'TĂNG' : 'GIẢM'} ${Math.abs(delta)}] ${note}`
+        }, { transaction: t });
+
+        await t.commit();
+
+        // Xóa cache liên quan
+        await Promise.all([
+            redisHelper.delByPattern('product:inventory:logs:*'),
+            redisHelper.delCache(`product:detail:${variant.product?.id || variant.productId}`),
+            redisHelper.delByPattern('products:list:*')
+        ]);
+
+        return {
+            EM: `Điều chỉnh kho thành công! Tồn kho SKU ${variant.sku}: ${variant.stock} → ${newStock}`,
+            EC: errorCode.SUCCESS,
+            DT: { previousStock: variant.stock, newStock, delta }
+        };
+
+    } catch (error) {
+        if (t) await t.rollback();
+        console.error(">>> Lỗi adjustInventory:", error);
+        return { EM: 'Lỗi server khi điều chỉnh kho hàng', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+
 const importInventory = async (fileBuffer, adminId) => {
     let t;
     try {
@@ -1066,5 +1137,5 @@ module.exports = {
     addProductVariant, updateProductVariant,
     addMultipleProductImages, deleteProductImage, getBestDiscountProducts,
     getBestSellerProducts, checkProductAvailability, filterProductsAdvanced, getInventoryLogs,
-    importInventory
+    importInventory, adjustInventory
 }

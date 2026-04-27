@@ -44,7 +44,7 @@ const searchSchema = Joi.object({
 const getInventoryLogsSchema = Joi.object({
     page: Joi.number().integer().min(1).allow('', null),
     limit: Joi.number().integer().min(1).allow('', null),
-    type: Joi.string().valid('IN', 'OUT', 'RETURN', 'HOLD', 'UNHOLD').allow('', null),
+    type: Joi.string().valid('IN', 'OUT', 'RETURN', 'HOLD', 'UNHOLD', 'ADJUST').allow('', null),
     variantId: Joi.number().integer().allow('', null),
     startDate: Joi.string().isoDate().allow('', null),
     endDate: Joi.string().isoDate().allow('', null)
@@ -70,6 +70,29 @@ const updateVariantSchema = Joi.object({
     // Cố ý bỏ qua trường 'stock' vì stock phải được quản lý thông qua InventoryLogs
 }).unknown(true);
 
+/**
+ * Schema cho chức năng "Bút toán đảo" (Compensating Transaction / Stock Adjustment)
+ * Admin dùng để sửa sai mà không xóa dữ liệu gốc.
+ */
+const adjustInventorySchema = Joi.object({
+    variantId: Joi.number().integer().required().messages({
+        'any.required': 'Vui lòng chọn biến thể sản phẩm cần điều chỉnh!',
+        'number.base': 'ID biến thể phải là số nguyên!'
+    }),
+    // delta có thể âm (điều chỉnh giảm) hoặc dương (điều chỉnh tăng)
+    // Nhưng không cho phép = 0 vì không có ý nghĩa nghiệp vụ
+    delta: Joi.number().integer().not(0).required().messages({
+        'any.required': 'Vui lòng nhập số lượng cần điều chỉnh!',
+        'number.base': 'Số lượng phải là số nguyên!',
+        'any.invalid': 'Số lượng điều chỉnh không được bằng 0!'
+    }),
+    note: Joi.string().min(10).max(500).required().messages({
+        'any.required': 'Vui lòng ghi rõ lý do điều chỉnh kho (tối thiểu 10 ký tự)!',
+        'string.min': 'Lý do điều chỉnh phải có ít nhất {#limit} ký tự!',
+        'string.max': 'Lý do điều chỉnh không được quá {#limit} ký tự!'
+    })
+});
+
 module.exports = {
     productIdSchema,
     imageIdSchema,
@@ -78,5 +101,6 @@ module.exports = {
     searchSchema,
     getInventoryLogsSchema,
     variantSchema,
-    updateVariantSchema
+    updateVariantSchema,
+    adjustInventorySchema
 };

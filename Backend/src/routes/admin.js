@@ -42,6 +42,7 @@ const uploadMemory = multer({
 router.get('/admin/inventory/logs', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryLogs);
 router.get('/admin/inventory/import/template', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryTemplate);
 router.post('/admin/inventory/import', JWTAction.checkUserPermission([], ['inventory.update', 'products.update']), uploadMemory.single('file'), productController.handleImportInventory);
+router.post('/admin/inventory/adjust', JWTAction.checkUserPermission([], ['inventory.update']), productController.handleAdjustInventory);
 
 router.get('/admin/payments/transactions', JWTAction.checkUserPermission([], ['payments.read']), orderController.handleGetPaymentTransactions);
 

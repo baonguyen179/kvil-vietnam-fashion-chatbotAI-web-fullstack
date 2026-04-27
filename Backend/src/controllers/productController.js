@@ -256,6 +256,29 @@ const handleGetInventoryTemplate = async (req, res) => {
     }
 };
 
+/**
+ * [ADMIN] Bút toán đảo - Điều chỉnh tồn kho không xóa dữ liệu gốc
+ * Chuyên dụng để sửa sai lần nhập xuất kho theo chuẩn kế toán.
+ */
+const handleAdjustInventory = async (req, res) => {
+    try {
+        const { error, value } = productValidation.adjustInventorySchema.validate(req.body);
+        if (error) {
+            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const adminId = req.user?.id || null;
+        const { variantId, delta, note } = value;
+
+        const data = await productService.adjustInventory(variantId, delta, note, adminId);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+
+    } catch (error) {
+        console.error('>>> Lỗi handleAdjustInventory:', error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
 module.exports = {
     handleGetAllProducts, handleCreateProduct, handleUpdateProduct,
     handleDeleteProduct,
@@ -268,5 +291,6 @@ module.exports = {
     handleGetBestSellerProducts,
     handleGetInventoryLogs,
     handleImportInventory,
-    handleGetInventoryTemplate
+    handleGetInventoryTemplate,
+    handleAdjustInventory
 }
