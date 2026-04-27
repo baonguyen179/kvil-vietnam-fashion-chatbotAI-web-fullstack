@@ -22,8 +22,13 @@ const getInventoryTemplate = () => {
     });
 };
 
+const adjustInventory = (variantId, delta, note) => {
+    return axios.post(`/api/v1/admin/inventory/adjust`, { variantId, delta, note });
+};
+
 export default {
     getInventoryLogs,
     importInventory,
-    getInventoryTemplate
+    getInventoryTemplate,
+    adjustInventory
 };

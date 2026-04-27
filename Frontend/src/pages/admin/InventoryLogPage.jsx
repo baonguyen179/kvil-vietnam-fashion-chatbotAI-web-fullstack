@@ -15,17 +15,19 @@ import './AdminShared.css';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import ImportInventoryModal from './ImportInventoryModal';
+import AdjustInventoryModal from './AdjustInventoryModal';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const TYPE_CONFIG = {
-    'IN': { color: 'green', label: 'Nhập kho', icon: <ArrowUpOutlined /> },
-    'OUT': { color: 'volcano', label: 'Xuất kho', icon: <ArrowDownOutlined /> },
-    'HOLD': { color: 'gold', label: 'Tạm giữ', icon: <HistoryOutlined /> },
+    'IN':     { color: 'green',   label: 'Nhập kho',     icon: <ArrowUpOutlined /> },
+    'OUT':    { color: 'volcano', label: 'Xuất kho',     icon: <ArrowDownOutlined /> },
+    'HOLD':   { color: 'gold',    label: 'Tạm giữ',      icon: <HistoryOutlined /> },
     'UNHOLD': { color: 'default', label: 'Hủy tạm giữ', icon: <ReloadOutlined /> },
-    'RETURN': { color: 'blue', label: 'Hoàn trả', icon: <ReloadOutlined /> },
+    'RETURN': { color: 'blue',    label: 'Hoàn trả',     icon: <ReloadOutlined /> },
+    'ADJUST': { color: 'purple',  label: 'Điều chỉnh',  icon: <ReloadOutlined /> },
 };
 
 const InventoryLogPage = () => {
@@ -43,6 +45,7 @@ const InventoryLogPage = () => {
         dateRange: [], // [startDate, endDate]
     });
     const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+    const [adjustRecord, setAdjustRecord] = useState(null); // null = đóng modal, record = mở
 
     const fetchLogs = async (page = 1, limit = 10, type = undefined, variantId = undefined, startDate = undefined, endDate = undefined) => {
         setLoading(true);
@@ -273,6 +276,25 @@ const InventoryLogPage = () => {
                 </Tooltip>
             )
         },
+        {
+            title: 'Thao tác',
+            key: 'action',
+            width: 130,
+            align: 'center',
+            render: (_, record) => (
+                // Chỉ hiện nút điều chỉnh cho log IN/OUT (các log do nhân viên tạo thủ công)
+                // Không hiện cho HOLD/UNHOLD/ADJUST vì chúng do hệ thống tự tạo
+                ['IN', 'OUT', 'RETURN'].includes(record.type) ? (
+                    <Button
+                        size="small"
+                        icon={<ReloadOutlined />}
+                        onClick={() => setAdjustRecord(record)}
+                    >
+                        Điều chỉnh
+                    </Button>
+                ) : null
+            )
+        },
     ];
 
     return (
@@ -333,6 +355,14 @@ const InventoryLogPage = () => {
                             >
                                 Nhập Kho (Excel)
                             </Button>
+                            <Button
+                                icon={<ReloadOutlined />}
+                                onClick={() => setAdjustRecord({ variantId: null, variant: null })}
+                                size="large"
+                                style={{ borderColor: '#722ed1', color: '#722ed1' }}
+                            >
+                                Bút toán điều chỉnh
+                            </Button>
                         </Space>
                     </Col>
                 </Row>
@@ -355,6 +385,17 @@ const InventoryLogPage = () => {
             <ImportInventoryModal 
                 open={isImportModalVisible} 
                 onClose={() => setIsImportModalVisible(false)}
+                onSuccess={() => {
+                    const startDate = filters.dateRange?.[0] ? dayjs(filters.dateRange[0]).format('YYYY-MM-DD') : undefined;
+                    const endDate = filters.dateRange?.[1] ? dayjs(filters.dateRange[1]).format('YYYY-MM-DD') : undefined;
+                    fetchLogs(1, pagination.pageSize, filters.type, filters.variantId, startDate, endDate);
+                }}
+            />
+
+            <AdjustInventoryModal
+                open={!!adjustRecord}
+                record={adjustRecord}
+                onClose={() => setAdjustRecord(null)}
                 onSuccess={() => {
                     const startDate = filters.dateRange?.[0] ? dayjs(filters.dateRange[0]).format('YYYY-MM-DD') : undefined;
                     const endDate = filters.dateRange?.[1] ? dayjs(filters.dateRange[1]).format('YYYY-MM-DD') : undefined;

@@ -180,6 +180,40 @@ const ProductManagePage = () => {
             render: (val) => val ? <Tag color="orange">-{val}%</Tag> : '-'
         },
         {
+            title: 'Tồn kho',
+            key: 'stock',
+            align: 'center',
+            width: 120,
+            render: (_, record) => {
+                const variants = record.variants || [];
+
+                // Edge-case: sản phẩm chưa có biến thể nào
+                if (variants.length === 0) {
+                    return (
+                        <Tooltip title="Sản phẩm chưa có biến thể. Vui lòng bấm &quot;Quản lý Biến thể&quot; để thêm.">
+                            <Tag color="default" style={{ cursor: 'help' }}>⚠️ Chưa có BT</Tag>
+                        </Tooltip>
+                    );
+                }
+
+                const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+                const hasOutOfStock = variants.some(v => (v.stock || 0) === 0);
+                const allOutOfStock = variants.every(v => (v.stock || 0) === 0);
+
+                if (allOutOfStock) {
+                    return <Tag color="red">❌ Hết hàng</Tag>;
+                }
+                if (hasOutOfStock) {
+                    return (
+                        <Tooltip title="Có một số biến thể đã hết hàng">
+                            <Tag color="orange" style={{ cursor: 'help' }}>⚠️ {totalStock.toLocaleString()}</Tag>
+                        </Tooltip>
+                    );
+                }
+                return <Tag color="green">{totalStock.toLocaleString()}</Tag>;
+            }
+        },
+        {
             title: 'Thao tác',
             key: 'action',
             width: 250,
