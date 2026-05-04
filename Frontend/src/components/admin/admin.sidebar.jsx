@@ -11,6 +11,7 @@ import {
     HistoryOutlined,
     TransactionOutlined,
     SafetyCertificateOutlined,
+    StarOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -86,6 +87,11 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
                     {
                         key: "return_requests",
                         label: <Link to={"/admin/orders/returns"}>Return Requests</Link>,
+                    },
+                    {
+                        key: "reviews",
+                        label: <Link to={"/admin/reviews"}>Product Reviews</Link>,
+                        icon: <StarOutlined />,
                     },
                 ],
             },

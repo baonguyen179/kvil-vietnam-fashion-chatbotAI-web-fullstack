@@ -26,7 +26,9 @@ instance.interceptors.request.use(function (config) {
     const state = store?.getState();
     const token = state?.auth?.access_token;
     
-    if (token) {
+    // Không ghi đè nếu request đã set Authorization thủ công (VD: review token)
+    const alreadyHasAuth = !!config.headers.Authorization;
+    if (token && !alreadyHasAuth) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     

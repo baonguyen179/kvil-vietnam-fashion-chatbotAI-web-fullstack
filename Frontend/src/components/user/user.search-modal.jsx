@@ -4,6 +4,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Search, X, Loader2, PackageSearch, ArrowRight } from "lucide-react";
 import productService from '@/services/productService';
 import { cn } from "@/lib/utils";
+import { encodeId } from '@/utils/idHasher';
+import { slugify } from '@/utils/slugify';
 
 const UserSearchModal = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
@@ -90,9 +92,9 @@ const UserSearchModal = ({ isOpen, onClose }) => {
         }, 500); // 500ms throttle/debounce
     };
 
-    const handleProductClick = (productId) => {
+    const handleProductClick = (productId, productName) => {
         onClose();
-        navigate(`/products/${productId}`);
+        navigate(`/products/${encodeId(productId)}/${slugify(productName)}`);
     };
 
     const formatCurrency = (amount) => {
@@ -196,7 +198,7 @@ const UserSearchModal = ({ isOpen, onClose }) => {
                                     return (
                                         <div 
                                             key={product.id}
-                                            onClick={() => handleProductClick(product.id)}
+                                            onClick={() => handleProductClick(product.id, product.name)}
                                             className="flex items-center gap-4 p-3 hover:bg-white rounded-sm cursor-pointer transition-colors group border border-transparent hover:border-[#eeeeee]"
                                         >
                                             <div className="w-16 h-16 rounded-sm overflow-hidden bg-[#eeeeee] shrink-0">

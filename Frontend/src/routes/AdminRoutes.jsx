@@ -18,6 +18,7 @@ const InventoryLogPage = lazy(() => import('@/pages/admin/InventoryLogPage'));
 const TransactionPage = lazy(() => import('@/pages/admin/TransactionPage'));
 const RoleManagePage = lazy(() => import('@/pages/admin/RoleManagePage'));
 const ReturnManagePage = lazy(() => import('@/pages/admin/ReturnManagePage'));
+const ReviewManagePage = lazy(() => import('@/pages/admin/ReviewManagePage'));
 
 // Thành phần bảo vệ Route dựa trên Role
 // Thành phần bảo vệ Route dựa trên Role và Permission
@@ -120,6 +121,11 @@ const AdminRoutes = ({ notFound }) => {
                     <Route path="orders/returns" element={
                         <AdminGuard requiredPermission="orders.read">
                             <ReturnManagePage />
+                        </AdminGuard>
+                    } />
+                    <Route path="reviews" element={
+                        <AdminGuard requiredPermission="orders.read">
+                            <ReviewManagePage />
                         </AdminGuard>
                     } />
 

@@ -17,6 +17,8 @@ import cartService from '@/services/cartService';
 import sizeService from '@/services/sizeService';
 import { toggleCartDrawer, addToCartLocal } from '@/redux/slices/cartSlice';
 import ProductCard from '@/components/user/product.card';
+import ReviewStars from '@/components/user/review.stars';
+import ProductReviews from '@/components/user/product.reviews';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -294,8 +296,15 @@ const ProductDetailPage = () => {
                 {/* 3. Column Right: Details */}
                 <div className="flex flex-col gap-6">
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl font-bold tracking-tight text-[#1c1c19] uppercase">{product.name}</h1>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider"> {currentSku}</p>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <h1 className="text-2xl font-bold tracking-tight text-[#1c1c19] uppercase">{product.name}</h1>
+                            <ReviewStars 
+                                rating={product.ratingAvg} 
+                                count={product.reviewCount} 
+                                size="md"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-400 uppercase tracking-wider mt-1"> {currentSku}</p>
                     </div>
 
                     <div className="flex items-baseline gap-4">
@@ -415,6 +424,13 @@ const ProductDetailPage = () => {
                     * Lưu ý: Các thông số trên chỉ mang tính chất gợi ý dựa trên form dáng chuẩn. Tùy thuộc vào thiết kế (ôm sát hoặc rộng rãi) và chất liệu vải mà cảm giác mặc sẽ có sự khác biệt nhỏ.
                 </p>
             </div>
+
+            {/* Middle Section: Customer Reviews */}
+            <ProductReviews 
+                productId={id} 
+                ratingAvg={product.ratingAvg} 
+                reviewCount={product.reviewCount} 
+            />
 
             {/* Bottom Section: Related Products */}
             <div className="mt-24 pt-10 border-t border-gray-100">

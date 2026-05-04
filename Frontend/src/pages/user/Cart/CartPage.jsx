@@ -3,6 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { encodeId } from '@/utils/idHasher';
+import { slugify } from '@/utils/slugify';
 
 import { Button } from "@/components/ui/button";
 import { removeFromCartLocal, updateQuantityLocal, setCartData } from '@/redux/slices/cartSlice';
@@ -126,7 +128,7 @@ const CartPage = () => {
                                         <div className="flex flex-col justify-center space-y-2">
                                             <Link 
                                                 // Link chuẩn SEO tương lai
-                                                to={`/products/${item.variant?.product?.id}`}
+                                                to={`/products/${encodeId(item.variant?.product?.id)}/${slugify(item.variant?.product?.name)}`}
                                                 className="text-sm font-bold tracking-tight uppercase hover:text-gray-600 transition-colors line-clamp-2 leading-snug"
                                             >
                                                 {item.variant?.product?.name}

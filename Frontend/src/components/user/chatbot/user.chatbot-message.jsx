@@ -2,6 +2,8 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Bot, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { encodeId } from '@/utils/idHasher';
+import { slugify } from '@/utils/slugify';
 
 /**
  * [SENIOR COMPONENT] UserChatbotMessage
@@ -70,7 +72,7 @@ const ProductCardMini = ({ product }) => {
 
     return (
         <Link 
-            to={`/products/${productId}`}
+            to={`/products/${encodeId(productId)}/${slugify(productName)}`}
             className="flex-none w-28 bg-white border border-gray-100 p-2 rounded-xl hover:border-black transition-all snap-start group"
             title={productName}
         >

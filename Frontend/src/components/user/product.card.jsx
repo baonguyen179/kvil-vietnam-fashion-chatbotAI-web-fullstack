@@ -3,23 +3,25 @@ import { cn } from "@/lib/utils";
 import { Link } from 'react-router-dom';
 import { encodeId } from '@/utils/idHasher';
 import { slugify } from '@/utils/slugify';
+import ReviewStars from './review.stars';
 
 const serif = { fontFamily: "'Noto Serif', Georgia, serif" };
 const sans = { fontFamily: "'Manrope', Helvetica, sans-serif" };
 
 /**
  * Format currency to Vietnamese Dong
- * [SENIOR] Moved outside to avoid re-creation on every render
+ *  Moved outside to avoid re-creation on every render
  */
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN').format(amount) + "đ";
 };
 
 const ProductCard = ({ product }) => {
+    
     // [SRP] Local state management for UI interaction
     const [selectedSizeId, setSelectedSizeId] = useState(null);
 
-    // [SENIOR] Memoize image objects to avoid recalculation
+    //  Memoize image objects to avoid recalculation
     const { mainImageUrl, hoverImageUrl } = useMemo(() => {
         const images = product?.images || [];
         const main = images.find(img => img.isMain) || images[0];
@@ -30,7 +32,7 @@ const ProductCard = ({ product }) => {
         };
     }, [product?.images]);
 
-    // [SENIOR] Memoize unique sizes and availability
+    //  Memoize unique sizes and availability
     const { uniqueSizes, variants } = useMemo(() => {
         const variants = product?.variants || [];
         const sizeMap = new Map();
@@ -59,7 +61,7 @@ const ProductCard = ({ product }) => {
     const totalStock = useMemo(() => variants.reduce((acc, v) => acc + (v.stock || 0), 0), [variants]);
     const isSoldOut = variants.length === 0 || totalStock === 0;
 
-    // [SENIOR] Dynamic Price Calculation based on selection
+    //  Dynamic Price Calculation based on selection
     const { currentBasePrice, currentDiscountedPrice, discountPercent } = useMemo(() => {
         const pct = product?.discountPercent || 0;
         let base = product?.basePrice || 0;
@@ -94,7 +96,7 @@ const ProductCard = ({ product }) => {
                 isSoldOut && "opacity-90"
             )}
         >
-            <div className="relative aspect-[2/3] w-full bg-[#f6f6f6] overflow-hidden">
+            <div className="relative aspect-2/3 w-full bg-[#f6f6f6] overflow-hidden">
                 {/* Badges */}
                 <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
                     {discountPercent > 0 && !isSoldOut && (
@@ -130,7 +132,7 @@ const ProductCard = ({ product }) => {
                     />
                 )}
 
-                {/* [SENIOR] Quick Size Selection Overlay on Hover */}
+                {/*  Quick Size Selection Overlay on Hover */}
                 {!isSoldOut && uniqueSizes.length > 0 && (
                     <div className="absolute bottom-0 left-0 right-0 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm z-30">
                         <p className="text-[10px] uppercase tracking-tighter text-gray-400 mb-1 font-bold">Chọn nhanh kích cỡ:</p>
@@ -161,16 +163,26 @@ const ProductCard = ({ product }) => {
             </div>
 
             <div className="flex flex-col gap-1.5 p-3.5">
-                <h3 
-                    className={cn(
-                        "text-[#1c1c19] text-sm md:text-[15px] font-medium truncate w-full group-hover:text-blue-600 transition-colors",
-                        isSoldOut && "text-gray-400"
-                    )}
-                    title={product?.name}
-                    style={sans}
-                >
-                    {product?.name}
-                </h3>
+                <div className="flex items-start justify-between gap-2">
+                    <h3 
+                        className={cn(
+                            "text-[#1c1c19] text-sm md:text-[15px] font-medium truncate flex-1 group-hover:text-blue-600 transition-colors",
+                            isSoldOut && "text-gray-400"
+                        )}
+                        title={product?.name}
+                        style={sans}
+                    >
+                        {product?.name}
+                    </h3>
+
+                    <ReviewStars
+                        rating={product?.ratingAvg}
+                        count={product?.reviewCount}
+                        size="sm"
+                        showCount={false}
+                        className="shrink-0 mt-0.5"
+                    />
+                </div>
 
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2.5">
@@ -188,7 +200,7 @@ const ProductCard = ({ product }) => {
                         )}
                     </div>
                     
-                    {/* [SENIOR] Small feedback when a specific size price is shown */}
+                    {/*  Small feedback when a specific size price is shown */}
                     {selectedSizeId && (
                         <span className="text-[10px] italic text-blue-500 font-semibold uppercase tracking-tighter">
                             * Giá theo kích cỡ đã chọn
