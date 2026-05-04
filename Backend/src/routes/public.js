@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-
+const uploadCloud = require('../config/cloudinary.config');
+const { checkReviewToken } = require('../middleware/reviewAuth');
 // Lấy các Controller tương ứng
 const authController = require('../controllers/authController');
 const categoryController = require('../controllers/categoryController');
@@ -11,6 +12,15 @@ const orderController = require('../controllers/orderController');
 const couponController = require('../controllers/couponController');
 const colorController = require('../controllers/colorController');
 const sizeController = require('../controllers/sizeController');
+const reviewController = require('../controllers/reviewController');
+
+
+// Public APIs
+router.get('/reviews/verify-token', reviewController.verifyReviewLink);
+router.get('/products/:id/reviews', reviewController.handleGetProductReviews);
+// Protected APIs (Token-based Validation via email link)
+// Cho phép upload tối đa 5 ảnh
+router.post('/reviews', checkReviewToken, uploadCloud.array('images', 5), reviewController.handleCreateReview);
 
 // [VNPAY CALLBACKS]-X
 router.get('/vnpay/ipn', orderController.handleVNPayIPN);

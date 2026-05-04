@@ -8,7 +8,7 @@ const PRODUCT_CACHE_TTL = 3600;
 
 const getAllProducts = async (queryParams) => {
     try {
-        const cacheKey = `products:list:${JSON.stringify(queryParams)}`;
+        const cacheKey = `products:list:v2:${JSON.stringify(queryParams)}`;
         const cachedData = await redisHelper.getCache(cacheKey);
         if (cachedData) return { EM: 'Lấy danh sách sản phẩm (Cache) thành công!', EC: errorCode.SUCCESS, DT: cachedData };
 
@@ -69,7 +69,7 @@ const getAllProducts = async (queryParams) => {
             order: orderCondition,
             limit: limit,
             offset: offset,
-            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],
+            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'ratingAvg', 'reviewCount', 'createdAt'],
             include: [
                 {
                     model: db.Category,
@@ -465,13 +465,13 @@ const deleteProductImage = async (imageId) => {
 }
 const getProductById = async (productId) => {
     try {
-        const cacheKey = `product:detail:${productId}`;
+        const cacheKey = `product:detail:v2:${productId}`;
         const cachedProduct = await redisHelper.getCache(cacheKey);
         if (cachedProduct) return { EM: 'Lấy chi tiết (Cache) thành công!', EC: errorCode.SUCCESS, DT: cachedProduct };
 
         const product = await db.Product.findOne({
             where: { id: productId },
-            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'description', 'createdAt'],
+            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'description', 'ratingAvg', 'reviewCount', 'createdAt'],
             include: [
                 {
                     model: db.Category,
@@ -526,7 +526,7 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
         // [SAFETY] Đảm bảo keyword là string và không trống
         const safeKeyword = (typeof keyword === 'string' ? keyword : '').trim();
 
-        const cacheKey = `products:search:${safeKeyword}:${page}:${limit}`;
+        const cacheKey = `products:search:v2:${safeKeyword}:${page}:${limit}`;
         const cached = await redisHelper.getCache(cacheKey);
         if (cached) return { EM: `Tìm thấy (Cache) '${safeKeyword}'`, EC: errorCode.SUCCESS, DT: cached };
 
@@ -546,7 +546,7 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
                     [Op.substring]: keyword // Tìm kiếm chuỗi con
                 }
             },
-            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],
+            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'ratingAvg', 'reviewCount', 'createdAt'],
             include: [
                 {
                     model: db.ProductImage,
@@ -656,7 +656,7 @@ const getBestDiscountProducts = async (keyword, limit = 5) => {
 };
 const getBestSellerProducts = async (limit = 10) => {
     try {
-        const cacheKey = `products:bestsellers:full:${limit}`;
+        const cacheKey = `products:bestsellers:full:v2:${limit}`;
         const cachedProducts = await redisHelper.getCache(cacheKey);
 
         if (cachedProducts) {
@@ -678,7 +678,7 @@ const getBestSellerProducts = async (limit = 10) => {
                 where: {
                     id: { [Op.in]: productIds }
                 },
-                attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],
+                attributes: ['id', 'name', 'basePrice', 'discountPercent', 'ratingAvg', 'reviewCount', 'createdAt'],
                 include: [
                     {
                         model: db.Category,
@@ -719,7 +719,7 @@ const getBestSellerProducts = async (limit = 10) => {
                 where: {
                     id: { [Op.notIn]: currentIds }
                 },
-                attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],
+                attributes: ['id', 'name', 'basePrice', 'discountPercent', 'ratingAvg', 'reviewCount', 'createdAt'],
                 include: [
                     {
                         model: db.Category,

@@ -26,6 +26,9 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'productId',
         as: 'collections'
       });
+
+      // Có nhiều Đánh giá
+      Product.hasMany(models.Review, { foreignKey: 'productId', as: 'reviews' });
     }
   }
   Product.init({
@@ -34,6 +37,14 @@ module.exports = (sequelize, DataTypes) => {
     description: DataTypes.TEXT,
     basePrice: DataTypes.DECIMAL,
     discountPercent: DataTypes.INTEGER,
+    ratingAvg: {
+      type: DataTypes.DECIMAL(3, 1),
+      defaultValue: 0
+    },
+    reviewCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
     deletedAt: {
       type: DataTypes.DATE,
       allowNull: true,

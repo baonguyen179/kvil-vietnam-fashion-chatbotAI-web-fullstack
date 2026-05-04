@@ -134,5 +134,64 @@ const sendOrderConfirmationEmail = async (userEmail, order) => {
     }
 };
 
-module.exports = { sendOtpEmail, sendOrderIdListEmail, sendOrderConfirmationEmail };
+const sendReviewRequestEmail = async (userEmail, order, itemsWithTokens) => {
+    try {
+        const baseUrl = process.env.REACT_URL || 'http://localhost:3000';
+        
+        // Lọc ra những sản phẩm chưa được đánh giá
+        const unreviewedItems = itemsWithTokens.filter(item => !item.reviewed && item.token);
+        
+        if (unreviewedItems.length === 0) return; // Không có gì để đánh giá
+
+        const productListHtml = unreviewedItems.map(item => `
+            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #eaeaea; border-radius: 8px; display: flex; align-items: center; gap: 15px;">
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 5px 0; color: #1c1c19;">${item.productName}</h4>
+                    <p style="margin: 0 0 10px 0; font-size: 13px; color: #888;">Phân loại: ${item.color} / ${item.size}</p>
+                    <a href="${baseUrl}/danh-gia?token=${item.token}" style="display: inline-block; background: #785254; color: #fff; padding: 8px 20px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;">
+                        Đánh giá sản phẩm
+                    </a>
+                </div>
+            </div>
+        `).join('');
+
+        const mailOptions = {
+            from: '"Kvil Fashion" <no-reply@kvilfashion.com>',
+            to: userEmail,
+            subject: `[Kvil Fashion] Đơn hàng #${order.id} đã giao thành công - Mời bạn đánh giá`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #eee;">
+                    <div style="text-align: center; padding: 20px; background: #1c1c19; color: #fff;">
+                        <h2 style="margin: 0; letter-spacing: 2px;">KOISAN CLOTHES</h2>
+                    </div>
+                    <div style="padding: 30px;">
+                        <h3 style="color: #1c1c19;">Đơn hàng đã được giao thành công!</h3>
+                        <p>Chào bạn, đơn hàng <b>#${order.id}</b> của bạn đã được giao đến nơi.</p>
+                        <p>Hy vọng bạn hài lòng với các sản phẩm của Koisan. Hãy dành chút thời gian để đánh giá trải nghiệm của mình nhé. Đánh giá của bạn giúp chúng tôi phục vụ tốt hơn và giúp những khách hàng khác có thêm thông tin!</p>
+                        
+                        <div style="margin: 30px 0;">
+                            ${productListHtml}
+                        </div>
+
+                        <p style="font-size: 13px; color: #666;">
+                            <i>Lưu ý: Link đánh giá có hiệu lực trong vòng 7 ngày kể từ khi nhận được email này.</i>
+                        </p>
+                        
+                        <hr style="border: 0; border-top: 1px solid #eee; margin-top: 40px;" />
+                        <p style="font-size: 11px; color: #aaa; text-align: center;">
+                            KOISAN CLOTHES - 274B Lạch Tray, Ngô Quyền, Hải Phòng<br/>
+                            Hotline: 0225.3846.118
+                        </p>
+                    </div>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error(">>> Lỗi Gửi Email Review Request:", error);
+    }
+};
+
+module.exports = { sendOtpEmail, sendOrderIdListEmail, sendOrderConfirmationEmail, sendReviewRequestEmail };
 

@@ -16,6 +16,9 @@ module.exports = (sequelize, DataTypes) => {
 
       // Chi tiết này mua Biến thể sản phẩm nào?
       OrderItem.belongsTo(models.ProductVariant, { foreignKey: 'variantId', as: 'variant' });
+
+      // Chi tiết đơn hàng này có thể có 1 đánh giá
+      OrderItem.hasOne(models.Review, { foreignKey: 'orderItemId', as: 'review' });
     }
   }
   OrderItem.init({

@@ -12,6 +12,7 @@ const chatbotController = require('../controllers/chatbotController');
 const roleController = require('../controllers/roleController');
 const colorController = require('../controllers/colorController');
 const sizeController = require('../controllers/sizeController');
+const reviewController = require('../controllers/reviewController');
 
 const JWTAction = require('../middleware/JWTAction');
 const uploadCloud = require('../config/cloudinary.config');
@@ -82,6 +83,10 @@ router.delete('/admin/collections/:id/products', JWTAction.checkUserPermission([
 router.get('/admin/orders', JWTAction.checkUserPermission([], ['orders.read']), orderController.handleGetAdminOrders);
 router.patch('/admin/orders/:id/status', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdateOrderStatus);
 router.patch('/admin/orders/:id/payment', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdatePaymentStatus);
+
+// [ADMIN - REVIEWS]
+router.get('/admin/reviews', JWTAction.checkUserPermission([], ['orders.read']), reviewController.handleGetAdminReviews);
+router.patch('/admin/reviews/:id/status', JWTAction.checkUserPermission([], ['orders.update']), reviewController.handleUpdateReviewStatus);
 
 // [ADMIN - VNPAY]
 router.patch('/admin/orders/:id/vnpay-sync', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleSyncVNPayStatus);

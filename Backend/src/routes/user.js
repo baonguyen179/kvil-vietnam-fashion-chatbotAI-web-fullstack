@@ -5,6 +5,7 @@ const authController = require('../controllers/authController');
 const userController = require('../controllers/userController');
 const cartController = require('../controllers/cartController');
 const orderController = require('../controllers/orderController');
+const reviewController = require('../controllers/reviewController');
 
 const JWTAction = require('../middleware/JWTAction');
 const uploadCloud = require('../config/cloudinary.config');
@@ -44,5 +45,8 @@ router.post('/user/orders/:id/return', uploadCloud.array('images', 5), orderCont
 
 // [PAYMENT] - CÁC ROUTE LIÊN QUAN ĐẾN THANH TOÁN
 router.get('/user/orders/:id/payment-url', orderController.handleGetVNPayUrl);
+
+// [REVIEWS] - Tạo token đánh giá cho từng sản phẩm trong đơn đã giao (user đăng nhập, không qua email)
+router.get('/user/orders/:id/review-tokens', reviewController.handleGetReviewTokens);
 
 module.exports = router;

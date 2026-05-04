@@ -4,6 +4,7 @@ const redisHelper = require('../helpers/redis.helper');
 const vnpayService = require('./vnpayService'); 
 const emailHelper = require('../helpers/email.helper');
 const { Op } = require('sequelize');
+const slugify = require('slugify');
 const ORDER_CACHE_TTL = process.env.ORDER_CACHE_TTL || 1800; // 30 phút
 
 
@@ -535,7 +536,7 @@ const getUserOrders = async (userId, queryParams) => {
 const getUserOrderDetail = async (userId, orderId) => {
     let currentStep = 'Khởi tạo getUserOrderDetail';
     try {
-        const cacheKey = `order:detail:user:${userId}:${orderId}`;
+        const cacheKey = `order:detail:v2:user:${userId}:${orderId}`;
         const cachedData = await redisHelper.getCache(cacheKey);
         if (cachedData) return {
             EM: 'Lấy chi tiết đơn hàng (Cache) thành công!',
@@ -550,7 +551,7 @@ const getUserOrderDetail = async (userId, orderId) => {
                 {
                     model: db.OrderItem,
                     as: 'orderItems',
-                    attributes: ['quantity', 'price'], // Giá gốc lúc mua và số lượng
+                    attributes: ['id', 'quantity', 'price'], // Giá gốc lúc mua và số lượng
                     include: [
                         {
                             model: db.ProductVariant,
@@ -562,12 +563,12 @@ const getUserOrderDetail = async (userId, orderId) => {
                                 {
                                     model: db.Product,
                                     as: 'product',
-                                    attributes: ['id', 'name'], // Chỉ lấy tên sản phẩm
+                                    attributes: ['id', 'name'],
                                     include: [
                                         {
                                             model: db.ProductImage,
-                                            as: 'images', // Nối sang bảng ảnh
-                                            where: { isMain: true }, // Chỉ lấy ảnh đại diện
+                                            as: 'images',
+                                            where: { isMain: true },
                                             attributes: ['imageUrl'], // Chỉ lấy link ảnh
                                             required: false // Lỡ SP chưa có ảnh thì không bị lỗi mất đơn hàng
                                         }
@@ -603,6 +604,9 @@ const getUserOrderDetail = async (userId, orderId) => {
                 }
 
                 return {
+                    id: item.id,
+                    productId: product?.id,
+                    slug: product?.name ? slugify(product.name, { lower: true, locale: 'vi' }) : '',
                     productName: product?.name || 'Sản phẩm không còn tồn tại',
                     size: item.variant?.size?.name || 'N/A',
                     color: item.variant?.color?.name || 'N/A',
@@ -801,6 +805,35 @@ const updateOrderStatus = async (orderId, newStatus) => {
         }
 
         await Promise.all(cacheClearTasks);
+
+        // [PROACTIVE UX] Gửi email mời đánh giá nếu đơn hàng đã giao
+        if (newStatus === 'delivered') {
+            try {
+                let userEmail = '';
+                if (orderUserId) {
+                    const userObj = await db.User.findByPk(orderUserId);
+                    userEmail = userObj?.email;
+                } else if (order.shippingAddress) {
+                    try {
+                        const addrObj = JSON.parse(order.shippingAddress);
+                        if (addrObj.email) userEmail = addrObj.email;
+                    } catch(e){}
+                }
+
+                if (userEmail) {
+                    // Inject service để lấy token
+                    const reviewService = require('./reviewService');
+                    const reviewData = await reviewService.getReviewTokensForOrder(orderId, orderUserId);
+                    if (reviewData.EC === 0 && reviewData.DT?.items?.length > 0) {
+                        const emailHelper = require('../helpers/email.helper');
+                        emailHelper.sendReviewRequestEmail(userEmail, order, reviewData.DT.items);
+                    }
+                }
+            } catch (emailErr) {
+                console.error(">>> [UX Error] Không thể gửi email mời đánh giá:", emailErr);
+            }
+        }
+
         return { EM: `Cập nhật trạng thái thành ${newStatus} thành công!`, EC: errorCode.SUCCESS, DT: '' };
 
     } catch (error) {
@@ -1320,4 +1353,4 @@ module.exports = {
     getVNPayPaymentUrl, syncOrderWithVNPay, getGuestVNPayPaymentUrl, getGuestOrderDetail, recoverGuestOrderIds,
     getUserOrdersShort
 };
-
+
