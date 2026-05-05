@@ -54,6 +54,7 @@ router.get('/collections/:slug', collectionController.handleGetCollectionBySlug)
 
 // [COUPONS]-X
 router.get('/coupons/check', couponController.handleCheckCoupon);
+router.get('/coupons', couponController.handleGetPublicCoupons);
 
 
 // [PUBLIC - CHATBOT AI]-X

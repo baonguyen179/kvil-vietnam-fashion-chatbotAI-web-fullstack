@@ -36,6 +36,7 @@ const createCoupon = async (data) => {
         });
 
         await redisHelper.delByPattern('coupons:admin:list:*');
+        await redisHelper.delByPattern('coupons:public:active');
         return { EM: 'Tạo mã giảm giá thành công!', EC: errorCode.SUCCESS, DT: newCoupon };
 
     } catch (error) {
@@ -130,6 +131,7 @@ const updateCoupon = async (id, data) => {
         await coupon.update(data); // Tính năng cực hay của Sequelize: Gửi field nào, nó update field đó
 
         await redisHelper.delByPattern('coupons:admin:list:*');
+        await redisHelper.delByPattern('coupons:public:active');
         return { EM: 'Cập nhật mã giảm giá thành công!', EC: errorCode.SUCCESS, DT: coupon };
 
     } catch (error) {
@@ -154,6 +156,7 @@ const deleteCoupon = async (id) => {
         await coupon.destroy();
 
         await redisHelper.delByPattern('coupons:admin:list:*');
+        await redisHelper.delByPattern('coupons:public:active');
         return { EM: 'Đã xóa mã giảm giá thành công!', EC: errorCode.SUCCESS, DT: '' };
 
     } catch (error) {
@@ -238,6 +241,48 @@ const checkCoupon = async (code, orderValue) => {
     }
 }
 
+const getPublicCoupons = async () => {
+    let currentStep = 'Khởi tạo getPublicCoupons';
+    try {
+        const cacheKey = `coupons:public:active`;
+        const cachedData = await redisHelper.getCache(cacheKey);
+
+        if (cachedData) {
+            return { EM: 'Lấy mã giảm giá công khai (Cache) thành công!', EC: errorCode.SUCCESS, DT: cachedData };
+        }
+
+        currentStep = 'Query DB lấy danh sách Coupons Active';
+        const now = new Date();
+        const activeCoupons = await db.Coupon.findAll({
+            where: {
+                isActive: true,
+                startDate: { [Op.lte]: now }, // Bắt đầu <= hiện tại
+                endDate: { [Op.gte]: now },   // Kết thúc >= hiện tại
+                [Op.or]: [
+                    { usageLimit: null },     // Không giới hạn số lượng
+                    { usedCount: { [Op.lt]: db.Sequelize.col('usageLimit') } } // Hoặc chưa dùng hết
+                ]
+            },
+            order: [['createdAt', 'DESC']],
+            attributes: ['code', 'discountType', 'discountValue', 'minOrderValue', 'maxDiscountAmount', 'endDate']
+        });
+
+        // LƯU CACHE 30 phút
+        await redisHelper.setCache(cacheKey, activeCoupons, COUPON_CACHE_TTL);
+        return {
+            EM: 'Lấy mã giảm giá công khai thành công!',
+            EC: errorCode.SUCCESS,
+            DT: activeCoupons
+        };
+
+    } catch (error) {
+        console.error(`\n[CRITICAL ERROR] Lỗi tại getPublicCoupons!`);
+        console.error(`- CHẾT TẠI BƯỚC: ${currentStep} `);
+        console.error(`- Chi tiết lỗi: ${error.message}\n`);
+        return { EM: 'Lỗi server khi lấy mã giảm giá công khai', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+}
+
 module.exports = {
-    createCoupon, deleteCoupon, updateCoupon, getAdminCoupons, checkCoupon
+    createCoupon, deleteCoupon, updateCoupon, getAdminCoupons, checkCoupon, getPublicCoupons
 };

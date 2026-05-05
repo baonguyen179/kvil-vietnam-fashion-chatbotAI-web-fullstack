@@ -97,6 +97,16 @@ const handleCheckCoupon = async (req, res) => {
     }
 }
 
+const handleGetPublicCoupons = async (req, res) => {
+    try {
+        const data = await couponService.getPublicCoupons();
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error(">>> Lỗi handleGetPublicCoupons:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
 module.exports = {
-    handleCreateCoupon, handleUpdateCoupon, handleDeleteCoupon, handleGetAdminCoupons, handleCheckCoupon
-};
+    handleCreateCoupon, handleDeleteCoupon, handleUpdateCoupon, handleGetAdminCoupons, handleCheckCoupon, handleGetPublicCoupons
+};
