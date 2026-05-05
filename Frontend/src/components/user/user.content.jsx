@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-const UserContent = ({ children, className }) => {
+const UserContent = ({ children, className, style }) => {
     return (
         <main 
             className={cn(
@@ -7,6 +7,7 @@ const UserContent = ({ children, className }) => {
                 "bg-background text-foreground",
                 className
             )}
+            style={style}
         >
             <div className="w-full">
                 {children}

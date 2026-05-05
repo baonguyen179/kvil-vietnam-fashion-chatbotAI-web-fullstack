@@ -18,6 +18,7 @@ import { toggleCartDrawer } from "@/redux/slices/cartSlice";
 import collectionService from "@/services/collectionService";
 import { ChevronDown } from "lucide-react";
 import UserSearchModal from "./user.search-modal";
+import UserAnnouncementBar from "./user.announcement-bar";
 
 const navLinks = [
     { label: "TRANG CHỦ", href: "/" },
@@ -29,7 +30,7 @@ const navLinks = [
 ];
 
 
-export const UserHeader = () => {
+export const UserHeader = ({ onHeightChange }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { pathname } = useLocation();
@@ -146,14 +147,23 @@ export const UserHeader = () => {
     // Helper for active styling - can be expanded to check actual routes if needed
     const isLinkActive = (label) => activeLink === label;
 
+    const [announcementHeight, setAnnouncementHeight] = useState(0);
+
+    useEffect(() => {
+        if (onHeightChange) {
+            onHeightChange(announcementHeight);
+        }
+    }, [announcementHeight, onHeightChange]);
+
     return (
         <>
             <header
                 className={cn(
-                    "fixed left-0 top-0 z-50 w-full bg-white transition-all duration-500",
+                    "fixed left-0 top-0 z-50 w-full bg-white transition-all duration-500 flex flex-col",
                     scrolled ? "shadow-md" : "shadow-sm"
                 )}
             >
+            <UserAnnouncementBar onHeightChange={setAnnouncementHeight} />
             <div className="mx-auto w-full max-w-screen-2xl px-6 md:px-12 lg:px-20">
                 
                 <div 

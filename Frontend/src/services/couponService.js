@@ -48,6 +48,13 @@ const couponService = {
         return await axios.get("/api/v1/coupons/check", {
             params: { code, orderValue }
         });
+    },
+
+    /**
+     * [PUBLIC] Lấy danh sách mã giảm giá đang active
+     */
+    getPublicCoupons: async () => {
+        return await axios.get("/api/v1/coupons");
     }
 };
 

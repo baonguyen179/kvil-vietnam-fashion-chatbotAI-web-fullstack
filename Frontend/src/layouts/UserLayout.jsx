@@ -3,13 +3,16 @@ import UserContent from '@/components/user/user.content';
 import UserFooter from '@/components/user/user.footer';
 import UserChatbotWidget from '@/components/user/chatbot/user.chatbot-widget';
 import { Outlet } from 'react-router-dom';
+import { useState } from 'react';
 
 const UserLayout = () => {
+    const [announcementHeight, setAnnouncementHeight] = useState(0);
+
     return (
         <div className="flex min-h-screen flex-col bg-background relative">
-            <UserHeader />
+            <UserHeader onHeightChange={setAnnouncementHeight} />
 
-            <UserContent className="pt-[136px]">
+            <UserContent style={{ paddingTop: `${136 + announcementHeight}px` }}>
                 <Outlet />
             </UserContent>
 
