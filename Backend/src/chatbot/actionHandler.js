@@ -1,6 +1,7 @@
 const orderService = require('../serviceForChatBot/orderService');
 const productService = require('../serviceForChatBot/productService');
 const collectionService = require('../serviceForChatBot/collectionService');
+const reviewService = require('../serviceForChatBot/reviewService');
 
 const executeAiAction = async (functionName, functionArgs = {}, userId = null) => {
     let finalReply = "";
@@ -210,6 +211,68 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                     finalReply = "Dạ hiện tại shop chưa có sản phẩm nào phù hợp với khoảng giá này rồi ạ. Bạn có muốn xem mẫu khác không?";
                 }
 
+                break;
+            }
+
+            case "getTopRatedProducts": {
+                const keyword = functionArgs.keyword || "";
+                const minRating = functionArgs.minRating || 4.0;
+                const limit = functionArgs.limit || 5;
+
+                const res = await reviewService.getTopRatedProducts(keyword, minRating, limit);
+                finalProducts = res.DT?.products || [];
+
+                if (finalProducts.length > 0) {
+                    const ratingLabel = minRating >= 5 ? "5 sao hoàn hảo" : `từ ${minRating} sao trở lên`;
+                    finalReply = keyword
+                        ? `Dạ, đây là những mẫu '${keyword}' được khách hàng đánh giá ${ratingLabel} tại Kvil ạ! ⭐`
+                        : `Dạ, đây là những sản phẩm được khách hàng đánh giá ${ratingLabel} tại shop mình ạ! ⭐`;
+                } else {
+                    finalReply = keyword
+                        ? `Dạ, hiện tại chưa có mẫu '${keyword}' nào đạt đủ ${minRating} sao với nhiều lượt đánh giá ạ. Bạn thử xem các sản phẩm khác nhé!`
+                        : `Dạ, hệ thống chưa có sản phẩm nào đạt đủ ${minRating} sao với nhiều lượt đánh giá ạ.`;
+                }
+                break;
+            }
+
+            case "getProductReviewSummary": {
+                const productName = functionArgs.productName || "";
+                const sampleLimit = functionArgs.sampleLimit || 3;
+
+                if (!productName) {
+                    finalReply = "Dạ, bạn muốn xem đánh giá của sản phẩm nào ạ? Cho mình biết tên sản phẩm với nhé!";
+                    break;
+                }
+
+                const summaryRes = await reviewService.getProductReviewSummary(productName, sampleLimit);
+                const { product, reviewSummary } = summaryRes.DT || {};
+
+                if (!product) {
+                    finalReply = `Dạ, mình không tìm thấy sản phẩm nào có tên '${productName}' trong hệ thống ạ. Bạn thử tìm kiếm lại với từ khóa khác nhé!`;
+                    break;
+                }
+
+                // Đặt product vào finalProducts để FE có thể render card
+                finalProducts = [product];
+
+                if (!reviewSummary || reviewSummary.reviewCount === 0) {
+                    finalReply = `Dạ, sản phẩm '${product.name}' hiện chưa có đánh giá nào ạ. Bạn có thể là người đầu tiên trải nghiệm và chia sẻ cảm nhận đó! 😊`;
+                    break;
+                }
+
+                // Tổng hợp câu trả lời từ data thực
+                const starEmoji = reviewSummary.ratingAvg >= 4.5 ? "⭐⭐⭐⭐⭐" : reviewSummary.ratingAvg >= 4 ? "⭐⭐⭐⭐" : "⭐⭐⭐";
+                let replyText = `Dạ, sản phẩm **${product.name}** được đánh giá ${reviewSummary.ratingAvg}/5 ${starEmoji} với ${reviewSummary.reviewCount} lượt nhận xét ạ!`;
+
+                if (reviewSummary.sampleComments && reviewSummary.sampleComments.length > 0) {
+                    const commentsText = reviewSummary.sampleComments
+                        .map(c => `- "${c.comment}" (${c.reviewer} - ${c.rating}⭐)`)
+                        .join('\n');
+                    replyText += `\n\nMột số nhận xét gần đây:\n${commentsText}`;
+                }
+
+                replyText += "\n\nBạn muốn xem thêm thông tin về sản phẩm này không ạ?";
+                finalReply = replyText;
                 break;
             }
 

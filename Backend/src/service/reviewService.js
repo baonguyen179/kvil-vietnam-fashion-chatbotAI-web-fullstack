@@ -120,7 +120,7 @@ const reviewService = {
      */
     getReviewTokensForOrder: async (orderId, userId) => {
         try {
-            // 1. Lấy order + kiểm tra chủ sở hữu
+            // Lấy order + kiểm tra chủ sở hữu
             const order = await db.Order.findOne({
                 where: { id: orderId, userId },
                 include: [{
@@ -146,7 +146,7 @@ const reviewService = {
                 return { EC: errorCode.VALIDATION_ERROR, EM: 'Chỉ có thể đánh giá khi đơn hàng đã giao thành công.' };
             }
 
-            // 2. Với từng item, kiểm tra đã review chưa, nếu chưa thì generate token
+            // Với từng item, kiểm tra đã review chưa, nếu chưa thì generate token
             const itemsWithTokens = await Promise.all(order.orderItems.map(async (item) => {
                 const existingReview = await db.Review.findOne({
                     where: { orderItemId: item.id }
