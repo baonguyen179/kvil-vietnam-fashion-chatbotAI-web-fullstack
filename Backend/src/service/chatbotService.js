@@ -14,7 +14,7 @@ const ADMIN_SESSIONS_TTL = 60;  // 1 phút - dữ liệu thay đổi nhanh hơn
 const ADMIN_DETAIL_TTL = 180;   // 3 phút - chi tiết session ít thay đổi hơn
 
 const processChatbotMessage = async (userId, sessionId, message) => {
-    // 1. [PERFORMANCE] Lưu log USER song song, không await để giảm latency
+    //  [PERFORMANCE] Lưu log USER song song, không await để giảm latency
     db.ChatLog.create({
         userId, sessionId, sender: 'USER', message, metadata: null
     }).catch(err => console.error(">>> Lỗi lưu log USER (Silent):", err));
@@ -24,7 +24,7 @@ const processChatbotMessage = async (userId, sessionId, message) => {
     const identifier = userId ? `user:${userId}` : `session:${sessionId}`;
     const contextCacheKey = `chat:context:${identifier}`;
 
-    // 2. [OPTIMIZATION] Lấy Context từ Redis cache trước khi query DB
+    // [OPTIMIZATION] Lấy Context từ Redis cache trước khi query DB
     let aiMessages = [];
     try {
         const cachedContext = await redisHelper.getCache(contextCacheKey);
@@ -76,7 +76,7 @@ const processChatbotMessage = async (userId, sessionId, message) => {
     ];
 
     try {
-        // 3. Gọi AI xử lý
+        // Gọi AI xử lý
         const response = await client.chat.completions.create({
             model: "openai/gpt-4o-mini", // Hoặc gpt-3.5-turbo/gpt-4o
             messages: messages,
@@ -111,7 +111,7 @@ const processChatbotMessage = async (userId, sessionId, message) => {
         finalReply = "Dạ, hệ thống đang bận một chút, bạn đợi mình vài giây nhé!";
     }
 
-    // 4. Cập nhật Context Cache (Giữ 10 tin nhắn mới nhất trong Redis)
+    // Cập nhật Context Cache (Giữ 10 tin nhắn mới nhất trong Redis)
     const newContext = [
         ...aiMessages,
         { role: "user", content: message },
