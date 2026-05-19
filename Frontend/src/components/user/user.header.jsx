@@ -323,7 +323,7 @@ export const UserHeader = ({ onHeightChange }) => {
             <div
                 className={cn(
                     "overflow-hidden transition-all duration-300 ease-in-out md:hidden bg-white border-t border-[#e8e0d8]",
-                    mobileOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+                    mobileOpen ? "max-h-[70vh] opacity-100 overflow-y-auto" : "max-h-0 opacity-0"
                 )}
             >
                 <nav className="flex flex-col px-10 py-6 gap-6">
