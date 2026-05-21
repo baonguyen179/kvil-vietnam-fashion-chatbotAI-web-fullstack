@@ -166,7 +166,7 @@ const getChatHistory = async (userId, sessionId, limit, page) => {
 
         const { count, rows } = await db.ChatLog.findAndCountAll({
             where: whereCondition,
-            order: [['createdAt', 'ASC']],
+            order: [['createdAt', 'DESC']],
             limit: limit,
             offset: offset,
             attributes: ['id', 'sender', 'message', 'metadata', 'createdAt']
@@ -179,6 +179,8 @@ const getChatHistory = async (userId, sessionId, limit, page) => {
             metadata: log.metadata ? JSON.parse(log.metadata) : [],
             createdAt: log.createdAt
         }));
+
+        formattedLogs.reverse();
 
         const result = {
             totalItems: count,

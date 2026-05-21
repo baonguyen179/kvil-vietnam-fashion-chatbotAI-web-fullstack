@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const uploadCloud = require('../config/cloudinary.config');
 const { checkReviewToken } = require('../middleware/reviewAuth');
+const JWTAction = require('../middleware/JWTAction');
 // Lấy các Controller tương ứng
 const authController = require('../controllers/authController');
 const categoryController = require('../controllers/categoryController');
@@ -58,8 +59,8 @@ router.get('/coupons', couponController.handleGetPublicCoupons);
 
 
 // [PUBLIC - CHATBOT AI]-X
-router.post('/chatbot/message', chatbotController.handleChatbotMessage);
-router.get('/chatbot/history', chatbotController.handleGetChatHistory);
+router.post('/chatbot/message', JWTAction.optionalAuth, chatbotController.handleChatbotMessage);
+router.get('/chatbot/history', JWTAction.optionalAuth, chatbotController.handleGetChatHistory);
 
 //  Yêu cầu gửi mã OTP-X
 router.post('/auth/forgot-password/send-otp', authController.handleSendOtp);
