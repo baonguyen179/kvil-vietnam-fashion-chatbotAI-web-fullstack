@@ -15,6 +15,10 @@ const UserChatbotWindow = ({ onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingHistory, setIsFetchingHistory] = useState(false);
     const [error, setError] = useState(null);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+
+    const LIMIT = 20;
 
     useEffect(() => {
         fetchHistory();
@@ -24,10 +28,16 @@ const UserChatbotWindow = ({ onClose }) => {
         try {
             setIsFetchingHistory(true);
             setError(null);
-            const res = await chatbotService.getHistory(1, 40);
+            setPage(1);
+            setHasMore(true);
+            const res = await chatbotService.getHistory(1, LIMIT);
             if (res && res.EC === 0) {
                 const history = res.DT.logs || [];
                 setMessages(history);
+
+                if (history.length < LIMIT) {
+                    setHasMore(false);
+                }
 
                 if (history.length === 0) {
                     setMessages([{
@@ -41,6 +51,29 @@ const UserChatbotWindow = ({ onClose }) => {
         } catch (err) {
             console.error("History fetch error:", err);
             setError("ERR_LOAD");
+        } finally {
+            setIsFetchingHistory(false);
+        }
+    };
+
+    const handleLoadMore = async () => {
+        if (isFetchingHistory || !hasMore) return;
+        try {
+            setIsFetchingHistory(true);
+            const nextPage = page + 1;
+            const res = await chatbotService.getHistory(nextPage, LIMIT);
+            if (res && res.EC === 0) {
+                const history = res.DT.logs || [];
+                if (history.length < LIMIT) {
+                    setHasMore(false);
+                }
+                if (history.length > 0) {
+                    setMessages(prev => [...history, ...prev]);
+                    setPage(nextPage);
+                }
+            }
+        } catch (err) {
+            console.error("Load more history error:", err);
         } finally {
             setIsFetchingHistory(false);
         }
@@ -127,6 +160,8 @@ const UserChatbotWindow = ({ onClose }) => {
                         messages={messages} 
                         isTyping={isLoading} 
                         isFetching={isFetchingHistory} 
+                        onLoadMore={handleLoadMore}
+                        hasMore={hasMore}
                     />
                     <UserChatbotInput onSend={handleSendMessage} disabled={isLoading} />
                 </>
