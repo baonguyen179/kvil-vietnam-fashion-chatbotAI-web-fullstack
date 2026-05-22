@@ -1,0 +1,12 @@
+.custom-admin-table .ant-table-thead > tr > th {
+    background: #fafafa;
+    font-weight: 600;
+}
+
+.custom-admin-table .ant-table-row:hover {
+    background-color: #f0f7ff !important;
+}
+
+.rounded-xl {
+    border-radius: 12px;
+}
