@@ -3,6 +3,7 @@ const db = require('../models/index');
 const errorCode = require('../config/errorCodes');
 const { executeAiAction } = require('../chatbot/actionHandler');
 const { aiFunctionDeclarations } = require('../chatbot/chatbotTools');
+const { SYSTEM_PROMPT } = require('../chatbot/chatbotPrompt');
 //config AI 
 const client = require('../config/openai.config');
 
@@ -51,25 +52,7 @@ const processChatbotMessage = async (userId, sessionId, message) => {
     const messages = [
         {
             role: "system",
-            content: `Bạn là trợ lý ảo tư vấn thời trang thông minh của shop Kvil (Kvil Fashion).
-            Thông tin Shop:
-            - CS1: Số 274B Lạch Tray, Quận Ngô Quyền, Hải Phòng.
-            - CS2: Số 123 Thái Hà, Đống Đa, Hà Nội.
-            - Hotline: 0225.3846.118 (8h00 - 22h00).
-            - Chính sách: Đổi trả trong 7 ngày nếu còn tem mác, miễn phí vận chuyển đơn từ 500k.
-
-            Nhiệm vụ: Tư vấn sản phẩm, kiểm tra hàng, lọc giá, TRA CỨU ĐƠN HÀNG.
-            Phong cách: Thân thiện, chuyên nghiệp, dùng emoji nhẹ nhàng.
-            QUY TẮC BÓC TÁCH GIÁ:
-            - "Dưới X": maxPrice = X, không điền minPrice.
-            - "Trên X": minPrice = X, không điền maxPrice.
-            - "Từ X đến Y": minPrice = X, maxPrice = Y.
-            - "X k": Tự động nhân với 1000 (Ví dụ: 700k -> 700000).
-            - LUÔN LUÔN giữ lại keyword (áo, quần...) khi khách nhắc tới.
-            TRA CỨU ĐƠN HÀNG:
-            - Nếu khách hỏi "Đơn hàng của tôi đâu?", hãy lịch sự hỏi Mã đơn hàng.
-            - Nếu là khách vãng lai, cần thêm cả Số điện thoại.
-            - Khi có đủ thông tin hoặc đã đăng nhập, hãy gọi 'trackOrder'.`
+            content: SYSTEM_PROMPT
         },
         ...aiMessages,
         { role: "user", content: message } // Thêm tin nhắn hiện tại
