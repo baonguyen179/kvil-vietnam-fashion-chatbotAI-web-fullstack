@@ -61,40 +61,23 @@ Tài liệu này mô tả chi tiết luồng xử lý, các API liên quan và c
 
 Mô hình quy trình: Trả hàng
 
-User gửi yêu cầu trả hàng ( kèm lý do + ảnh )
--> Hệ thống lưu vào ReturnRequests (Pending)
+User gửi yêu cầu trả hàng (kèm lý do + ảnh) thông qua API:
+- Endpoint: `/api/v1/user/orders/:id/return` (sử dụng FormData để upload tối đa 5 hình ảnh lên Cloudinary)
+- Hệ thống tạo bản ghi `ReturnRequest` với trạng thái `PENDING` và cập nhật đơn hàng thành trạng thái `returning`.
 
-QUY TRÌNH 1: Khi KẾ TOÁN duyệt trả hàng (Có refund)
-Nhân viên Kế toán chọn Yêu cầu -> Chọn Duyệt (Tạo phiếu Refund)
+QUY TRÌNH 1: Khi ADMIN duyệt trả hàng (API: `/api/v1/admin/orders/returns/:id/status` với body `{ "status": "APPROVED" }`)
 
--> Hệ thống cập nhật ReturnRequests.status = 'REFUNDED'
+1. Cập nhật trạng thái yêu cầu trả hàng: `ReturnRequests.status = 'APPROVED'`.
+2. Cập nhật trạng thái đơn hàng: `Order.status = 'returned'`.
+3. Hoàn trả tồn kho cho tất cả sản phẩm trong đơn hàng (Tăng `ProductVariants.stock`) và tạo bản ghi lịch sử kho `InventoryLog` (Type: `RETURN`, Note: `Hoàn kho do duyệt trả hàng đơn #...`).
+4. Xử lý Hoàn tiền (Refund):
+   - **Trường hợp Đơn thanh toán qua VNPAY:** Hệ thống sẽ tự động gọi API hoàn tiền trực tuyến `vnpayService.refundTransaction` (Hoàn tiền toàn phần). Sau đó, tạo bản ghi trong bảng `PaymentTransactions` với trạng thái `REFUNDED` (nếu thành công) hoặc `REFUND_FAILED` (nếu thất bại).
+   - **Trường hợp Đơn thanh toán bằng phương thức khác (COD, chuyển khoản thường):** Không được hoàn tiền tự động. Nhân viên kế toán/quản trị viên thực hiện chuyển khoản thủ công bằng tài khoản ngân hàng hoặc tiền mặt trực tiếp cho khách hàng.
 
--> Kế toán thực hiện chuyển khoản ngân hàng cho khách (hoặc tiền mặt)
+QUY TRÌNH 2: Khi ADMIN từ chối trả hàng (API: `/api/v1/admin/orders/returns/:id/status` với body `{ "status": "REJECTED" }`)
 
--> Kế toán điền số tiền refund vào ReturnRequests.refundAmount
+1. Cập nhật trạng thái yêu cầu trả hàng: `ReturnRequests.status = 'REJECTED'`.
+2. Khôi phục trạng thái đơn hàng về: `Order.status = 'delivered'`.
+3. Không hoàn kho và không hoàn tiền.
 
--> Sau khi chuyển tiền xong, Kế toán tích vào ô "Đã hoàn tiền"
-
--> Hệ thống trừ tồn kho (tăng ProductVariants.stock) + tạo InventoryLogs (Type: RETURN)
-
--> Gửi email thông báo Refund thành công cho User
-
-QUY TRÌNH 2: Khi KINH DOANH duyệt trả hàng (Không refund)
-Nhân viên Kinh doanh chọn Yêu cầu -> Chọn Duyệt (Không tạo phiếu Refund)
-
--> Hệ thống cập nhật ReturnRequests.status = 'APPROVED'
-
--> Nhân viên Kinh doanh cộng tồn kho (tăng ProductVariants.stock) + tạo InventoryLogs (Type: RETURN)
-
--> Trừ tiền khách (nếu đơn còn nợ)
-
--> Gửi email thông báo duyệt trả hàng thành công cho User
-
-QUY TRÌNH 3: Khi từ chối trả hàng
-Nhân viên Kinh doanh chọn Yêu cầu -> Chọn Từ chối
-
--> Hệ thống cập nhật ReturnRequests.status = 'REJECTED'
-
-## -> Gửi email thông báo từ chối trả hàng cho User
-
-_Tài liệu được soạn thảo bởi Kvil Development Team._
+_Tài liệu được soạn thảo và cập nhật bởi Kvil Development Team._
