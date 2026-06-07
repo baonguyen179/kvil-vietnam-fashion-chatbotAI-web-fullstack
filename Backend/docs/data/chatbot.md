@@ -139,3 +139,38 @@ Dưới đây là các chỉ số đánh giá thực tế dựa trên các bài 
 ---
 
 **KVIL Fashion - Nâng tầm trải nghiệm mua sắm bằng Trí tuệ nhân tạo.**
+
+---
+
+## 6. Cơ chế So khớp Ý định và Gọi hàm (Function Calling vs. Vectorization)
+
+Để hiểu rõ cách Chatbot nhận diện câu hỏi và kích hoạt các hàm bổ trợ (tools) ở trên, dưới đây là chi tiết về cơ chế lưu trữ và xử lý thông tin:
+
+### 💾 A. Cách lưu trữ mô tả hàm (Application Level)
+
+Các mô tả hàm được định nghĩa tĩnh dưới dạng một mảng các JSON Object tuân thủ chuẩn JSON Schema của OpenAI/Gemini tại file [chatbotTools.js](Backend/src/chatbot/chatbotTools.js).
+
+Mỗi hàm gồm có:
+
+- **`name`**: Tên định danh của hàm để gọi trong code (ví dụ: `searchProducts`).
+- **`description`**: Mô tả bằng ngôn ngữ tự nhiên về chức năng của hàm. Đây là phần thông tin cốt lõi giúp AI hiểu được khi nào cần kích hoạt hàm này.
+- **`parameters`**: Định nghĩa kiểu dữ liệu và mô tả cho các tham số đầu vào mà AI cần bóc tách từ câu hỏi của khách hàng.
+
+### 🔌 B. Cách truyền tải và xử lý khi người dùng nhắn tin (API Level)
+
+Hệ thống **không thực hiện vector hóa câu hỏi và so khớp cục bộ** trên Backend. Quy trình hoạt động thực tế như sau:
+
+1. **Đóng gói dữ liệu**: Khi có tin nhắn mới từ khách hàng, hàm `processChatbotMessage` tại [chatbotService.js](Backend/src/service/chatbotService.js) sẽ lấy lịch sử trò chuyện từ Redis/Database, gộp chung với câu hỏi mới của user và danh sách các hàm cấu hình `aiFunctionDeclarations`.
+2. **Gửi yêu cầu lên AI**: Toàn bộ gói thông tin này được gửi lên API của LLM (ví dụ: `openai/gpt-4o-mini`) qua tham số `tools`.
+3. **Cơ chế so khớp của LLM**:
+   - Thay vì tìm kiếm vector thuần túy, LLM sử dụng cơ chế **Attention (Chú ý)** của mạng Transformer để đọc hiểu ngữ cảnh hội thoại kết hợp với các mô tả (`description`) trong danh sách `tools`.
+   - Nếu LLM xác định câu hỏi cần dùng đến một chức năng hệ thống, nó sẽ phản hồi về một yêu cầu gọi hàm (trả về đối tượng `tool_calls` chứa tên hàm và các tham số đã được bóc tách).
+4. **Thực thi**: Backend nhận kết quả `tool_calls` từ LLM, parse các đối số và thực thi hàm tương ứng thông qua `executeAiAction` trong file `actionHandler.js`.
+
+### 🔮 C. Ý tưởng mở rộng: Cơ chế Vector Search cho mô tả hàm (Semantic Tool Retrieval)
+
+Trong tương lai, nếu số lượng hàm nghiệp vụ của shop tăng lên hàng trăm hoặc hàng ngàn hàm (khiến dung lượng payload gửi lên API quá lớn và tốn token/giới hạn context window), chúng ta sẽ cần áp dụng cơ chế vector hóa thực sự:
+
+1. **Vector hóa**: Sử dụng một Embedding model (như `text-embedding-3-small`) để chuyển đổi tất cả mô tả hàm (`description`) thành các vector số học (Embeddings).
+2. **Lưu trữ**: Lưu các vector này kèm theo schema JSON của hàm vào một Vector Database (như PGVector, Pinecone, hoặc ChromaDB).
+3. **Tìm kiếm ngữ nghĩa (Semantic Search)**: Khi khách hỏi, ta sẽ vector hóa câu hỏi đó, tính toán độ tương đồng Cosine (Cosine Similarity) với các vector mô tả hàm, lọc ra Top 3-5 hàm phù hợp nhất và chỉ gửi các hàm này lên LLM.
