@@ -168,10 +168,24 @@ const ProductManagePage = () => {
             render: (text) => <Tag color="blue">{text || 'N/A'}</Tag>
         },
         {
-            title: 'Giá gốc',
-            dataIndex: 'basePrice',
-            key: 'basePrice',
-            render: (val) => <Text className="text-red-500 font-semibold">{val?.toLocaleString()}đ</Text>
+            title: 'Giá',
+            key: 'price',
+            render: (_, record) => {
+                const variants = record.variants || [];
+                if (variants.length === 0) {
+                    return <Text className="text-red-500 font-semibold">{record.basePrice?.toLocaleString()}đ</Text>;
+                }
+                const prices = variants.map(v => v.price).filter(p => p !== undefined && p !== null);
+                if (prices.length === 0) {
+                    return <Text className="text-red-500 font-semibold">{record.basePrice?.toLocaleString()}đ</Text>;
+                }
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
+                if (minPrice === maxPrice) {
+                    return <Text className="text-red-500 font-semibold">{minPrice.toLocaleString()}đ</Text>;
+                }
+                return <Text className="text-red-500 font-semibold">{minPrice.toLocaleString()}đ - {maxPrice.toLocaleString()}đ</Text>;
+            }
         },
         {
             title: 'Khuyến mãi',

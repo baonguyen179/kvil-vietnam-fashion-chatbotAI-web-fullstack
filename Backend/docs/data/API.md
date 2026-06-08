@@ -95,46 +95,47 @@ Các API này nằm trong `src/routes/admin.js`. Yêu cầu đăng nhập (`chec
 | 10 | Inventory | `/admin/inventory/logs` | GET | `inventory.read` | Xem lịch sử nhập/xuất kho |
 | 11 | Inventory | `/admin/inventory/import/template` | GET | `inventory.read` | Lấy template file excel nhập kho |
 | 12 | Inventory | `/admin/inventory/import` | POST | `inventory.update`, `products.update`| Nhập kho bằng file (multer) |
-| 13 | Inventory | `/admin/inventory/adjust` | POST | `inventory.update` | Điều chỉnh tồn kho thủ công |
-| 14 | Payments | `/admin/payments/transactions` | GET | `payments.read` | Xem danh sách giao dịch VNPay |
-| 15 | Returns | `/admin/orders/returns` | GET | `orders.read` | Lấy danh sách các yêu cầu trả hàng |
-| 16 | Returns | `/admin/orders/returns/:id/status`| PATCH | `orders.update` | Duyệt/Từ chối yêu cầu trả hàng |
-| 17 | Categories | `/admin/categories` | POST | `categories.manage` | Tạo danh mục mới |
-| 18 | Categories | `/admin/categories/:id` | PUT | `categories.manage` | Cập nhật danh mục |
-| 19 | Categories | `/admin/categories/:id` | DELETE | `categories.manage` | Xóa danh mục |
-| 20 | Products | `/admin/products` | POST | `products.create` | Tạo sản phẩm |
-| 21 | Products | `/admin/products/:id` | PUT | `products.update` | Cập nhật thông tin chung của sản phẩm |
-| 22 | Products | `/admin/products/:id` | DELETE | `products.delete` | Xóa sản phẩm |
-| 23 | Products | `/admin/products/:id/variants`| POST | `products.update` | Thêm biến thể cho sản phẩm |
-| 24 | Products | `/admin/variants/:variantId` | PUT | `products.update` | Cập nhật thông tin một biến thể |
-| 25 | Products | `/admin/products/:id/images` | POST | `products.update` | Upload thêm ảnh sản phẩm (Cloudinary) |
-| 26 | Products | `/admin/products/images/:imageId`| DELETE| `products.update` | Xóa ảnh của sản phẩm |
-| 27 | Colors | `/admin/colors` | POST | `products.update` | Tạo màu mới |
-| 28 | Colors | `/admin/colors/:id` | PUT | `products.update` | Cập nhật màu |
-| 29 | Colors | `/admin/colors/:id` | DELETE | `products.update` | Xóa màu |
-| 30 | Sizes | `/admin/sizes` | POST | `products.update` | Tạo kích thước mới |
-| 31 | Sizes | `/admin/sizes/:id` | PUT | `products.update` | Cập nhật kích thước |
-| 32 | Sizes | `/admin/sizes/:id` | DELETE | `products.update` | Xóa kích thước |
-| 33 | Collections | `/admin/collections` | POST | `collections.manage` | Tạo bộ sưu tập (có hình ảnh banner) |
-| 34 | Collections | `/admin/collections/:id` | PUT | `collections.manage` | Sửa thông tin bộ sưu tập |
-| 35 | Collections | `/admin/collections/:id/products`| POST | `collections.manage` | Thêm các sản phẩm vào bộ sưu tập |
-| 36 | Collections | `/admin/collections/:id/products`| DELETE| `collections.manage` | Bỏ các sản phẩm ra khỏi bộ sưu tập |
-| 37 | Orders | `/admin/orders` | GET | `orders.read` | Lấy danh sách toàn bộ đơn hàng |
-| 38 | Orders | `/admin/orders/:id/status` | PATCH | `orders.update` | Cập nhật trạng thái đơn hàng (duyệt, giao...) |
-| 39 | Orders | `/admin/orders/:id/payment` | PATCH | `orders.update` | Cập nhật trạng thái thanh toán |
-| 40 | Reviews | `/admin/reviews` | GET | `orders.read` | Xem danh sách đánh giá của KH |
-| 41 | Reviews | `/admin/reviews/:id/status` | PATCH | `orders.update` | Đổi trạng thái đánh giá (hiện/ẩn) |
-| 42 | VNPay | `/admin/orders/:id/vnpay-sync` | PATCH | `orders.update` | QueryDR VNPay để đồng bộ kết quả thanh toán |
-| 43 | Coupons | `/admin/coupons` | POST | `coupons.manage` | Tạo mã giảm giá mới |
-| 44 | Coupons | `/admin/coupons` | GET | `coupons.manage` | Lấy danh sách tất cả mã giảm giá |
-| 45 | Coupons | `/admin/coupons/:id` | PUT | `coupons.manage` | Sửa mã giảm giá |
-| 46 | Coupons | `/admin/coupons/:id` | DELETE | `coupons.manage` | Xóa mã giảm giá |
-| 47 | Dashboard | `/admin/dashboard/stats` | GET | `dashboard.read` | Lấy số liệu thống kê Dashboard |
-| 48 | Chatbot | `/admin/chatbot/stats` | GET | `chatbot.read` | Lấy thống kê hiệu suất chatbot |
-| 49 | Chatbot | `/admin/chatbot/sessions` | GET | `chatbot.read` | Lấy danh sách các phiên chat |
-| 50 | Chatbot | `/admin/chatbot/sessions/:sessionId`| GET| `chatbot.read` | Xem chi tiết tin nhắn trong một phiên chat |
-| 51 | Chatbot | `/admin/chatbot/sessions/:sessionId`| DELETE|`chatbot.manage` | Xóa một phiên chat |
-| 52 | Chatbot | `/admin/chatbot/users/:userId`| DELETE | `chatbot.manage` | Xóa toàn bộ lịch sử chat của user |
+| 13 | Inventory | `/admin/inventory/import-manual` | POST | `inventory.update`, `products.update`| Nhập kho thủ công hàng loạt bằng JSON |
+| 14 | Inventory | `/admin/inventory/adjust` | POST | `inventory.update` | Điều chỉnh tồn kho thủ công |
+| 15 | Payments | `/admin/payments/transactions` | GET | `payments.read` | Xem danh sách giao dịch VNPay |
+| 16 | Returns | `/admin/orders/returns` | GET | `orders.read` | Lấy danh sách các yêu cầu trả hàng |
+| 17 | Returns | `/admin/orders/returns/:id/status`| PATCH | `orders.update` | Duyệt/Từ chối yêu cầu trả hàng |
+| 18 | Categories | `/admin/categories` | POST | `categories.manage` | Tạo danh mục mới |
+| 19 | Categories | `/admin/categories/:id` | PUT | `categories.manage` | Cập nhật danh mục |
+| 20 | Categories | `/admin/categories/:id` | DELETE | `categories.manage` | Xóa danh mục |
+| 21 | Products | `/admin/products` | POST | `products.create` | Tạo sản phẩm |
+| 22 | Products | `/admin/products/:id` | PUT | `products.update` | Cập nhật thông tin chung của sản phẩm |
+| 23 | Products | `/admin/products/:id` | DELETE | `products.delete` | Xóa sản phẩm |
+| 24 | Products | `/admin/products/:id/variants`| POST | `products.update` | Thêm biến thể cho sản phẩm |
+| 25 | Products | `/admin/variants/:variantId` | PUT | `products.update` | Cập nhật thông tin một biến thể |
+| 26 | Products | `/admin/products/:id/images` | POST | `products.update` | Upload thêm ảnh sản phẩm (Cloudinary) |
+| 27 | Products | `/admin/products/images/:imageId`| DELETE| `products.update` | Xóa ảnh của sản phẩm |
+| 28 | Colors | `/admin/colors` | POST | `products.update` | Tạo màu mới |
+| 29 | Colors | `/admin/colors/:id` | PUT | `products.update` | Cập nhật màu |
+| 30 | Colors | `/admin/colors/:id` | DELETE | `products.update` | Xóa màu |
+| 31 | Sizes | `/admin/sizes` | POST | `products.update` | Tạo kích thước mới |
+| 32 | Sizes | `/admin/sizes/:id` | PUT | `products.update` | Cập nhật kích thước |
+| 33 | Sizes | `/admin/sizes/:id` | DELETE | `products.update` | Xóa kích thước |
+| 34 | Collections | `/admin/collections` | POST | `collections.manage` | Tạo bộ sưu tập (có hình ảnh banner) |
+| 35 | Collections | `/admin/collections/:id` | PUT | `collections.manage` | Sửa thông tin bộ sưu tập |
+| 36 | Collections | `/admin/collections/:id/products`| POST | `collections.manage` | Thêm các sản phẩm vào bộ sưu tập |
+| 37 | Collections | `/admin/collections/:id/products`| DELETE| `collections.manage` | Bỏ các sản phẩm ra khỏi bộ sưu tập |
+| 38 | Orders | `/admin/orders` | GET | `orders.read` | Lấy danh sách toàn bộ đơn hàng |
+| 39 | Orders | `/admin/orders/:id/status` | PATCH | `orders.update` | Cập nhật trạng thái đơn hàng (duyệt, giao...) |
+| 40 | Orders | `/admin/orders/:id/payment` | PATCH | `orders.update` | Cập nhật trạng thái thanh toán |
+| 41 | Reviews | `/admin/reviews` | GET | `orders.read` | Xem danh sách đánh giá của KH |
+| 42 | Reviews | `/admin/reviews/:id/status` | PATCH | `orders.update` | Đổi trạng thái đánh giá (hiện/ẩn) |
+| 43 | VNPay | `/admin/orders/:id/vnpay-sync` | PATCH | `orders.update` | QueryDR VNPay để đồng bộ kết quả thanh toán |
+| 44 | Coupons | `/admin/coupons` | POST | `coupons.manage` | Tạo mã giảm giá mới |
+| 45 | Coupons | `/admin/coupons` | GET | `coupons.manage` | Lấy danh sách tất cả mã giảm giá |
+| 46 | Coupons | `/admin/coupons/:id` | PUT | `coupons.manage` | Sửa mã giảm giá |
+| 47 | Coupons | `/admin/coupons/:id` | DELETE | `coupons.manage` | Xóa mã giảm giá |
+| 48 | Dashboard | `/admin/dashboard/stats` | GET | `dashboard.read` | Lấy số liệu thống kê Dashboard |
+| 49 | Chatbot | `/admin/chatbot/stats` | GET | `chatbot.read` | Lấy thống kê hiệu suất chatbot |
+| 50 | Chatbot | `/admin/chatbot/sessions` | GET | `chatbot.read` | Lấy danh sách các phiên chat |
+| 51 | Chatbot | `/admin/chatbot/sessions/:sessionId`| GET| `chatbot.read` | Xem chi tiết tin nhắn trong một phiên chat |
+| 52 | Chatbot | `/admin/chatbot/sessions/:sessionId`| DELETE|`chatbot.manage` | Xóa một phiên chat |
+| 53 | Chatbot | `/admin/chatbot/users/:userId`| DELETE | `chatbot.manage` | Xóa toàn bộ lịch sử chat của user |
 
 ---
 

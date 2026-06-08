@@ -16,6 +16,10 @@ const importInventory = (file) => {
     });
 };
 
+const importInventoryManual = (items) => {
+    return axios.post(`/api/v1/admin/inventory/import-manual`, { items });
+};
+
 const getInventoryTemplate = () => {
     return axios.get(`/api/v1/admin/inventory/import/template`, {
         responseType: 'blob' // Rất quan trọng để tải file
@@ -29,6 +33,7 @@ const adjustInventory = (variantId, delta, note) => {
 export default {
     getInventoryLogs,
     importInventory,
+    importInventoryManual,
     getInventoryTemplate,
     adjustInventory
 };

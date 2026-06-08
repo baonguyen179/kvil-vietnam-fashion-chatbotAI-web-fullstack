@@ -165,6 +165,7 @@ id int pk
 orderId int [ref: > Orders.id]
 variantId int [ref: > ProductVariants.id] // Biết chính xác khách mua size gì, màu gì
 quantity int
+costPrice DECIMAL(15,2),
 price decimal // GIÁ TẠI THỜI ĐIỂM MUA
 }
 
@@ -204,6 +205,7 @@ variantId int [ref: > ProductVariants.id]
 userId int [ref: > Users.id] // Người thực hiện (Nhân viên Kinh doanh)
 type string // 'IN' (Nhập mới), 'OUT' (Xuất thực), 'RETURN' (Hoàn trả), 'HOLD' (Tạm giữ), 'UNHOLD' (Hủy giữ), 'ADJUST' (Điều chỉnh kho)
 quantity int // Số lượng thay đổi
+costPrice DECIMAL(15,2),
 note text // Ghi chú (VD: "Nhập lô hàng Hè", "Khách trả hàng đơn #123")
 createdAt datetime // Thời gian thực hiện
 }

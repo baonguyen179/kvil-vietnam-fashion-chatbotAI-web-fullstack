@@ -23,19 +23,21 @@ const parseExcelBuffer = async (buffer) => {
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return; // Bỏ qua Header
 
-            // Giả định thứ tự cột trong File mẫu (Template):
             // Cột 1: SKU
             // Cột 2: Tên sản phẩm (Chỉ để xem, không bắt buộc)
             // Cột 3: Số lượng nhập
+            // Cột 4: Giá vốn nhập
             const sku = row.getCell(1).value;
             const quantityStr = row.getCell(3).value;
+            const costPriceStr = row.getCell(4).value;
 
             // Xử lý an toàn: Chỉ lấy những dòng có khai báo SKU
             if (sku) {
                 data.push({
                     rowNumber: rowNumber,
                     sku: typeof sku === 'object' && sku.text ? sku.text.trim() : String(sku).trim(),
-                    quantity: typeof quantityStr === 'object' && quantityStr.result !== undefined ? quantityStr.result : Number(quantityStr)
+                    quantity: typeof quantityStr === 'object' && quantityStr.result !== undefined ? quantityStr.result : Number(quantityStr),
+                    costPrice: typeof costPriceStr === 'object' && costPriceStr.result !== undefined ? costPriceStr.result : Number(costPriceStr)
                 });
             }
         });
@@ -58,6 +60,7 @@ const generateTemplateBuffer = async () => {
         { header: 'MÃ SKU (*)', key: 'sku', width: 20 },
         { header: 'TÊN SẢN PHẨM (Tham khảo)', key: 'productName', width: 40 },
         { header: 'SỐ LƯỢNG NHẬP (*)', key: 'quantity', width: 25 },
+        { header: 'GIÁ VỐN NHẬP (*)', key: 'costPrice', width: 25 },
     ];
 
     // Style cho Header
@@ -74,13 +77,14 @@ const generateTemplateBuffer = async () => {
     worksheet.addRow({
         sku: 'AOMUA-DEN-XL',
         productName: 'Áo thun mùa hè - Đen - XL',
-        quantity: 100
+        quantity: 100,
+        costPrice: 150000
     });
     
     // Ghi chú hướng dẫn ở dòng 3
     const guideRow = worksheet.getRow(3);
     guideRow.getCell(1).value = 'LƯU Ý: Không sửa các cột Header có dấu (*). Chỉ điền thông tin từ dòng số 2.';
-    worksheet.mergeCells('A3:C3');
+    worksheet.mergeCells('A3:D3');
     guideRow.font = { italic: true, color: { argb: 'FFFF0000' } };
 
     return await workbook.xlsx.writeBuffer();

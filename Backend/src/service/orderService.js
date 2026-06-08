@@ -7,6 +7,20 @@ const { Op } = require('sequelize');
 const slugify = require('slugify');
 const ORDER_CACHE_TTL = process.env.ORDER_CACHE_TTL || 1800; // 30 phút
 
+const getAvgCostPrice = async (variantId) => {
+    try {
+        const logs = await db.InventoryLog.findAll({
+            where: { variantId, type: 'IN', costPrice: { [Op.gt]: 0 } }
+        });
+        const totalQty = logs.reduce((s, l) => s + l.quantity, 0);
+        const totalCost = logs.reduce((s, l) => s + (l.quantity * parseFloat(l.costPrice)), 0);
+        return totalQty > 0 ? (totalCost / totalQty) : 0;
+    } catch (error) {
+        console.error(">>> Lỗi getAvgCostPrice:", error);
+        return 0;
+    }
+};
+
 
 
 /**
@@ -235,10 +249,12 @@ const createOrder = async (userId, data) => {
 
             totalBeforeDiscount += (purchasePrice * item.quantity);
 
+            const avgCost = await getAvgCostPrice(item.variantId);
             orderItemsData.push({
                 variantId: item.variantId,
                 quantity: item.quantity,
-                price: purchasePrice // Save the discounted price as the historical purchase price
+                price: purchasePrice, // Save the discounted price as the historical purchase price
+                costPrice: avgCost
             });
 
             await lockedVariant.decrement('stock', { by: item.quantity, transaction: t });
@@ -749,6 +765,7 @@ const updateOrderStatus = async (orderId, newStatus) => {
                         userId: null, 
                         type: logType,
                         quantity: item.quantity,
+                        costPrice: logType === 'RETURN' ? item.costPrice : 0,
                         note: logNote
                     }, { transaction: t });
                 }
@@ -1098,6 +1115,7 @@ const updateReturnStatus = async (id, status, adminId) => {
                         userId: adminId, 
                         type: 'RETURN',
                         quantity: item.quantity,
+                        costPrice: item.costPrice || 0,
                         note: `Hoàn kho do duyệt trả hàng đơn #${request.orderId}`
                     }, { transaction: t });
                 }

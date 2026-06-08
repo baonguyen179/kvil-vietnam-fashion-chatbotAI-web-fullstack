@@ -59,7 +59,8 @@ const variantSchema = Joi.object({
         'number.min': 'Số lượng kho không được nhỏ hơn 0!',
         'any.required': 'Vui lòng nhập số lượng tồn kho!'
     }),
-    price: Joi.number().min(0).allow('', null)
+    price: Joi.number().min(0).allow('', null),
+    costPrice: Joi.number().min(0).allow('', null)
 }).unknown(true);
 
 const updateVariantSchema = Joi.object({
@@ -93,6 +94,26 @@ const adjustInventorySchema = Joi.object({
     })
 });
 
+const importInventoryManualSchema = Joi.object({
+    items: Joi.array().items(
+        Joi.object({
+            sku: Joi.string().required().messages({ 'any.required': 'Mã SKU là bắt buộc!' }),
+            quantity: Joi.number().integer().min(1).required().messages({
+                'number.base': 'Số lượng nhập phải là số!',
+                'number.min': 'Số lượng nhập phải lớn hơn 0!',
+                'any.required': 'Số lượng nhập là bắt buộc!'
+            }),
+            costPrice: Joi.number().min(0.01).required().messages({
+                'number.base': 'Giá vốn nhập phải là số!',
+                'number.min': 'Giá vốn nhập phải lớn hơn 0!',
+                'any.required': 'Giá vốn nhập là bắt buộc!'
+            })
+        })
+    ).min(1).required().messages({
+        'array.min': 'Danh sách nhập kho phải có ít nhất 1 sản phẩm!'
+    })
+});
+
 module.exports = {
     productIdSchema,
     imageIdSchema,
@@ -102,5 +123,6 @@ module.exports = {
     getInventoryLogsSchema,
     variantSchema,
     updateVariantSchema,
-    adjustInventorySchema
+    adjustInventorySchema,
+    importInventoryManualSchema
 };

@@ -279,6 +279,35 @@ const handleAdjustInventory = async (req, res) => {
     }
 };
 
+const handleImportInventoryManual = async (req, res) => {
+    try {
+        const { error, value } = productValidation.importInventoryManualSchema.validate(req.body);
+        if (error) {
+            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const adminId = req.user?.id || null;
+        const { items } = value;
+
+        const data = await productService.importInventoryManual(items, adminId);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+
+    } catch (error) {
+        console.error('>>> Lỗi handleImportInventoryManual:', error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+const handleGetAllVariantSkus = async (req, res) => {
+    try {
+        const data = await productService.getAllVariantSkus();
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error('>>> Lỗi handleGetAllVariantSkus:', error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
 module.exports = {
     handleGetAllProducts, handleCreateProduct, handleUpdateProduct,
     handleDeleteProduct,
@@ -292,5 +321,7 @@ module.exports = {
     handleGetInventoryLogs,
     handleImportInventory,
     handleGetInventoryTemplate,
-    handleAdjustInventory
+    handleAdjustInventory,
+    handleImportInventoryManual,
+    handleGetAllVariantSkus
 }

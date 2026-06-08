@@ -44,6 +44,8 @@ const getDashboardStats = async (queryParams) => {
             totalProducts,
             chartData,
             orderStatusBreakdown,
+            totalCostResult,
+            dailyCostData,
         ] = await Promise.all([
 
             // [1] Tổng doanh thu — chỉ đơn đã giao thành công
@@ -98,21 +100,74 @@ const getDashboardStats = async (queryParams) => {
                 group: ['status'],
                 raw: true
             }),
+
+            // [8] Tổng giá vốn của các đơn đã giao thành công
+            db.OrderItem.findAll({
+                attributes: [
+                    [db.sequelize.fn('SUM', db.sequelize.literal('OrderItem.costPrice * OrderItem.quantity')), 'totalCost']
+                ],
+                include: [{
+                    model: db.Order,
+                    as: 'order',
+                    where: { ...dateCondition, status: 'delivered' },
+                    attributes: []
+                }],
+                raw: true
+            }),
+
+            // [9] Giá vốn theo ngày
+            db.OrderItem.findAll({
+                attributes: [
+                    [db.sequelize.fn('DATE', db.sequelize.col('OrderItem.createdAt')), 'date'],
+                    [db.sequelize.fn('SUM', db.sequelize.literal('OrderItem.costPrice * OrderItem.quantity')), 'totalCost']
+                ],
+                include: [{
+                    model: db.Order,
+                    as: 'order',
+                    where: { ...dateCondition, status: 'delivered' },
+                    attributes: []
+                }],
+                group: [db.sequelize.fn('DATE', db.sequelize.col('OrderItem.createdAt'))],
+                raw: true
+            })
         ]);
+
+        const totalCost = parseFloat(totalCostResult?.[0]?.totalCost || 0);
+        const grossProfit = parseFloat(totalRevenue || 0) - totalCost;
+        const profitMargin = totalRevenue > 0 ? (grossProfit / parseFloat(totalRevenue)) * 100 : 0;
+
+        const costMap = new Map();
+        (dailyCostData || []).forEach(row => {
+            const formattedDate = row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date);
+            costMap.set(formattedDate, parseFloat(row.totalCost || 0));
+        });
+
+        const formattedChartData = chartData.map(row => {
+            const dateStr = row.date instanceof Date ? row.date.toISOString().slice(0, 10) : String(row.date);
+            const revenue = parseFloat(row.revenue || 0);
+            const cost = costMap.get(dateStr) || 0;
+            const profit = revenue - cost;
+            return {
+                date: row.date,
+                orderCount: parseInt(row.orderCount, 10),
+                revenue,
+                totalCost: cost,
+                grossProfit: profit
+            };
+        });
 
         const resultData = {
             summary: {
-                totalRevenue: parseFloat(totalRevenue || 0), // parseFloat giữ được số thập phân tiền tệ
+                totalRevenue: parseFloat(totalRevenue || 0),
+                totalCost,
+                grossProfit,
+                profitMargin,
                 totalOrders,
                 pendingOrders,
                 newCustomers,
                 totalProducts,
             },
-            chart: chartData.map(row => ({
-                date: row.date,
-                orderCount: parseInt(row.orderCount, 10),
-                revenue: parseFloat(row.revenue || 0),
-            })),
+            chart: formattedChartData,
             orderStatusBreakdown: orderStatusBreakdown.map(row => ({
                 status: row.status,
                 count: parseInt(row.count, 10),
@@ -121,7 +176,7 @@ const getDashboardStats = async (queryParams) => {
                 startDate: toDateStr(start),
                 endDate: toDateStr(end),
             },
-            generatedAt: new Date().toISOString(), // Frontend biết data mới hay từ cache
+            generatedAt: new Date().toISOString(),
         };
 
         await redisHelper.setCache(cacheKey, resultData, DASHBOARD_CACHE_TTL);

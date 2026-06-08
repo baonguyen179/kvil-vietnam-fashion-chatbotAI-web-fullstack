@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Drawer, Form, Input, InputNumber, Button, Table, Space, message, Spin, Typography, Card, Select } from 'antd';
+import { Drawer, Form, Input, InputNumber, Button, Table, Space, message, Spin, Typography, Card, Select, Modal } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import productService from '@/services/productService';
 import colorService from '@/services/colorService';
 import sizeService from '@/services/sizeService';
+import inventoryService from '@/services/inventoryService';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -21,6 +23,12 @@ const AdminVariantDrawer = ({
     const [sizes, setSizes] = useState([]);
     const [editingVariant, setEditingVariant] = useState(null);
     const [form] = Form.useForm();
+
+    // State phục vụ việc xem lịch sử nhập kho của biến thể
+    const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
+    const [selectedVariantForHistory, setSelectedVariantForHistory] = useState(null);
+    const [historyLogs, setHistoryLogs] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
 
     const fetchProductVariants = async () => {
         if (!manageVariantProduct?.id) return;
@@ -75,7 +83,8 @@ const AdminVariantDrawer = ({
             sizeId: record.sizeId,
             stock: record.stock, // Disabled in UI
             price: record.price,
-            sku: record.sku
+            sku: record.sku,
+            costPrice: record.avgCostPrice
         });
     };
 
@@ -119,6 +128,26 @@ const AdminVariantDrawer = ({
         }
     };
 
+    const handleShowHistoryLogs = async (record) => {
+        setSelectedVariantForHistory(record);
+        setIsHistoryModalVisible(true);
+        setHistoryLoading(true);
+        try {
+            // Lấy tối đa 50 log nhập (type = 'IN') của biến thể này
+            const res = await inventoryService.getInventoryLogs(1, 50, 'IN', record.id);
+            if (res && res.EC === 0) {
+                setHistoryLogs(res.DT.logs || []);
+            } else {
+                message.error(res.EM || "Không thể tải lịch sử nhập hàng!");
+            }
+        } catch (error) {
+            console.error(">>> Error fetching variant inventory logs:", error);
+            message.error("Lỗi khi kết nối đến máy chủ");
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
     const columns = [
         {
             title: 'Màu sắc (Color)',
@@ -145,6 +174,12 @@ const AdminVariantDrawer = ({
             key: 'stock',
         },
         {
+            title: 'Giá vốn (AVG)',
+            dataIndex: 'avgCostPrice',
+            key: 'avgCostPrice',
+            render: (val) => val ? val.toLocaleString() + 'đ' : <Text type="secondary">0đ</Text>
+        },
+        {
             title: 'Giá riêng (VNĐ)',
             dataIndex: 'price',
             key: 'price',
@@ -168,8 +203,46 @@ const AdminVariantDrawer = ({
                     >
                         Sửa
                     </Button>
+                    <Button 
+                        type="link" 
+                        onClick={() => handleShowHistoryLogs(record)}
+                        style={{ color: '#107c41' }}
+                    >
+                        Lịch sử nhập
+                    </Button>
                 </Space>
             )
+        }
+    ];
+
+    // Các cột cho bảng lịch sử nhập hàng trong Modal
+    const historyColumns = [
+        {
+            title: 'Ngày nhập',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: (val) => dayjs(val).format('DD/MM/YYYY HH:mm'),
+            width: 150
+        },
+        {
+            title: 'Số lượng nhập',
+            dataIndex: 'quantity',
+            key: 'quantity',
+            render: (val) => <span className="text-green-600 font-semibold">+{val}</span>,
+            width: 120
+        },
+        {
+            title: 'Giá vốn nhập',
+            dataIndex: 'costPrice',
+            key: 'costPrice',
+            render: (val) => val ? parseFloat(val).toLocaleString('vi-VN') + 'đ' : '0đ',
+            width: 130
+        },
+        {
+            title: 'Ghi chú',
+            dataIndex: 'note',
+            key: 'note',
+            render: (val) => <span className="text-gray-500 text-xs">{val || '---'}</span>
         }
     ];
 
@@ -242,6 +315,26 @@ const AdminVariantDrawer = ({
                         </Form.Item>
 
                         <Form.Item
+                            name="costPrice"
+                            label="Giá vốn nhập (*)"
+                            rules={[{ required: !editingVariant, message: 'Vui lòng nhập giá vốn!' }]}
+                        >
+                            <InputNumber 
+                                min={0} 
+                                style={{ width: '100%' }}
+                                formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                                placeholder={editingVariant ? "" : "vd: 50,000"}
+                                disabled={!!editingVariant}
+                            />
+                            {editingVariant && (
+                                <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginTop: 4 }}>
+                                    * Không thể sửa trực tiếp. Vui lòng nhập/xuất kho để điều chỉnh giá vốn.
+                                </Text>
+                            )}
+                        </Form.Item>
+
+                        <Form.Item
                             name="price"
                             label="Giá tùy chỉnh (nếu có khác gốc)"
                         >
@@ -294,6 +387,42 @@ const AdminVariantDrawer = ({
                     size="small"
                 />
             </Spin>
+
+            {/* Modal hiển thị lịch sử nhập kho của biến thể */}
+            <Modal
+                title={`Lịch sử giá nhập hàng - SKU: ${selectedVariantForHistory?.sku || 'N/A'}`}
+                open={isHistoryModalVisible}
+                onCancel={() => {
+                    setIsHistoryModalVisible(false);
+                    setSelectedVariantForHistory(null);
+                    setHistoryLogs([]);
+                }}
+                footer={[
+                    <Button 
+                        key="close" 
+                        onClick={() => {
+                            setIsHistoryModalVisible(false);
+                            setSelectedVariantForHistory(null);
+                            setHistoryLogs([]);
+                        }}
+                    >
+                        Đóng
+                    </Button>
+                ]}
+                width={700}
+                centered
+            >
+                <Table
+                    columns={historyColumns}
+                    dataSource={historyLogs}
+                    rowKey="id"
+                    loading={historyLoading}
+                    size="small"
+                    bordered
+                    pagination={{ pageSize: 5 }}
+                    locale={{ emptyText: 'Chưa có lịch sử nhập hàng cho biến thể này.' }}
+                />
+            </Modal>
         </Drawer>
     );
 };

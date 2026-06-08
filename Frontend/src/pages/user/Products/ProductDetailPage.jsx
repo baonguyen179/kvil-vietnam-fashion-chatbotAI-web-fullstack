@@ -44,7 +44,8 @@ const ProductDetailPage = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeImage, setActiveImage] = useState(null);
-    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedColorId, setSelectedColorId] = useState(null);
+    const [selectedSizeId, setSelectedSizeId] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [sizesData, setSizesData] = useState([]);
@@ -80,10 +81,9 @@ const ProductDetailPage = () => {
                 const mainImg = res.DT.images?.find(img => img.isMain) || res.DT.images?.[0];
                 setActiveImage(mainImg?.imageUrl);
                 
-                const firstAvailableVariant = res.DT.variants?.find(v => v.stock > 0);
-                if (firstAvailableVariant) {
-                    setSelectedSize(firstAvailableVariant.size?.name || null);
-                }
+                // Reset selected values on new product load
+                setSelectedColorId(null);
+                setSelectedSizeId(null);
 
                 // Sau khi lấy được sản phẩm, tìm sản phẩm liên quan
                 fetchRelatedProducts(res.DT);
@@ -133,16 +133,108 @@ const ProductDetailPage = () => {
         }
     };
 
+    // Extract unique colors and sizes from variants
+    const uniqueColors = useMemo(() => {
+        if (!product || !product.variants) return [];
+        const colorsMap = new Map();
+        product.variants.forEach(v => {
+            if (v.color) {
+                colorsMap.set(v.color.id, v.color);
+            }
+        });
+        return Array.from(colorsMap.values());
+    }, [product]);
+
+    const uniqueSizes = useMemo(() => {
+        if (!product || !product.variants) return [];
+        const sizesMap = new Map();
+        product.variants.forEach(v => {
+            if (v.size) {
+                sizesMap.set(v.size.id, v.size);
+            }
+        });
+        return Array.from(sizesMap.values());
+    }, [product]);
+
     const pricing = useMemo(() => {
-        if (!product) return { current: 0, original: 0, discount: 0 };
+        if (!product) return { current: 0, original: 0, discount: 0, isRange: false };
         
-        const variant = product.variants?.find(v => v.size?.name === selectedSize);
-        const original = variant?.price || product.basePrice;
         const discount = product.discountPercent || 0;
-        const current = original * (1 - discount / 100);
+        const hasVariants = product.variants && product.variants.length > 0;
+
+        if (!hasVariants) {
+            const original = product.basePrice || 0;
+            const current = original * (1 - discount / 100);
+            return { current, original, discount, isRange: false };
+        }
+
+        const selectedVariant = product.variants.find(
+            v => v.color?.id === selectedColorId && v.size?.id === selectedSizeId
+        );
+
+        if (selectedVariant) {
+            const original = selectedVariant.price || product.basePrice || 0;
+            const current = original * (1 - discount / 100);
+            return { current, original, discount, isRange: false };
+        }
+
+        const prices = product.variants.map(v => v.price || product.basePrice || 0);
+        const minOriginal = Math.min(...prices);
+        const maxOriginal = Math.max(...prices);
+
+        const minCurrent = minOriginal * (1 - discount / 100);
+        const maxCurrent = maxOriginal * (1 - discount / 100);
+
+        return {
+            discount,
+            isRange: true,
+            minCurrent,
+            maxCurrent,
+            minOriginal,
+            maxOriginal
+        };
+    }, [product, selectedColorId, selectedSizeId]);
+
+    const isAddToCartDisabled = useMemo(() => {
+        if (!product) return true;
+        const hasVariants = product.variants && product.variants.length > 0;
+        if (!hasVariants) return false;
         
-        return { current, original, discount };
-    }, [product, selectedSize]);
+        if (!selectedColorId || !selectedSizeId) return true;
+        
+        const variant = product.variants.find(
+            v => v.color?.id === selectedColorId && v.size?.id === selectedSizeId
+        );
+        return !variant || variant.stock <= 0;
+    }, [product, selectedColorId, selectedSizeId]);
+
+    const addToCartText = useMemo(() => {
+        if (!product) return "Thêm vào giỏ";
+        const hasVariants = product.variants && product.variants.length > 0;
+        if (!hasVariants) return "Thêm vào giỏ";
+        
+        if (!selectedColorId || !selectedSizeId) {
+            return "Chọn Màu & Size";
+        }
+        
+        const variant = product.variants.find(
+            v => v.color?.id === selectedColorId && v.size?.id === selectedSizeId
+        );
+        if (!variant) return "Không sẵn có";
+        if (variant.stock <= 0) return "Hết hàng";
+        return "Thêm vào giỏ";
+    }, [product, selectedColorId, selectedSizeId]);
+
+    const currentSku = useMemo(() => {
+        if (!product) return "N/A";
+        const hasVariants = product.variants && product.variants.length > 0;
+        if (!hasVariants) return "N/A";
+        
+        const variant = product.variants.find(
+            v => v.color?.id === selectedColorId && v.size?.id === selectedSizeId
+        );
+        return variant?.sku || product.variants?.[0]?.sku || "N/A";
+    }, [product, selectedColorId, selectedSizeId]);
 
     const handleQuantityChange = (type) => {
         if (type === 'plus') {
@@ -155,47 +247,63 @@ const ProductDetailPage = () => {
     };
 
     const handleAddToCart = async () => {
-        if (!selectedSize) {
-            toast.warn("Vui lòng chọn kích cỡ trước khi thêm vào giỏ hàng");
-            return;
-        }
+        if (!product) return;
+        const hasVariants = product.variants && product.variants.length > 0;
         
-        const variant = product.variants?.find(v => v.size?.name === selectedSize);
-        if (!variant) return;
+        if (hasVariants) {
+            if (!selectedColorId || !selectedSizeId) {
+                toast.warn("Vui lòng chọn đầy đủ Màu sắc và Kích cỡ trước khi thêm vào giỏ hàng");
+                return;
+            }
+            
+            const variant = product.variants.find(
+                v => v.color?.id === selectedColorId && v.size?.id === selectedSizeId
+            );
+            
+            if (!variant) {
+                toast.error("Biến thể này không tồn tại!");
+                return;
+            }
 
-        if (isAuthenticated) {
-            // Trường hợp: Thành viên đã đăng nhập -> Gọi API
-            try {
-                const res = await cartService.addToCart(variant.id, quantity);
-                if (res && res.EC === 0) {
-                    toast.success("Đã thêm vào giỏ hàng thành công!");
-                    dispatch(toggleCartDrawer(true));
-                } else {
-                    toast.error(res.EM || "Lỗi khi thêm vào giỏ hàng");
+            if (variant.stock <= 0) {
+                toast.error("Biến thể này hiện đã hết hàng!");
+                return;
+            }
+
+            if (isAuthenticated) {
+                try {
+                    const res = await cartService.addToCart(variant.id, quantity);
+                    if (res && res.EC === 0) {
+                        toast.success("Đã thêm vào giỏ hàng thành công!");
+                        dispatch(toggleCartDrawer(true));
+                    } else {
+                        toast.error(res.EM || "Lỗi khi thêm vào giỏ hàng");
+                    }
+                } catch (error) {
+                    console.error("Add to cart api error:", error);
+                    toast.error("Lỗi kết nối máy chủ");
                 }
-            } catch (error) {
-                console.error("Add to cart api error:", error);
-                toast.error("Lỗi kết nối máy chủ");
+            } else {
+                const item = {
+                    variant: {
+                        id: variant.id,
+                        size: variant.size,
+                        color: variant.color,
+                        price: pricing.current,
+                        product: {
+                            id: product.id,
+                            name: product.name,
+                            images: product.images
+                        }
+                    },
+                    quantity: quantity
+                };
+                dispatch(addToCartLocal(item));
+                toast.success("Đã thêm vào giỏ hàng (khách)");
+                dispatch(toggleCartDrawer(true));
             }
         } else {
-            // Trường hợp: Khách vãng lai -> Lưu local Redux
-            const item = {
-                variant: {
-                    id: variant.id,
-                    size: variant.size,
-                    color: variant.color,
-                    price: pricing.current,
-                    product: {
-                        id: product.id,
-                        name: product.name,
-                        images: product.images
-                    }
-                },
-                quantity: quantity
-            };
-            dispatch(addToCartLocal(item));
-            toast.success("Đã thêm vào giỏ hàng (khách)");
-            dispatch(toggleCartDrawer(true));
+            toast.warn("Sản phẩm này hiện tại chưa có biến thể sẵn sàng để bán. Vui lòng liên hệ hỗ trợ!");
         }
     };
 
@@ -231,8 +339,6 @@ const ProductDetailPage = () => {
             </div>
         );
     }
-
-    const currentSku = product.variants?.find(v => v.size?.name === selectedSize)?.sku || product.variants?.[0]?.sku || "N/A";
 
     return (
         <div className="max-w-[1300px] mx-auto px-4 py-10 bg-white">
@@ -307,46 +413,115 @@ const ProductDetailPage = () => {
                         <p className="text-xs text-gray-400 uppercase tracking-wider mt-1"> {currentSku}</p>
                     </div>
 
-                    <div className="flex items-baseline gap-4">
-                        <span className="text-3xl font-bold text-red-600">{formatCurrency(pricing.current)}</span>
-                        {pricing.discount > 0 && (
+                    <div className="flex items-baseline gap-4 flex-wrap">
+                        {pricing.isRange ? (
                             <>
-                                <span className="text-lg text-gray-400 line-through">{formatCurrency(pricing.original)}</span>
-                                <Badge className="bg-red-600 text-white hover:bg-red-600 rounded-none font-bold px-2 py-0.5">
-                                    -{pricing.discount}%
-                                </Badge>
+                                {pricing.minCurrent === pricing.maxCurrent ? (
+                                    <span className="text-3xl font-bold text-red-600">{formatCurrency(pricing.minCurrent)}</span>
+                                ) : (
+                                    <span className="text-3xl font-bold text-red-600">
+                                        {formatCurrency(pricing.minCurrent)} - {formatCurrency(pricing.maxCurrent)}
+                                    </span>
+                                )}
+                                {pricing.discount > 0 && (
+                                    <>
+                                        {pricing.minOriginal === pricing.maxOriginal ? (
+                                            <span className="text-lg text-gray-400 line-through">{formatCurrency(pricing.minOriginal)}</span>
+                                        ) : (
+                                            <span className="text-lg text-gray-400 line-through">
+                                                {formatCurrency(pricing.minOriginal)} - {formatCurrency(pricing.maxOriginal)}
+                                            </span>
+                                        )}
+                                        <Badge className="bg-red-600 text-white hover:bg-red-600 rounded-none font-bold px-2 py-0.5">
+                                            -{pricing.discount}%
+                                        </Badge>
+                                    </>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <span className="text-3xl font-bold text-red-600">{formatCurrency(pricing.current)}</span>
+                                {pricing.discount > 0 && (
+                                    <>
+                                        <span className="text-lg text-gray-400 line-through">{formatCurrency(pricing.original)}</span>
+                                        <Badge className="bg-red-600 text-white hover:bg-red-600 rounded-none font-bold px-2 py-0.5">
+                                            -{pricing.discount}%
+                                        </Badge>
+                                    </>
+                                )}
                             </>
                         )}
                     </div>
 
                     <Separator />
 
-                    <div>
-                        <span className="text-sm font-bold uppercase mb-3 block tracking-tight">Chọn Size:</span>
-                        <div className="flex flex-wrap gap-2">
-                            {['S', 'M', 'L', 'XL'].map(size => {
-                                const variant = product.variants?.find(v => v.size?.name === size);
-                                const isAvailable = variant && variant.stock > 0;
-                                
-                                return (
-                                    <button
-                                        key={size}
-                                        className={`h-12 w-12 border flex items-center justify-center transition-all font-medium ${
-                                            selectedSize === size 
-                                            ? 'bg-black text-white border-black' 
-                                            : !isAvailable 
-                                                ? 'opacity-20 cursor-not-allowed line-through border-gray-200' 
-                                                : 'bg-white text-black border-gray-200 hover:border-black'
-                                        }`}
-                                        disabled={!isAvailable}
-                                        onClick={() => setSelectedSize(size)}
-                                    >
-                                        {size}
-                                    </button>
-                                );
-                            })}
+                    {/* Attribute Selection */}
+                    {product.variants && product.variants.length > 0 && (
+                        <div className="space-y-4">
+                            <div>
+                                <span className="text-sm font-bold uppercase mb-3 block tracking-tight">Chọn Màu sắc:</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {uniqueColors.map(color => {
+                                        const isSelected = selectedColorId === color.id;
+                                        const isAvailable = product.variants.some(
+                                            v => v.color?.id === color.id && v.stock > 0 && (!selectedSizeId || v.size?.id === selectedSizeId)
+                                        );
+                                        return (
+                                            <button
+                                                key={color.id}
+                                                className={`px-4 py-2 border flex items-center gap-2 transition-all font-medium rounded-sm ${
+                                                    isSelected 
+                                                    ? 'bg-black text-white border-black' 
+                                                    : !isAvailable
+                                                        ? 'opacity-20 cursor-not-allowed line-through border-gray-200'
+                                                        : 'bg-white text-black border-gray-200 hover:border-black'
+                                                }`}
+                                                disabled={!isAvailable}
+                                                onClick={() => setSelectedColorId(color.id)}
+                                            >
+                                                {color.hexCode && (
+                                                    <span 
+                                                        className="w-4 h-4 rounded-full border border-gray-300 block" 
+                                                        style={{ backgroundColor: color.hexCode }} 
+                                                    />
+                                                )}
+                                                {color.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div>
+                                <span className="text-sm font-bold uppercase mb-3 block tracking-tight">Chọn Size:</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {uniqueSizes.map(size => {
+                                        const isSelected = selectedSizeId === size.id;
+                                        const isAvailable = product.variants.some(
+                                            v => v.size?.id === size.id && v.stock > 0 && (!selectedColorId || v.color?.id === selectedColorId)
+                                        );
+
+                                        return (
+                                            <button
+                                                key={size.id}
+                                                className={`h-12 min-w-12 px-2 border flex items-center justify-center transition-all font-medium rounded-sm ${
+                                                    isSelected 
+                                                    ? 'bg-black text-white border-black' 
+                                                    : !isAvailable 
+                                                        ? 'opacity-20 cursor-not-allowed line-through border-gray-200' 
+                                                        : 'bg-white text-black border-gray-200 hover:border-black'
+                                                }`}
+                                                disabled={!isAvailable}
+                                                onClick={() => setSelectedSizeId(size.id)}
+                                            >
+                                                {size.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="flex flex-col gap-3">
                         <span className="text-sm font-bold uppercase block tracking-tight">Số lượng:</span>
@@ -376,9 +551,10 @@ const ProductDetailPage = () => {
                         <Button 
                             className="w-full h-14 bg-black hover:bg-zinc-800 text-white rounded-none uppercase font-bold tracking-widest text-base shadow-xl active:scale-[0.98] transition-all"
                             onClick={handleAddToCart}
+                            disabled={isAddToCartDisabled}
                         >
                             <ShoppingBag className="w-5 h-5 mr-3" />
-                            Thêm vào giỏ
+                            {addToCartText}
                         </Button>
                     </div>
 

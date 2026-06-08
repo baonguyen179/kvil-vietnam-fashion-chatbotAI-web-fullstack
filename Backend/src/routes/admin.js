@@ -43,6 +43,7 @@ const uploadMemory = multer({
 router.get('/admin/inventory/logs', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryLogs);
 router.get('/admin/inventory/import/template', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryTemplate);
 router.post('/admin/inventory/import', JWTAction.checkUserPermission([], ['inventory.update', 'products.update']), uploadMemory.single('file'), productController.handleImportInventory);
+router.post('/admin/inventory/import-manual', JWTAction.checkUserPermission([], ['inventory.update', 'products.update']), productController.handleImportInventoryManual);
 router.post('/admin/inventory/adjust', JWTAction.checkUserPermission([], ['inventory.update']), productController.handleAdjustInventory);
 
 router.get('/admin/payments/transactions', JWTAction.checkUserPermission([], ['payments.read']), orderController.handleGetPaymentTransactions);
@@ -62,6 +63,7 @@ router.put('/admin/products/:id', JWTAction.checkUserPermission([], ['products.u
 router.delete('/admin/products/:id', JWTAction.checkUserPermission([], ['products.delete']), productController.handleDeleteProduct);
 router.post('/admin/products/:id/variants', JWTAction.checkUserPermission([], ['products.update']), productController.handleAddProductVariant);
 router.put('/admin/variants/:variantId', JWTAction.checkUserPermission([], ['products.update']), productController.handleUpdateProductVariant);
+router.get('/admin/variants/all-skus', JWTAction.checkUserPermission([], ['products.update', 'inventory.update']), productController.handleGetAllVariantSkus);
 router.post('/admin/products/:id/images', JWTAction.checkUserPermission([], ['products.update']), uploadCloud.array('images', 10), productController.handleAddProductImages);
 router.delete('/admin/products/images/:imageId', JWTAction.checkUserPermission([], ['products.update']), productController.handleDeleteProductImage);
 

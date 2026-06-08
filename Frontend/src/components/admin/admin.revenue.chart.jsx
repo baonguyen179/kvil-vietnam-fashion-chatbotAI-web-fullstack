@@ -12,18 +12,25 @@ const CustomTooltip = ({ active, payload, label }) => {
     return (
         <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
             <p className="font-semibold text-gray-700 mb-2">{label}</p>
-            {payload.map((p) => (
-                <div key={p.dataKey} className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: p.color }} />
-                    <span className="text-gray-600">{p.name}:</span>
-                    <span className="font-medium">
-                        {p.dataKey === 'revenue'
-                            ? `${Number(p.value).toLocaleString('vi-VN')}đ`
-                            : p.value
-                        }
-                    </span>
-                </div>
-            ))}
+            {payload.map((p) => {
+                let displayName = p.name;
+                if (p.dataKey === 'revenue') displayName = 'Doanh thu';
+                if (p.dataKey === 'grossProfit') displayName = 'Lợi nhuận gộp';
+                if (p.dataKey === 'orderCount') displayName = 'Số đơn';
+
+                return (
+                    <div key={p.dataKey} className="flex items-center gap-2 mt-1">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: p.color }} />
+                        <span className="text-gray-600">{displayName}:</span>
+                        <span className="font-medium">
+                            {p.dataKey === 'revenue' || p.dataKey === 'grossProfit'
+                                ? `${Number(p.value).toLocaleString('vi-VN')}đ`
+                                : p.value
+                            }
+                        </span>
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -51,8 +58,9 @@ const AdminRevenueChart = ({ chartData, loading }) => {
     // Format lại data: parse number, format date ngắn gọn
     const data = chartData.map((item) => ({
         ...item,
-        revenue:    parseFloat(item.revenue)    || 0,
-        orderCount: parseInt(item.orderCount)   || 0,
+        revenue:     parseFloat(item.revenue)     || 0,
+        grossProfit: parseFloat(item.grossProfit) || 0,
+        orderCount:  parseInt(item.orderCount)    || 0,
         // Hiển thị "dd/MM" thay vì full ISO date
         label: new Date(item.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
     }));
@@ -64,6 +72,10 @@ const AdminRevenueChart = ({ chartData, loading }) => {
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.3} />
                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#a855f7" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#a855f7" stopOpacity={0.02} />
                     </linearGradient>
                     <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.3} />
@@ -80,7 +92,7 @@ const AdminRevenueChart = ({ chartData, loading }) => {
                     tickLine={false}
                 />
 
-                {/* Trục trái: Doanh thu */}
+                {/* Trục trái: Doanh thu & Lợi nhuận */}
                 <YAxis
                     yAxisId="revenue"
                     orientation="left"
@@ -104,7 +116,11 @@ const AdminRevenueChart = ({ chartData, loading }) => {
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
                     wrapperStyle={{ fontSize: 13, paddingTop: 8 }}
-                    formatter={(value) => value === 'revenue' ? 'Doanh thu (đ)' : 'Số đơn'}
+                    formatter={(value) => {
+                        if (value === 'revenue') return 'Doanh thu (đ)';
+                        if (value === 'grossProfit') return 'Lợi nhuận gộp (đ)';
+                        return 'Số đơn';
+                    }}
                 />
 
                 <Area
@@ -115,6 +131,17 @@ const AdminRevenueChart = ({ chartData, loading }) => {
                     stroke="#3b82f6"
                     strokeWidth={2}
                     fill="url(#colorRevenue)"
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                />
+                <Area
+                    yAxisId="revenue"
+                    type="monotone"
+                    dataKey="grossProfit"
+                    name="grossProfit"
+                    stroke="#a855f7"
+                    strokeWidth={2}
+                    fill="url(#colorProfit)"
                     dot={false}
                     activeDot={{ r: 5 }}
                 />

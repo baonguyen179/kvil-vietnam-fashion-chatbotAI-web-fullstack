@@ -6,6 +6,22 @@ const aqp = require('api-query-params').default || require('api-query-params');
 const redisHelper = require('../helpers/redis.helper');
 const PRODUCT_CACHE_TTL = 3600;
 
+const getAvgCostPrice = async (variantId) => {
+    try {
+        const logs = await db.InventoryLog.findAll({
+            where: { variantId, type: 'IN', costPrice: { [Op.gt]: 0 } }
+        });
+
+        const totalQty = logs.reduce((s, l) => s + l.quantity, 0);
+        const totalCost = logs.reduce((s, l) => s + (l.quantity * parseFloat(l.costPrice)), 0);
+
+        return totalQty > 0 ? (totalCost / totalQty) : 0;
+    } catch (error) {
+        console.error(">>> Lỗi getAvgCostPrice:", error);
+        return 0;
+    }
+};
+
 const getAllProducts = async (queryParams) => {
     try {
         const cacheKey = `products:list:v2:${JSON.stringify(queryParams)}`;
@@ -225,6 +241,7 @@ const updateProduct = async (productId, updateData) => {
         // Xóa cache chi tiết và toàn bộ danh sách
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delCache(`product:detail:v2:${productId}`),
             redisHelper.delByPattern('products:list:*'),
             redisHelper.delByPattern('products:search:*'),
             redisHelper.delByPattern('collection:detail:*')
@@ -249,6 +266,7 @@ const deleteProduct = async (productId) => {
 
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delCache(`product:detail:v2:${productId}`),
             redisHelper.delByPattern('products:list:*'),
             redisHelper.delByPattern('collection:detail:*')
         ]);
@@ -261,7 +279,7 @@ const deleteProduct = async (productId) => {
 }
 const addProductVariant = async (productId, variantData) => {
     try {
-        const { colorId, sizeId, stock, sku, price } = variantData;
+        const { colorId, sizeId, stock, sku, price, costPrice } = variantData;
 
         if (!colorId || !sizeId || stock === undefined || !sku) {
             return {
@@ -302,16 +320,19 @@ const addProductVariant = async (productId, variantData) => {
         });
 
         // [NEW] Ghi log nhập hàng ban đầu
+        const initialCostPrice = costPrice || price || product.basePrice || 0;
         await db.InventoryLog.create({
             variantId: newVariant.id,
             userId: null, // Admin thực hiện
             type: 'IN',
             quantity: stock,
+            costPrice: initialCostPrice,
             note: `Nhập kho ban đầu cho biến thể mới của SP ID: ${productId}`
         });
 
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delCache(`product:detail:v2:${productId}`),
             redisHelper.delByPattern('products:list:*'),
             redisHelper.delByPattern('collection:detail:*')
         ]);
@@ -367,6 +388,7 @@ const updateProductVariant = async (variantId, updateData) => {
 
         await Promise.all([
             redisHelper.delCache(`product:detail:${variant.productId}`),
+            redisHelper.delCache(`product:detail:v2:${variant.productId}`),
             redisHelper.delByPattern('products:list:*'),
             redisHelper.delByPattern('collection:detail:*')
         ]);
@@ -407,6 +429,7 @@ const addMultipleProductImages = async (productId, imagesDataInput) => {
         const newImages = await db.ProductImage.bulkCreate(imagesData);
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delCache(`product:detail:v2:${productId}`),
             redisHelper.delByPattern('products:list:*'),
             redisHelper.delByPattern('collection:detail:*')
         ]);
@@ -445,6 +468,7 @@ const deleteProductImage = async (imageId) => {
 
         await Promise.all([
             redisHelper.delCache(`product:detail:${productId}`),
+            redisHelper.delCache(`product:detail:v2:${productId}`),
             redisHelper.delByPattern('products:list:*'),
             redisHelper.delByPattern('collection:detail:*')
         ]);
@@ -505,6 +529,15 @@ const getProductById = async (productId) => {
                 DT: ''
             };
         }
+
+        // Tính giá vốn trung bình cho từng biến thể và gán động
+        if (product.variants && product.variants.length > 0) {
+            for (const v of product.variants) {
+                const avgCost = await getAvgCostPrice(v.id);
+                v.setDataValue('avgCostPrice', avgCost);
+            }
+        }
+
         if (product) await redisHelper.setCache(cacheKey, product, PRODUCT_CACHE_TTL);
         return {
             EM: 'Lấy chi tiết sản phẩm thành công!',
@@ -1002,12 +1035,14 @@ const adjustInventory = async (variantId, delta, note, adminId) => {
         // Cập nhật tồn kho trong 1 transaction an toàn
         await variant.update({ stock: newStock }, { transaction: t });
 
+        const avgCost = await getAvgCostPrice(variant.id);
         // Ghi log ADJUST - không bao giờ xóa log cũ
         await db.InventoryLog.create({
             variantId: variant.id,
             userId: adminId,
             type: 'ADJUST',
             quantity: Math.abs(delta),
+            costPrice: avgCost,
             note: `[${delta > 0 ? 'TĂNG' : 'GIẢM'} ${Math.abs(delta)}] ${note}`
         }, { transaction: t });
 
@@ -1017,6 +1052,7 @@ const adjustInventory = async (variantId, delta, note, adminId) => {
         await Promise.all([
             redisHelper.delByPattern('product:inventory:logs:*'),
             redisHelper.delCache(`product:detail:${variant.product?.id || variant.productId}`),
+            redisHelper.delCache(`product:detail:v2:${variant.product?.id || variant.productId}`),
             redisHelper.delByPattern('products:list:*')
         ]);
 
@@ -1063,6 +1099,9 @@ const importInventory = async (fileBuffer, adminId) => {
             if (!item.quantity || isNaN(item.quantity) || item.quantity <= 0) {
                 errors.push(`Dòng ${item.rowNumber}: Số lượng nhập (${item.quantity}) không hợp lệ.`);
             }
+            if (item.costPrice === undefined || item.costPrice === null || isNaN(item.costPrice) || item.costPrice <= 0) {
+                errors.push(`Dòng ${item.rowNumber}: Giá vốn nhập (${item.costPrice}) không hợp lệ (Phải lớn hơn 0).`);
+            }
             if (!variantMap.has(item.sku)) {
                 errors.push(`Dòng ${item.rowNumber}: Mã SKU '${item.sku}' không tồn tại trong hệ thống.`);
             }
@@ -1096,6 +1135,7 @@ const importInventory = async (fileBuffer, adminId) => {
                 userId: adminId,
                 type: 'IN', // Option: Cộng dồn
                 quantity: item.quantity,
+                costPrice: item.costPrice,
                 note: `Nhập kho hàng loạt qua file Excel.`
             });
         }
@@ -1115,6 +1155,7 @@ const importInventory = async (fileBuffer, adminId) => {
         // Xóa cache chi tiết của từng sản phẩm bị ảnh hưởng
         updatedProductIds.forEach(pid => {
             cacheTasks.push(redisHelper.delCache(`product:detail:${pid}`));
+            cacheTasks.push(redisHelper.delCache(`product:detail:v2:${pid}`));
         });
         
         await Promise.all(cacheTasks);
@@ -1132,10 +1173,149 @@ const importInventory = async (fileBuffer, adminId) => {
     }
 };
 
+const importInventoryManual = async (items, adminId) => {
+    let t;
+    try {
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return { EM: 'Danh sách nhập hàng trống!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+        if (items.length > 1000) {
+            return { EM: 'Số lượng dòng tối đa là 1000 mỗi lần.', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        // 2. Lấy toàn bộ mã SKU từ DB để kiểm tra
+        const skusInInput = items.map(item => item.sku);
+        const variantsInDb = await db.ProductVariant.findAll({
+            where: { sku: { [Op.in]: skusInInput } },
+            attributes: ['id', 'sku', 'stock', 'productId']
+        });
+
+        const variantMap = new Map();
+        variantsInDb.forEach(v => variantMap.set(v.sku, v));
+
+        // 3. Validation
+        const errors = [];
+        items.forEach((item, index) => {
+            const line = index + 1;
+            if (!item.sku) {
+                errors.push(`Dòng ${line}: Mã SKU không được để trống.`);
+            }
+            if (!item.quantity || isNaN(item.quantity) || item.quantity <= 0) {
+                errors.push(`Dòng ${line}: Số lượng nhập (${item.quantity}) không hợp lệ (Phải lớn hơn 0).`);
+            }
+            if (item.costPrice === undefined || item.costPrice === null || isNaN(item.costPrice) || item.costPrice <= 0) {
+                errors.push(`Dòng ${line}: Giá vốn nhập (${item.costPrice}) không hợp lệ (Phải lớn hơn 0).`);
+            }
+            if (item.sku && !variantMap.has(item.sku)) {
+                errors.push(`Dòng ${line}: Mã SKU '${item.sku}' không tồn tại trong hệ thống.`);
+            }
+        });
+
+        if (errors.length > 0) {
+            return { 
+                EM: 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.', 
+                EC: errorCode.VALIDATION_ERROR, 
+                DT: { errors }
+            };
+        }
+
+        // 4. Mở Transaction: Update kho và Ghi Log
+        t = await db.sequelize.transaction();
+
+        const logTasks = [];
+        const updateTasks = [];
+        const updatedProductIds = new Set();
+
+        for (const item of items) {
+            const variant = variantMap.get(item.sku);
+            
+            updateTasks.push(variant.increment('stock', { by: item.quantity, transaction: t }));
+            updatedProductIds.add(variant.productId);
+
+            logTasks.push({
+                variantId: variant.id,
+                userId: adminId,
+                type: 'IN',
+                quantity: item.quantity,
+                costPrice: item.costPrice,
+                note: `Nhập kho thủ công hàng loạt.`
+            });
+        }
+
+        await Promise.all(updateTasks);
+        await db.InventoryLog.bulkCreate(logTasks, { transaction: t });
+
+        await t.commit();
+
+        // 5. Xóa Cache
+        const cacheTasks = [
+            redisHelper.delByPattern('product:inventory:logs:*'),
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('products:search:*'),
+            redisHelper.delByPattern('collection:detail:*')
+        ];
+        updatedProductIds.forEach(pid => {
+            cacheTasks.push(redisHelper.delCache(`product:detail:${pid}`));
+            cacheTasks.push(redisHelper.delCache(`product:detail:v2:${pid}`));
+        });
+        
+        await Promise.all(cacheTasks);
+
+        return {
+            EM: `Nhập kho thành công ${items.length} dòng!`,
+            EC: errorCode.SUCCESS,
+            DT: { successCount: items.length }
+        };
+
+    } catch (error) {
+        if (t) await t.rollback();
+        console.error(">>> Lỗi importInventoryManual:", error);
+        return { EM: error.message || 'Lỗi hệ thống khi nhập kho thủ công', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+
+const getAllVariantSkus = async () => {
+    try {
+        const variants = await db.ProductVariant.findAll({
+            attributes: ['id', 'sku', 'price'],
+            include: [
+                {
+                    model: db.Product,
+                    as: 'product',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: db.Color,
+                    as: 'color',
+                    attributes: ['name']
+                },
+                {
+                    model: db.Size,
+                    as: 'size',
+                    attributes: ['name']
+                }
+            ],
+            order: [[{ model: db.Product, as: 'product' }, 'name', 'ASC']]
+        });
+
+        const formatted = variants.map(v => ({
+            id: v.id,
+            sku: v.sku,
+            price: v.price,
+            displayName: `[${v.sku}] ${v.product?.name || 'N/A'} - Màu: ${v.color?.name || 'N/A'} - Size: ${v.size?.name || 'N/A'}`
+        }));
+
+        return { EM: 'Lấy danh sách SKU thành công', EC: errorCode.SUCCESS, DT: formatted };
+    } catch (error) {
+        console.error(">>> Lỗi getAllVariantSkus:", error);
+        return { EM: 'Lỗi server khi lấy danh sách SKU', EC: errorCode.OTHER_ERROR, DT: [] };
+    }
+};
+
 module.exports = {
     getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, searchProducts,
     addProductVariant, updateProductVariant,
     addMultipleProductImages, deleteProductImage, getBestDiscountProducts,
     getBestSellerProducts, checkProductAvailability, filterProductsAdvanced, getInventoryLogs,
-    importInventory, adjustInventory
+    importInventory, adjustInventory, importInventoryManual, getAllVariantSkus
 }

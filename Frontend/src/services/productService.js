@@ -48,6 +48,9 @@ const productService = {
     },
     getBestSellers: async (limit = 10) => {
         return await axios.get(`/api/v1/products/best-seller`, { params: { limit } });
+    },
+    getAllVariantSkus: async () => {
+        return await axios.get(`/api/v1/admin/variants/all-skus`);
     }
 }
 
