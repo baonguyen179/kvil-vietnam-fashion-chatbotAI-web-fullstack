@@ -5,6 +5,11 @@ const emailHelper = require('../helpers/email.helper');
 // Nếu dùng chung client gốc, lệnh brPop sẽ khóa toàn bộ các tác vụ cache khác của server.
 const workerClient = redisClient.duplicate();
 
+// Thêm listener bắt lỗi để tránh crash ứng dụng khi mất kết nối Redis đột ngột (ECONNRESET)
+workerClient.on('error', (err) => {
+    console.error('>>> Redis Worker Client Error:', err.message);
+});
+
 const startEmailWorker = async () => {
     try {
         await workerClient.connect();

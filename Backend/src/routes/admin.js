@@ -13,6 +13,8 @@ const roleController = require('../controllers/roleController');
 const colorController = require('../controllers/colorController');
 const sizeController = require('../controllers/sizeController');
 const reviewController = require('../controllers/reviewController');
+const reportController = require('../controllers/reportController');
+const { ROLES } = require('../config/roles');
 
 const JWTAction = require('../middleware/JWTAction');
 const uploadCloud = require('../config/cloudinary.config');
@@ -101,6 +103,19 @@ router.delete('/admin/coupons/:id', JWTAction.checkUserPermission([], ['coupons.
 
 // [ADMIN - DASHBOARD]-X
 router.get('/admin/dashboard/stats', JWTAction.checkUserPermission([], ['dashboard.read']), dashboardController.handleGetDashboardStats);
+
+// [ADMIN - REPORTS]
+router.get('/admin/reports/overview', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES, ROLES.ACCOUNTANT), reportController.handleGetOverview);
+router.get('/admin/reports/top-products', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES), reportController.handleGetTopProducts);
+router.get('/admin/reports/slow-products', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES), reportController.handleGetSlowProducts);
+router.get('/admin/reports/low-stock', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES), reportController.handleGetLowStock);
+router.get('/admin/reports/overstock', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES), reportController.handleGetOverstock);
+router.get('/admin/reports/sell-through', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES), reportController.handleGetSellThrough);
+router.get('/admin/reports/revenue-by-category', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES, ROLES.ACCOUNTANT), reportController.handleGetRevenueByCategory);
+router.get('/admin/reports/profit', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.ACCOUNTANT), reportController.handleGetProfit);
+router.get('/admin/reports/top-customers', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.ACCOUNTANT), reportController.handleGetTopCustomers);
+router.get('/admin/reports/coupon-performance', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES, ROLES.ACCOUNTANT), reportController.handleGetCouponPerformance);
+
 
 // [ADMIN - CHATBOT] QUẢN LÝ & GIÁM SÁT CHATBOT-X
 router.get('/admin/chatbot/stats', JWTAction.checkUserPermission([], ['chatbot.read']), chatbotController.handleGetAdminChatStats);

@@ -12,6 +12,7 @@ import {
     TransactionOutlined,
     SafetyCertificateOutlined,
     StarOutlined,
+    BarChartOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -32,6 +33,12 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
                 label: <Link to={"/admin"}>Dashboard</Link>,
                 icon: <AppstoreOutlined />,
                 permission: 'dashboard.read'
+            },
+            {
+                key: "reports",
+                label: <Link to={"/admin/reports"}>Báo cáo kinh doanh</Link>,
+                icon: <BarChartOutlined />,
+                allowedRoles: ['SUPER_ADMIN', 'SALES', 'ACCOUNTANT']
             },
             {
                 key: "users",
@@ -117,11 +124,17 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
         ];
 
         // Lọc menu theo quyền hạn hoặc vai trò Super Admin
-        const filtered = allItems.filter(item => {
-            if (isSuperAdmin) return true;
-            if (item.permission && permissions.includes(item.permission)) return true;
-            return false;
-        });
+        const filtered = allItems
+            .filter(item => {
+                if (isSuperAdmin) return true;
+                if (item.allowedRoles && roles.some(r => item.allowedRoles.includes(r))) return true;
+                if (item.permission && permissions.includes(item.permission)) return true;
+                return false;
+            })
+            .map(item => {
+                const { allowedRoles, permission, ...rest } = item;
+                return rest;
+            });
 
         return [
             {
@@ -130,7 +143,7 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
                 children: filtered
             }
         ];
-    }, [isSuperAdmin, permissions]);
+    }, [isSuperAdmin, permissions, roles]);
 
     return (
         <Sider
