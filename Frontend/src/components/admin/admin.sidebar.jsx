@@ -30,7 +30,7 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
         const allItems = [
             {
                 key: "dashboard",
-                label: <Link to={"/admin"}>Dashboard</Link>,
+                label: <Link to={"/admin"}>Tổng quan</Link>,
                 icon: <AppstoreOutlined />,
                 permission: 'dashboard.read'
             },
@@ -42,62 +42,62 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
             },
             {
                 key: "users",
-                label: <Link to={"/admin/users"}>Manage Users</Link>,
+                label: <Link to={"/admin/users"}>Quản lý người dùng</Link>,
                 icon: <TeamOutlined />,
                 permission: 'users.manage'
             },
             {
                 key: "roles",
-                label: <Link to={"/admin/roles"}>Roles & Permissions</Link>,
+                label: <Link to={"/admin/roles"}>Phân quyền</Link>,
                 icon: <SafetyCertificateOutlined />,
                 permission: 'roles.manage' 
             },
             {
                 key: 'catalog',
-                label: 'Catalog',
+                label: 'Quản lý sản phẩm',
                 icon: <ShoppingOutlined />,
                 permission: 'products.read',
                 children: [
                     {
                         key: 'categories',
-                        label: <Link to={"/admin/categories"}>Categories</Link>,
+                        label: <Link to={"/admin/categories"}>Danh mục</Link>,
                     },
                     {
                         key: 'products',
-                        label: <Link to={"/admin/products"}>Products</Link>,
+                        label: <Link to={"/admin/products"}>Sản phẩm</Link>,
                     },
                     {
                         key: 'collections',
-                        label: <Link to={"/admin/collections"}>Collections</Link>,
+                        label: <Link to={"/admin/collections"}>Bộ sưu tập</Link>,
                     },
                     {
                         key: 'attributes',
-                        label: <Link to={"/admin/attributes"}>Colors & Sizes</Link>,
+                        label: <Link to={"/admin/attributes"}>Thuộc tính</Link>,
                     },
                     {
                         key: 'inventory',
-                        label: <Link to={"/admin/inventory"}>Inventory Logs</Link>,
+                        label: <Link to={"/admin/inventory"}>Nhật ký kho</Link>,
                         icon: <HistoryOutlined />,
                     },
                 ],
             },
             {
                 key: 'orders_parent',
-                label: 'Order',
+                label: 'Đơn hàng',
                 icon: <ShoppingCartOutlined />,
                 permission: 'orders.read',
                 children: [
                     {
                         key: "orders",
-                        label: <Link to={"/admin/orders"}>All Orders</Link>,
+                        label: <Link to={"/admin/orders"}>Danh sách đơn</Link>,
                     },
                     {
                         key: "return_requests",
-                        label: <Link to={"/admin/orders/returns"}>Return Requests</Link>,
+                        label: <Link to={"/admin/orders/returns"}>Yêu cầu trả hàng</Link>,
                     },
                     {
                         key: "reviews",
-                        label: <Link to={"/admin/reviews"}>Product Reviews</Link>,
+                        label: <Link to={"/admin/reviews"}>Đánh giá</Link>,
                         icon: <StarOutlined />,
                     },
                 ],
@@ -105,13 +105,13 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
 
             {
                 key: "coupons",
-                label: <Link to={"/admin/coupons"}>Coupons</Link>,
+                label: <Link to={"/admin/coupons"}>Mã giảm giá</Link>,
                 icon: <TagOutlined />,
                 permission: 'coupons.manage'
             },
             {
                 key: "transactions",
-                label: <Link to={"/admin/transactions"}>Transactions</Link>,
+                label: <Link to={"/admin/transactions"}>Giao dịch</Link>,
                 icon: <TransactionOutlined />,
                 permission: 'payments.read'
             },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import {
     Table, Button, Space, Tag, message as antdMessage, Card, Typography,
     Tooltip, Badge, Select, Popconfirm, Flex, App
@@ -17,6 +18,8 @@ import {
     PAYMENT_STATUS_OPTIONS,
     PAYMENT_METHOD_OPTIONS,
     DELIVERY_METHOD_OPTIONS,
+    ALLOWED_NEXT_STATUS,
+    getAllowedNextStatus,
 } from '@/constants/orderConstants';
 
 const { Title, Text } = Typography;
@@ -31,6 +34,10 @@ const formatDate = (val) =>
 
 const OrderManagePage = () => {
     const { message, modal } = App.useApp();
+    const user = useSelector(state => state.auth.user);
+    const { roles = [] } = user || {};
+    const isSuperAdmin = roles.includes('SUPER_ADMIN');
+
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [updatingId, setUpdatingId] = useState(null); 
@@ -95,6 +102,17 @@ const OrderManagePage = () => {
     const handleUpdateStatus = async (orderId, newStatus) => {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
+
+        // Kiểm tra quyền chuyển đổi trạng thái (chỉ SUPER_ADMIN được đi lùi/đổi tự do, các role khác chỉ được đi tiếp 1 bước hoặc hủy đơn)
+        const isCurrent = newStatus === order.status;
+        const isAllowed = isSuperAdmin || 
+            isCurrent || 
+            getAllowedNextStatus(order.status, order.deliveryMethod).includes(newStatus);
+
+        if (!isAllowed) {
+            message.warning('Bạn không có quyền chuyển đổi ngược hoặc nhảy cóc trạng thái đơn hàng!');
+            return;
+        }
 
         // [Yêu cầu 3] Xử lý Hủy đơn với Confirm Dialog
         if (newStatus === 'cancelled') {
@@ -230,7 +248,7 @@ const OrderManagePage = () => {
                         status={record.paymentStatus ? 'success' : 'warning'}
                         text={
                             <span className={`text-xs ${record.paymentStatus ? 'text-green-600' : 'text-orange-500'}`}>
-                                {record.paymentStatus ? 'Đã TT' : 'Chưa TT'}
+                                {record.paymentStatus ? 'Đã thanh toán' : 'Chưa thanh toán'}
                             </span>
                         }
                     />
@@ -299,23 +317,30 @@ const OrderManagePage = () => {
                                         handleUpdateStatus(record.id, val);
                                     }}
                                     options={Object.entries(ORDER_STATUS_CONFIG)
-                                        .filter(([key]) => key !== record.status)
-                                        .map(([key, cfg]) => ({
-                                            value: key,
-                                            label: (
-                                                <Space size={4}>
-                                                    <Badge color={cfg.badgeColor} />
-                                                    {cfg.label}
-                                                </Space>
-                                            ),
-                                        }))
+                                        .map(([key, cfg]) => {
+                                            const isCurrent = key === record.status;
+                                            const isAllowed = isSuperAdmin || 
+                                                isCurrent || 
+                                                getAllowedNextStatus(record.status, record.deliveryMethod).includes(key);
+
+                                            return {
+                                                value: key,
+                                                label: (
+                                                    <Space size={4}>
+                                                        <Badge color={cfg.badgeColor} />
+                                                        {cfg.label}
+                                                    </Space>
+                                                ),
+                                                disabled: isCurrent || !isAllowed,
+                                            };
+                                        })
                                     }
                                 />
                             </Tooltip>
                         )}
 
                         {/* Toggle thanh toán nhanh */}
-                        <Tooltip title={record.paymentStatus ? 'Đánh dấu Chưa TT' : 'Đánh dấu Đã TT'}>
+                        <Tooltip title={record.paymentStatus ? 'Đánh dấu Chưa thanh toán' : 'Đánh dấu Đã thanh toán'}>
                             <Popconfirm
                                 title={record.paymentStatus ? 'Hoàn tác thanh toán?' : 'Xác nhận đã thanh toán?'}
                                 onConfirm={() => handleUpdatePayment(record.id, !record.paymentStatus)}
@@ -382,8 +407,8 @@ const OrderManagePage = () => {
                     options={PAYMENT_STATUS_OPTIONS}
                 />
                 <Select
-                    placeholder="Hình thức TT"
-                    className="w-[165px]"
+                    placeholder="Hình thức thanh toán"
+                    className="w-[195px]"
                     value={filters.paymentMethod}
                     onChange={(v) => handleFilterChange('paymentMethod', v)}
                     options={PAYMENT_METHOD_OPTIONS}
@@ -431,6 +456,7 @@ const OrderManagePage = () => {
                 onUpdatePayment={handleUpdatePayment}
                 updatingId={updatingId}
                 onSyncSuccess={handleSyncSuccess}
+                isSuperAdmin={isSuperAdmin}
             />
         </Card>
     );

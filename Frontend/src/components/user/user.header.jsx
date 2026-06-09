@@ -291,7 +291,7 @@ export const UserHeader = ({ onHeightChange }) => {
 
                     <div 
                         className={cn(
-                            "flex items-center gap-4 transition-all duration-500 overflow-hidden",
+                            "flex items-center gap-4 transition-all duration-500 overflow-hidden h-full",
                             scrolled ? "w-auto opacity-100 ml-8" : "w-0 opacity-0"
                         )}
                     >

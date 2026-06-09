@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Drawer, Descriptions, Tag, Badge, Divider, Space, Typography, Button, Popconfirm, Select, App, Alert } from 'antd';
 import { UserOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined, SyncOutlined } from '@ant-design/icons';
-import { ORDER_STATUS_CONFIG, PAYMENT_METHOD_LABELS, DELIVERY_METHOD_LABELS } from '@/constants/orderConstants';
+import { ORDER_STATUS_CONFIG, PAYMENT_METHOD_LABELS, DELIVERY_METHOD_LABELS, ALLOWED_NEXT_STATUS, getAllowedNextStatus } from '@/constants/orderConstants';
 import orderService from '@/services/orderService';
 
 const { Text, Title } = Typography;
@@ -12,7 +12,7 @@ const formatCurrency = (val) => {
     return isNaN(num) ? '—' : `${num.toLocaleString('vi-VN')}đ`;
 };
 
-const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdatePayment, updatingId, onSyncSuccess }) => {
+const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdatePayment, updatingId, onSyncSuccess, isSuperAdmin }) => {
     const { message } = App.useApp();
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null); // { type: 'success'|'error'|'info', text: string }
@@ -197,16 +197,23 @@ const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdate
                         loading={updatingId === order.id}
                         className="w-full"
                         onChange={(val) => onUpdateStatus(order.id, val)}
-                        options={Object.entries(ORDER_STATUS_CONFIG).map(([key, cfg]) => ({
-                            value: key,
-                            label: (
-                                <Space size={4}>
-                                    <Badge color={cfg.badgeColor} />
-                                    {cfg.label}
-                                </Space>
-                            ),
-                            disabled: key === order.status,
-                        }))}
+                        options={Object.entries(ORDER_STATUS_CONFIG).map(([key, cfg]) => {
+                            const isCurrent = key === order.status;
+                            const isAllowed = isSuperAdmin || 
+                                isCurrent || 
+                                getAllowedNextStatus(order.status, order.deliveryMethod).includes(key);
+
+                            return {
+                                value: key,
+                                label: (
+                                    <Space size={4}>
+                                        <Badge color={cfg.badgeColor} />
+                                        {cfg.label}
+                                    </Space>
+                                ),
+                                disabled: isCurrent || !isAllowed,
+                            };
+                        })}
                     />
                     {isCancelled && (
                         <div className="text-xs text-red-400 mt-1">Đơn đã hủy, không thể thay đổi</div>
@@ -230,7 +237,7 @@ const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdate
                             loading={updatingId === order.id}
                             className={!order.paymentStatus ? 'bg-green-600 hover:bg-green-700 border-green-600' : ''}
                         >
-                            {order.paymentStatus ? 'Đánh dấu Chưa TT' : 'Đánh dấu Đã TT'}
+                            {order.paymentStatus ? 'Đánh dấu Chưa thanh toán' : 'Đánh dấu Đã thanh toán'}
                         </Button>
                     </Popconfirm>
                 </div>

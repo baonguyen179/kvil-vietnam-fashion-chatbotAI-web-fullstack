@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Input, Button, Select, Space, Tag, message as antdMessage, Popconfirm, Card, Typography, Modal, Form, App } from 'antd';
 import { SearchOutlined, CrownOutlined, UserAddOutlined } from '@ant-design/icons';
 import userService from '@/services/userService';
+import adminRoleService from '@/services/adminRoleService';
 import { useSelector } from 'react-redux';
 
 const { Option } = Select;
@@ -18,6 +19,7 @@ const UserManagePage = () => {
     const { message } = App.useApp();
     const currentUser = useSelector(state => state.auth.user);
     const [users, setUsers] = useState([]);
+    const [rolesList, setRolesList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [pagination, setPagination] = useState({
         current: 1,
@@ -54,8 +56,20 @@ const UserManagePage = () => {
         }
     };
 
+    const fetchRolesList = async () => {
+        try {
+            const res = await adminRoleService.getAllRoles();
+            if (res && res.EC === 0) {
+                setRolesList(res.DT || []);
+            }
+        } catch (error) {
+            console.error(">>> Lỗi khi tải danh sách vai trò:", error);
+        }
+    };
+
     useEffect(() => {
         fetchUsers(pagination.current, pagination.pageSize, filters.search, filters.role);
+        fetchRolesList();
     }, []);
 
     const handleTableChange = (newPagination) => {
@@ -147,17 +161,28 @@ const UserManagePage = () => {
                     <Select
                         size="small"
                         value={record.role}
-                        className="w-36"
+                        className="w-40"
                         disabled={isSelf}
                         onChange={(newRole) => {
                             handleUpdateRole(record.id, newRole);
                         }}
                     >
-                        {Object.entries(ROLE_CONFIG).map(([key, config]) => (
-                            <Option key={key} value={key}>
-                                {config.label}
-                            </Option>
-                        ))}
+                        {rolesList.length > 0 ? (
+                            rolesList.map((r) => {
+                                const config = ROLE_CONFIG[r.name] || { color: 'blue', label: r.name };
+                                return (
+                                    <Option key={r.name} value={r.name}>
+                                        {config.label}
+                                    </Option>
+                                );
+                            })
+                        ) : (
+                            Object.entries(ROLE_CONFIG).map(([key, config]) => (
+                                <Option key={key} value={key}>
+                                    {config.label}
+                                </Option>
+                            ))
+                        )}
                     </Select>
                 );
             },
@@ -188,9 +213,18 @@ const UserManagePage = () => {
                         className="w-[180px]"
                         onChange={handleRoleFilter}
                     >
-                        {Object.entries(ROLE_CONFIG).map(([key, config]) => (
-                            <Option key={key} value={key}>{config.label}</Option>
-                        ))}
+                        {rolesList.length > 0 ? (
+                            rolesList.map((r) => {
+                                const config = ROLE_CONFIG[r.name] || { color: 'blue', label: r.name };
+                                return (
+                                    <Option key={r.name} value={r.name}>{config.label}</Option>
+                                );
+                            })
+                        ) : (
+                            Object.entries(ROLE_CONFIG).map(([key, config]) => (
+                                <Option key={key} value={key}>{config.label}</Option>
+                            ))
+                        )}
                     </Select>
                     <Button 
                         type="primary" 

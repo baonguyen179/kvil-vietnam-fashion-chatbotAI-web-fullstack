@@ -17,7 +17,8 @@ stateDiagram-v2
     pending --> cancelled : Hủy đơn / Quá hạn Hold Stock (UNHOLD kho)
     pending --> confirmed : Sales xác nhận (COD) / Hệ thống nhận IPN (VNPay)
 
-    confirmed --> shipping : Bàn giao ĐVVC (Quy trình đóng gói & xuất kho - OUT)
+    confirmed --> shipping : Giao tận nơi (home_delivery) - Xuất kho OUT
+    confirmed --> delivered : Nhận tại cửa hàng (store_pickup) - Xuất kho OUT
 
     shipping --> delivered : Giao hàng thành công (Happy Path)
     shipping --> cancelled : RTO - Giao thất bại & hàng quay về (UNHOLD kho)
@@ -68,9 +69,14 @@ stateDiagram-v2
    - **Đơn VNPay**: Xác nhận tự động (`confirmed`) ngay sau khi hệ thống nhận được tín hiệu IPN (Instant Payment Notification) từ cổng thanh toán VNPay thông báo giao dịch thành công.
    - **Đơn COD**: Nhân viên Sales gọi điện thoại xác nhận đơn hàng với khách hàng. Sau khi xác nhận thành công, Sales cập nhật trạng thái đơn thành `confirmed` trên trang quản trị.
 2. **Xuất kho vật lý (Outbound)**:
-   - Định kỳ hàng ngày, nhân viên Sales xuất danh sách các đơn hàng ở trạng thái `confirmed` sang tệp Excel để nhập vào cổng thông tin của Đơn vị vận chuyển (Giao Hàng Tiết Kiệm - GHTK).
-   - Hệ thống vận hành theo quy trình **thủ công qua file Excel** để tối ưu hóa chi phí vận hành (không tốn chi phí tích hợp API trực tiếp của ĐVVC).
-   - Thủ kho dựa trên danh sách đơn để tiến hành nhặt hàng, đóng gói và dán mã vận đơn của GHTK lên kiện hàng. Hệ thống chuyển trạng thái đơn sang `shipping` và ghi log xuất kho `OUT` kèm thông tin đơn hàng tương ứng.
+   - **Đối với Giao tận nơi (home_delivery)**:
+     - Định kỳ hàng ngày, nhân viên Sales xuất danh sách các đơn hàng ở trạng thái `confirmed` sang tệp Excel để nhập vào cổng thông tin của Đơn vị vận chuyển (Giao Hàng Tiết Kiệm - GHTK).
+     - Hệ thống vận hành theo quy trình **thủ công qua file Excel** để tối ưu hóa chi phí vận hành (không tốn chi phí tích hợp API trực tiếp của ĐVVC).
+     - Thủ kho dựa trên danh sách đơn để tiến hành nhặt hàng, đóng gói và dán mã vận đơn của GHTK lên kiện hàng. Hệ thống chuyển trạng thái đơn sang `shipping` và ghi log xuất kho `OUT` kèm thông tin đơn hàng tương ứng (Bàn giao cho ĐVVC).
+   - **Đối với Nhận tại cửa hàng (store_pickup)**:
+     - Đơn hàng sau khi được xác nhận (`confirmed`) sẽ được lưu giữ tại cửa hàng (không xuất kho `OUT` và không đi qua trạng thái `shipping`).
+     - Khi khách hàng đến cửa hàng nhận sản phẩm, nhân viên thực hiện cập nhật trạng thái trực tiếp từ `confirmed` sang `delivered` (Đã giao) trên trang quản trị. Tại thời điểm này, hệ thống mới chính thức ghi log xuất kho `OUT` trực tiếp với ghi chú: `Xuất kho trực tiếp (Khách nhận tại cửa hàng) cho đơn hàng #...`.
+
 
 ---
 

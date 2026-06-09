@@ -38,7 +38,7 @@ export const PAYMENT_STATUS_OPTIONS = [
 ];
 
 export const PAYMENT_METHOD_OPTIONS = [
-    { value: '',              label: 'Tất cả hình thức TT' },
+    { value: '',              label: 'Tất cả hình thức thanh toán' },
     { value: 'COD',           label: 'Tiền mặt (COD)' },
     { value: 'VNPAY', label: 'VNPay' },
 ];
@@ -48,3 +48,32 @@ export const DELIVERY_METHOD_OPTIONS = [
     { value: 'home_delivery',  label: 'Giao tận nơi' },
     { value: 'store_pickup',   label: 'Nhận tại cửa hàng' },
 ];
+
+export const ALLOWED_NEXT_STATUS = {
+    pending: ['confirmed', 'cancelled'],
+    confirmed: ['shipping', 'cancelled'],
+    shipping: ['delivered', 'cancelled'],
+    delivered: [],
+    cancelled: []
+};
+
+/**
+ * Lấy danh sách các trạng thái tiếp theo được phép dựa trên trạng thái hiện tại và hình thức giao hàng.
+ * Đối với 'store_pickup' (Nhận tại cửa hàng): từ 'confirmed' (Đã xác nhận) sẽ đi thẳng tới 'delivered' (Đã giao), bỏ qua 'shipping' (Đang giao).
+ */
+export const getAllowedNextStatus = (currentStatus, deliveryMethod) => {
+    if (deliveryMethod === 'store_pickup') {
+        const storePickupMap = {
+            pending: ['confirmed', 'cancelled'],
+            confirmed: ['delivered', 'cancelled'],
+            shipping: ['delivered', 'cancelled'],
+            delivered: [],
+            cancelled: []
+        };
+        return storePickupMap[currentStatus] || [];
+    }
+    
+    // Mặc định cho home_delivery và các hình thức khác
+    return ALLOWED_NEXT_STATUS[currentStatus] || [];
+};
+

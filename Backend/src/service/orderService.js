@@ -712,6 +712,7 @@ const getAdminOrders = async (queryParams) => {
 const updateOrderStatus = async (orderId, newStatus) => {
     const t = await db.sequelize.transaction();
     let currentStep = 'Khởi tạo updateOrderStatus';
+    let needLogOut = false;
 
     try {
         currentStep = 'Tìm đơn hàng và khóa dòng dữ liệu';
@@ -754,12 +755,13 @@ const updateOrderStatus = async (orderId, newStatus) => {
 
                     let logType = 'RETURN';
                     let logNote = `Hoàn kho do Admin/Hệ thống hủy đơn hàng #${orderId}`;
-                    if (order.status === 'pending') {
+                    // Nếu đơn chưa từng xuất kho thực tế (vẫn ở pending hoặc confirmed) thì chỉ ghi nhận UNHOLD (Hủy tạm giữ)
+                    if (order.status === 'pending' || order.status === 'confirmed') {
                         logType = 'UNHOLD';
-                        logNote = `Hủy tạm giữ do Admin/Hệ thống hủy đơn hàng #${orderId}`;
+                        logNote = `Hủy tạm giữ (chưa xuất kho) do Admin/Hệ thống hủy đơn hàng #${orderId}`;
                     }
 
-                    // [IMPROVED LOG] Ghi log hoàn trả kho do Admin hủy đơn kèm mã đơn
+                    // Ghi log hoàn trả kho do Admin hủy đơn kèm mã đơn
                     await db.InventoryLog.create({
                         variantId: item.variantId,
                         userId: null, 
@@ -781,8 +783,17 @@ const updateOrderStatus = async (orderId, newStatus) => {
         } else {
             currentStep = 'Cập nhật trạng thái luân chuyển bình thường';
             
-            // Nếu đơn hàng chuyển từ pending sang trạng thái khác (trừ cancelled) -> Ghi log OUT
-            if (order.status === 'pending' && newStatus !== 'pending') {
+            // [LOG OUT] Ghi log xuất kho vật lý thực tế:
+            // - Giao tận nơi (home_delivery): xuất kho khi bắt đầu vận chuyển (shipping)
+            // - Nhận tại cửa hàng (store_pickup): xuất kho khi khách nhận hàng (delivered)
+            // - Phòng hờ giao tận nơi bị nhảy thẳng từ confirmed -> delivered: vẫn ghi log OUT
+            if (newStatus === 'shipping' && order.status !== 'shipping' && order.status !== 'delivered') {
+                needLogOut = true;
+            } else if (newStatus === 'delivered' && order.status !== 'shipping' && order.status !== 'delivered') {
+                needLogOut = true;
+            }
+
+            if (needLogOut) {
                 const orderItems = await db.OrderItem.findAll({ where: { orderId: orderId }, transaction: t });
                 for (let item of orderItems) {
                     await db.InventoryLog.create({
@@ -790,7 +801,9 @@ const updateOrderStatus = async (orderId, newStatus) => {
                         userId: null,
                         type: 'OUT',
                         quantity: item.quantity,
-                        note: `Xuất kho chính thức cho đơn hàng #${orderId} (Đã xác nhận/vận chuyển)`
+                        note: order.deliveryMethod === 'store_pickup'
+                            ? `Xuất kho trực tiếp (Khách nhận tại cửa hàng) cho đơn hàng #${orderId}`
+                            : `Xuất kho bàn giao ĐVVC cho đơn hàng #${orderId}`
                     }, { transaction: t });
                 }
             }
@@ -815,9 +828,9 @@ const updateOrderStatus = async (orderId, newStatus) => {
             cacheClearTasks.push(redisHelper.delByPattern('product:detail:*'));
             cacheClearTasks.push(redisHelper.delByPattern('products:list:*'));
             cacheClearTasks.push(redisHelper.delByPattern('product:bestsellers:*'));
-            cacheClearTasks.push(redisHelper.delByPattern('product:inventory:logs:*')); // Mới: Cập nhật lịch sử kho
-        } else if (order.status === 'pending' && newStatus !== 'pending') {
-            // Cập nhật log kho khi chuyển trạng thái từ pending
+        }
+        
+        if (newStatus === 'cancelled' || needLogOut) {
             cacheClearTasks.push(redisHelper.delByPattern('product:inventory:logs:*'));
         }
 
