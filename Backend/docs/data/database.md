@@ -154,7 +154,7 @@ paymentMethod string // 'COD', 'VNPAY'
 paymentStatus boolean // true: đã thanh toán, false: chưa
 shippingAddress text
 deliveryMethod text //store_pickup,home_delivery
-status string // 'pending', 'confirmed', 'shipping', 'delivered', 'cancelled', 'returning' (đang yêu cầu trả), 'returned' (đã hoàn trả)
+status string // 'pending', 'confirmed', 'shipping', 'delivered', 'cancelled', 'returning' (đang yêu cầu trả), 'return_approved' (chờ nhận hàng hoàn), 'returned' (đã hoàn trả)
 shippingFee decimal
 createdAt datetime
 updatedAt datetime // Đã bổ sung
@@ -203,7 +203,7 @@ InventoryLogs [icon: archive, color: green] {
 id int pk
 variantId int [ref: > ProductVariants.id]
 userId int [ref: > Users.id] // Người thực hiện (Nhân viên Kinh doanh)
-type string // 'IN' (Nhập mới), 'OUT' (Xuất thực), 'RETURN' (Hoàn trả), 'HOLD' (Tạm giữ), 'UNHOLD' (Hủy giữ), 'ADJUST' (Điều chỉnh kho)
+type string // 'IN' (Nhập mới), 'OUT' (Xuất thực), 'RETURN' (Hoàn trả), 'RETURN_DEFECTIVE' (Nhập kho phế phẩm), 'HOLD' (Tạm giữ), 'UNHOLD' (Hủy giữ), 'ADJUST' (Điều chỉnh kho)
 quantity int // Số lượng thay đổi
 costPrice DECIMAL(15,2),
 note text // Ghi chú (VD: "Nhập lô hàng Hè", "Khách trả hàng đơn #123")
@@ -212,10 +212,10 @@ createdAt datetime // Thời gian thực hiện
 PaymentTransactions [icon: credit-card, color: yellow] {
 id int pk
 orderId int [ref: > Orders.id]
-provider string // 'VNPAY'
+provider string // 'VNPAY', 'COD_REFUND'
 transactionId string // Mã giao dịch trả về từ ngân hàng (Ví dụ: vnp_TransactionNo)
 amount decimal // Số tiền thực tế đã chuyển
-status string // 'SUCCESS', 'FAILED', 'PENDING'
+status string // 'SUCCESS', 'FAILED', 'PENDING', 'REFUNDED', 'REFUND_FAILED'
 createdAt datetime
 }
 ReturnRequests [icon: repeat, color: red] {

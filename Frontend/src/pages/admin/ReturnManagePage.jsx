@@ -12,7 +12,8 @@ import {
     Descriptions, 
     Divider,
     Select,
-    Tooltip
+    Tooltip,
+    Radio
 } from 'antd';
 import { 
     EyeOutlined, 
@@ -41,6 +42,63 @@ const ReturnManagePage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+
+    // Confirm Received Modal State (Bước 2: Thủ kho xác nhận hàng về)
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [confirmingRequestId, setConfirmingRequestId] = useState(null);
+    const [stockCondition, setStockCondition] = useState('good');
+
+    const handleOpenConfirmReceived = (id) => {
+        setConfirmingRequestId(id);
+        setStockCondition('good');
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleConfirmReceived = async () => {
+        setActionLoading(true);
+        try {
+            const res = await orderService.confirmReturnReceived(confirmingRequestId, { stockCondition });
+            if (res && res.EC === 0) {
+                notification.success({
+                    message: 'Thành công',
+                    description: res.EM
+                });
+                setIsConfirmModalOpen(false);
+                setIsModalOpen(false);
+                fetchRequests();
+            } else {
+                notification.error({
+                    message: 'Thất bại',
+                    description: res.EM
+                });
+            }
+        } catch (error) {
+            notification.error({
+                message: 'Lỗi',
+                description: 'Lỗi hệ thống khi xác nhận nhận hàng hoàn'
+            });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // Helper functions cho hoàn tiền COD
+    const parseBankInfo = (reason) => {
+        if (!reason) return null;
+        const match = reason.match(/^\[Thông tin hoàn tiền:\s*([^\]]+)\]/);
+        if (!match) return null;
+        const parts = match[1].split(' - ');
+        return {
+            bankName: parts[0] || 'N/A',
+            accountNumber: parts[1] || 'N/A',
+            accountHolder: parts[2] || 'N/A'
+        };
+    };
+
+    const displayReasonOnly = (reason) => {
+        if (!reason) return '';
+        return reason.replace(/^\[Thông tin hoàn tiền:\s*[^\]]+\]\s*-\s*Lý do:\s*/, '');
+    };
 
     const fetchRequests = useCallback(async () => {
         setLoading(true);
@@ -154,9 +212,9 @@ const ReturnManagePage = () => {
             render: (status) => {
                 let color = 'gold';
                 let label = 'Chờ duyệt';
-                if (status === 'APPROVED') { color = 'green'; label = 'Đã duyệt'; }
+                if (status === 'APPROVED') { color = 'orange'; label = 'Chờ nhận hàng'; }
                 if (status === 'REJECTED') { color = 'red'; label = 'Từ chối'; }
-                if (status === 'REFUNDED') { color = 'blue'; label = 'Đã hoàn tiền'; }
+                if (status === 'REFUNDED') { color = 'green'; label = 'Đã nhận & hoàn tiền'; }
                 return <Tag color={color}>{label.toUpperCase()}</Tag>;
             },
         },
@@ -183,7 +241,7 @@ const ReturnManagePage = () => {
                     </Tooltip>
                     {record.status === 'PENDING' && (
                         <>
-                            <Tooltip title="Chấp nhận">
+                            <Tooltip title="Duyệt trả hàng">
                                 <Button 
                                     style={{ color: '#52c41a', borderColor: '#52c41a' }}
                                     icon={<CheckCircleOutlined />} 
@@ -198,6 +256,15 @@ const ReturnManagePage = () => {
                                 />
                             </Tooltip>
                         </>
+                    )}
+                    {record.status === 'APPROVED' && (
+                        <Tooltip title="Xác nhận nhận hàng hoàn">
+                            <Button 
+                                style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                                icon={<CheckCircleOutlined />} 
+                                onClick={() => handleOpenConfirmReceived(record.id)}
+                            />
+                        </Tooltip>
                     )}
                 </Space>
             ),
@@ -270,7 +337,16 @@ const ReturnManagePage = () => {
                             type="primary" 
                             onClick={() => handleUpdateStatus(selectedItem.id, 'APPROVED')}
                         >
-                            Chấp nhận & Hoàn kho
+                            Duyệt trả hàng
+                        </Button>
+                    ),
+                    selectedItem?.status === 'APPROVED' && (
+                        <Button 
+                            key="confirm-received" 
+                            type="primary" 
+                            onClick={() => handleOpenConfirmReceived(selectedItem.id)}
+                        >
+                            Xác nhận nhận hàng hoàn
                         </Button>
                     )
                 ]}
@@ -299,9 +375,31 @@ const ReturnManagePage = () => {
                             </Descriptions.Item>
                         </Descriptions>
 
+                        {/* [COD REFUND INFO] Phân tách và hiển thị thông tin ngân hàng của đơn COD */}
+                        {(() => {
+                            const bankInfo = parseBankInfo(selectedItem.reason);
+                            if (!bankInfo) return null;
+                            return (
+                                <>
+                                    <Divider orientation="left">Thông Tin Hoàn Tiền COD</Divider>
+                                    <Descriptions bordered column={2} size="small">
+                                        <Descriptions.Item label="Ngân Hàng">
+                                            <Text strong>{bankInfo.bankName}</Text>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Số Tài Khoản">
+                                            <Text copyable strong>{bankInfo.accountNumber}</Text>
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Chủ Tài Khoản" span={2}>
+                                            <Text strong>{bankInfo.accountHolder}</Text>
+                                        </Descriptions.Item>
+                                    </Descriptions>
+                                </>
+                            );
+                        })()}
+
                         <Divider orientation="left">Lý Do Trả Hàng</Divider>
                         <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px', marginBottom: '16px' }}>
-                            <Text italic>"{selectedItem.reason}"</Text>
+                            <Text italic>"{displayReasonOnly(selectedItem.reason)}"</Text>
                         </div>
 
                         <Divider orientation="left">Hình Ảnh Minh Chứng</Divider>
@@ -324,6 +422,44 @@ const ReturnManagePage = () => {
                         </Space>
                     </div>
                 )}
+            </Modal>
+
+            {/* Warehouse Confirmation Modal (Bước 2: Thủ kho chọn tình trạng hàng) */}
+            <Modal
+                title={<Title level={4}>Xác Nhận Đã Nhận Hàng Hoàn</Title>}
+                open={isConfirmModalOpen}
+                onOk={handleConfirmReceived}
+                onCancel={() => setIsConfirmModalOpen(false)}
+                okText="Xác nhận & Nhập kho"
+                cancelText="Hủy bỏ"
+                confirmLoading={actionLoading}
+            >
+                <div style={{ padding: '12px 0' }}>
+                    <Text>Vui lòng kiểm tra thực tế hàng hoàn vật lý và chọn tình trạng hàng để nhập kho:</Text>
+                    <div style={{ marginTop: 20 }}>
+                        <Radio.Group 
+                            onChange={(e) => setStockCondition(e.target.value)} 
+                            value={stockCondition}
+                            optionType="button"
+                            buttonStyle="solid"
+                        >
+                            <Radio.Button value="good" style={{ width: 180, textAlign: 'center' }}>
+                                Nguyên vẹn (Cộng kho)
+                            </Radio.Button>
+                            <Radio.Button value="defective" style={{ width: 180, textAlign: 'center' }} danger>
+                                Lỗi/Hỏng (Phế phẩm)
+                            </Radio.Button>
+                        </Radio.Group>
+                    </div>
+                    <div style={{ marginTop: 16, padding: '10px', background: '#fafafa', borderRadius: '4px' }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            {stockCondition === 'good' 
+                                ? '* Hệ thống sẽ cộng lại số lượng sản phẩm vào kho bán lẻ trực tuyến.'
+                                : '* Hệ thống sẽ ghi nhận hàng lỗi vào lịch sử kho (RETURN_DEFECTIVE) và KHÔNG cộng lại vào số lượng bán trực tuyến.'
+                            }
+                        </Text>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

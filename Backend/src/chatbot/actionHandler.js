@@ -6,6 +6,7 @@ const reviewService = require('../serviceForChatBot/reviewService');
 const executeAiAction = async (functionName, functionArgs = {}, userId = null) => {
     let finalReply = "";
     let finalProducts = [];
+    let rawResult = null;
 
     try {
         switch (functionName) {
@@ -53,6 +54,16 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                 } else {
                     finalReply = "Dạ, mình vẫn chưa tìm thấy đơn hàng nào khớp với thông tin bạn cung cấp. Bạn kiểm tra lại mã đơn hoặc số điện thoại giúp mình nhé!";
                 }
+                rawResult = {
+                    found: ordersInfo.length > 0,
+                    orders: ordersInfo.map(o => ({
+                        orderId: o.orderId,
+                        status: o.status,
+                        date: o.date,
+                        total: o.total,
+                        items: o.items ? o.items.map(i => ({ name: i.name, color: i.color, size: i.size, quantity: i.quantity })) : []
+                    }))
+                };
                 break;
             }
 
@@ -76,6 +87,16 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                 } else {
                     finalReply = `Dạ tiếc quá, hiện tại shop chưa có mẫu nào khớp với '${keyword}' rồi ạ. Bạn thử tìm từ khóa khác nhé!`;
                 }
+                rawResult = {
+                    keyword,
+                    count: finalProducts.length,
+                    products: finalProducts.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.basePrice,
+                        discountPercent: p.discountPercent
+                    }))
+                };
                 break;
             }
 
@@ -94,6 +115,16 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                         ? (functionArgs.replyMessage || "Dạ, gửi bạn danh sách sản phẩm bên mình nhé!")
                         : "Dạ, hiện tại chưa có sản phẩm nào ạ.";
 
+                rawResult = {
+                    sort,
+                    count: finalProducts.length,
+                    products: finalProducts.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.basePrice,
+                        discountPercent: p.discountPercent
+                    }))
+                };
                 break;
             }
 
@@ -109,6 +140,14 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                 } else {
                     finalReply = "Dạ hiện chưa có bộ sưu tập nào ạ.";
                 }
+                rawResult = {
+                    count: collections.length,
+                    collections: collections.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        description: c.description
+                    }))
+                };
                 break;
             }
 
@@ -127,6 +166,16 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                         ? (functionArgs.replyMessage || "Dạ, đây là các sản phẩm đang giảm giá mạnh ạ!")
                         : "Dạ hiện chưa có sản phẩm ưu đãi phù hợp ạ.";
 
+                rawResult = {
+                    limit,
+                    count: finalProducts.length,
+                    products: finalProducts.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.basePrice,
+                        discountPercent: p.discountPercent
+                    }))
+                };
                 break;
             }
 
@@ -145,6 +194,17 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                 } else {
                     finalReply = "Dạ hiện tại các mẫu này đang cháy hàng mất rồi, bạn xem thử các bộ sưu tập mới nhé!";
                 }
+                rawResult = {
+                    keyword,
+                    limit,
+                    count: finalProducts.length,
+                    products: finalProducts.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.basePrice,
+                        discountPercent: p.discountPercent
+                    }))
+                };
                 break;
             }
 
@@ -163,6 +223,19 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                     ? `Dạ còn hàng${size ? ` size ${size}` : ""}${color ? ` màu ${color}` : ""} ạ!`
                     : `Dạ hiện tại sản phẩm này đang hết hàng rồi ạ.`;
 
+                rawResult = {
+                    keyword,
+                    size,
+                    color,
+                    available: isAvailable,
+                    variants: (stockRes.DT?.variants || []).map(v => ({
+                        sku: v.sku,
+                        stock: v.stock,
+                        price: v.price,
+                        color: v.color?.name,
+                        size: v.size?.name
+                    }))
+                };
                 break;
             }
 
@@ -179,6 +252,15 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                     const res = await productService.searchProducts(keyword, 1, 5, "price_asc");
                     finalProducts = res.DT?.products || [];
                     finalReply = `Dạ, đây là những mẫu ${keyword} có giá cực kỳ tốt (rẻ nhất) tại shop mình ạ!`;
+                    rawResult = {
+                        keyword,
+                        count: finalProducts.length,
+                        products: finalProducts.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            price: p.basePrice
+                        }))
+                    };
                     break;
                 }
                 const res = await productService.filterProductsAdvanced(
@@ -211,6 +293,17 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                     finalReply = "Dạ hiện tại shop chưa có sản phẩm nào phù hợp với khoảng giá này rồi ạ. Bạn có muốn xem mẫu khác không?";
                 }
 
+                rawResult = {
+                    keyword,
+                    minPrice,
+                    maxPrice,
+                    count: finalProducts.length,
+                    products: finalProducts.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.basePrice
+                    }))
+                };
                 break;
             }
 
@@ -232,6 +325,18 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                         ? `Dạ, hiện tại chưa có mẫu '${keyword}' nào đạt đủ ${minRating} sao với nhiều lượt đánh giá ạ. Bạn thử xem các sản phẩm khác nhé!`
                         : `Dạ, hệ thống chưa có sản phẩm nào đạt đủ ${minRating} sao với nhiều lượt đánh giá ạ.`;
                 }
+                rawResult = {
+                    keyword,
+                    minRating,
+                    limit,
+                    count: finalProducts.length,
+                    products: finalProducts.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        price: p.basePrice,
+                        ratingAvg: p.ratingAvg
+                    }))
+                };
                 break;
             }
 
@@ -241,11 +346,23 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
 
                 if (!productName) {
                     finalReply = "Dạ, bạn muốn xem đánh giá của sản phẩm nào ạ? Cho mình biết tên sản phẩm với nhé!";
+                    rawResult = { error: "Missing productName" };
                     break;
                 }
 
                 const summaryRes = await reviewService.getProductReviewSummary(productName, sampleLimit);
                 const { product, reviewSummary } = summaryRes.DT || {};
+
+                rawResult = {
+                    productName,
+                    found: !!product,
+                    product: product ? { id: product.id, name: product.name } : null,
+                    reviewSummary: reviewSummary ? {
+                        ratingAvg: reviewSummary.ratingAvg,
+                        reviewCount: reviewSummary.reviewCount,
+                        sampleComments: reviewSummary.sampleComments || []
+                    } : null
+                };
 
                 if (!product) {
                     finalReply = `Dạ, mình không tìm thấy sản phẩm nào có tên '${productName}' trong hệ thống ạ. Bạn thử tìm kiếm lại với từ khóa khác nhé!`;
@@ -278,15 +395,17 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
 
             default:
                 finalReply = "Dạ, hệ thống chưa hỗ trợ yêu cầu này ạ.";
+                rawResult = { error: "Unsupported tool name" };
                 break;
         }
 
     } catch (error) {
         console.error(">>> Lỗi executeAiAction:", error);
         finalReply = "Dạ hệ thống đang gặp lỗi, bạn thử lại giúp mình nhé!";
+        rawResult = { error: error.message || "Internal execution error" };
     }
 
-    return { finalReply, finalProducts };
+    return { finalReply, finalProducts, rawResult };
 };
 
 module.exports = {

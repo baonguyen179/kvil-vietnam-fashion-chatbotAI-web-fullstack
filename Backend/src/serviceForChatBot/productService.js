@@ -466,7 +466,9 @@ const getProductById = async (productId) => {
 }
 const searchProducts = async (keyword, page = 1, limit = 10) => {
     try {
-        const safeKeyword = (typeof keyword === 'string' ? keyword : '').trim();
+        let safeKeyword = (typeof keyword === 'string' ? keyword : '').trim();
+        // Loại bỏ tiền tố phổ biến để tăng độ chính xác tìm kiếm
+        safeKeyword = safeKeyword.replace(/^(vải|chất liệu|màu sắc|màu)\s+/i, '').trim();
         /*const cacheKey = `products:search:${safeKeyword}:${page}:${limit}`;
         const cached = await redisHelper.getCache(cacheKey);
         if (cached) return { EM: `Tìm thấy (Cache) '${safeKeyword}'`, EC: errorCode.SUCCESS, DT: cached };
@@ -481,7 +483,9 @@ const searchProducts = async (keyword, page = 1, limit = 10) => {
             where: {
                 [Op.or]: [
                     { name: { [Op.substring]: safeKeyword } }, // Tìm theo tên sp
-                    { '$collections.name$': { [Op.substring]: safeKeyword } } // Tìm theo tên BST
+                    { '$collections.name$': { [Op.substring]: safeKeyword } }, // Tìm theo tên BST
+                    { description: { [Op.substring]: safeKeyword } }, // Tìm theo mô tả (chứa thông tin chất liệu vải)
+                    { '$variants.color.name$': { [Op.substring]: safeKeyword } } // Tìm theo màu sắc biến thể
                 ]
             },
             attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],

@@ -413,6 +413,24 @@ const handleUpdateReturnRequestStatus = async (req, res) => {
     }
 };
 
+const handleConfirmReturnReceived = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { stockCondition } = req.body; // 'good' | 'defective'
+        const warehouseUserId = req.user.id;
+
+        if (!['good', 'defective'].includes(stockCondition)) {
+            return res.status(200).json({ EM: 'Tình trạng hàng không hợp lệ!', EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+
+        const data = await orderService.confirmReturnReceived(id, warehouseUserId, stockCondition);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error(">>> Lỗi handleConfirmReturnReceived:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
 module.exports = {
     handleCreateOrder, handleCancelOrder,
     handleGetUserOrders, handleGetUserOrderDetail,
@@ -421,6 +439,7 @@ module.exports = {
     handleRequestReturnOrder,
     handleGetVNPayUrl, handleVNPayIPN, handleVNPayReturn,
     handleGetPaymentTransactions, handleGetReturnRequests, handleUpdateReturnRequestStatus,
+    handleConfirmReturnReceived,
     handleSyncVNPayStatus, handleGetGuestVNPayUrl, handleGetGuestOrderDetail,
     handleRecoverGuestOrderIds
 }

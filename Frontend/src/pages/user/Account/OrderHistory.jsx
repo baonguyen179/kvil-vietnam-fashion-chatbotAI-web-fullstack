@@ -35,7 +35,7 @@ const OrderHistory = () => {
     const [orderIdToCancel, setOrderIdToCancel] = useState(null);
 
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
-    const [orderIdToReturn, setOrderIdToReturn] = useState(null);
+    const [orderToReturn, setOrderToReturn] = useState(null);
 
     const fetchOrders = useCallback(async (page = 1, currentStatus = status) => {
         setLoading(true);
@@ -100,7 +100,8 @@ const OrderHistory = () => {
     };
 
     const handleReturnOrder = (orderId) => {
-        setOrderIdToReturn(orderId);
+        const found = orders.find(o => o.id === orderId);
+        setOrderToReturn(found);
         setIsReturnModalOpen(true);
     };
 
@@ -246,7 +247,7 @@ const OrderHistory = () => {
             <UserReturnModal 
                 isOpen={isReturnModalOpen}
                 onClose={() => setIsReturnModalOpen(false)}
-                orderId={orderIdToReturn}
+                order={orderToReturn}
                 onSuccess={() => fetchOrders(pagination.page, status)}
             />
         </div>

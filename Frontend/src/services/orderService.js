@@ -50,6 +50,15 @@ const orderService = {
     },
 
     /**
+     * [ADMIN/INVENTORY] Thủ kho xác nhận nhận hàng hoàn vật lý
+     * @param {number} id - Request ID
+     * @param {Object} data - { stockCondition: 'good' | 'defective' }
+     */
+    confirmReturnReceived: async (id, data) => {
+        return await axios.patch(`${BASE}/returns/${id}/confirm-received`, data);
+    },
+
+    /**
      * Tạo đơn hàng mới (Dành cho cả User và Guest)
      * @param {Object} orderData 
      */

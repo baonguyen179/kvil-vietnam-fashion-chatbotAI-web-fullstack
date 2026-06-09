@@ -8,12 +8,19 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import userService from '@/services/userService';
 
-const UserReturnModal = ({ isOpen, onClose, orderId, onSuccess }) => {
+const UserReturnModal = ({ isOpen, onClose, order, onSuccess }) => {
+    const orderId = order?.id;
+    const paymentMethod = order?.paymentMethod;
     const [reason, setReason] = useState('');
+    const [bankName, setBankName] = useState('');
+    const [accountNumber, setAccountNumber] = useState('');
+    const [accountHolder, setAccountHolder] = useState('');
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [previews, setPreviews] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,10 +84,32 @@ const UserReturnModal = ({ isOpen, onClose, orderId, onSuccess }) => {
             return;
         }
 
+        if (paymentMethod === 'COD') {
+            if (!bankName) {
+                toast.error('Vui lòng chọn ngân hàng nhận tiền hoàn');
+                return;
+            }
+            if (!accountNumber.trim()) {
+                toast.error('Vui lòng nhập số tài khoản ngân hàng');
+                return;
+            }
+            if (!accountHolder.trim()) {
+                toast.error('Vui lòng nhập tên chủ tài khoản ngân hàng');
+                return;
+            }
+        }
+
         setIsSubmitting(true);
         try {
             const formData = new FormData();
-            formData.append('reason', reason);
+            
+            let finalReason = reason.trim();
+            if (paymentMethod === 'COD') {
+                const bankInfo = `[Thông tin hoàn tiền: ${bankName} - ${accountNumber.trim()} - ${accountHolder.trim().toUpperCase()}]`;
+                finalReason = `${bankInfo} - Lý do: ${reason.trim()}`;
+            }
+
+            formData.append('reason', finalReason);
             selectedFiles.forEach(file => {
                 formData.append('images', file);
             });
@@ -104,6 +133,9 @@ const UserReturnModal = ({ isOpen, onClose, orderId, onSuccess }) => {
 
     const handleClose = () => {
         setReason('');
+        setBankName('');
+        setAccountNumber('');
+        setAccountHolder('');
         setSelectedFiles([]);
         previews.forEach(url => URL.revokeObjectURL(url));
         setPreviews([]);
@@ -131,6 +163,62 @@ const UserReturnModal = ({ isOpen, onClose, orderId, onSuccess }) => {
                             onChange={(e) => setReason(e.target.value)}
                         />
                     </div>
+
+                    {paymentMethod === 'COD' && (
+                        <div className="space-y-4 p-4 bg-gray-50 border border-[#eeeeee] rounded-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-[#504444] border-b border-gray-200 pb-2">
+                                Thông tin nhận hoàn tiền (Đơn COD)
+                            </h4>
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-[#666666] uppercase">
+                                        Ngân hàng <span className="text-red-500">*</span>
+                                    </label>
+                                    <Select value={bankName} onValueChange={setBankName}>
+                                        <SelectTrigger className="h-10 border-[#eeeeee] bg-white rounded-none focus:ring-0 w-full text-xs">
+                                            <SelectValue placeholder="Chọn ngân hàng" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Vietcombank">Vietcombank (VCB)</SelectItem>
+                                            <SelectItem value="Techcombank">Techcombank (TCB)</SelectItem>
+                                            <SelectItem value="BIDV">BIDV</SelectItem>
+                                            <SelectItem value="VietinBank">VietinBank (CTG)</SelectItem>
+                                            <SelectItem value="MB Bank">MB Bank (MBB)</SelectItem>
+                                            <SelectItem value="ACB">ACB</SelectItem>
+                                            <SelectItem value="TPBank">TPBank (TPB)</SelectItem>
+                                            <SelectItem value="Sacombank">Sacombank (STB)</SelectItem>
+                                            <SelectItem value="VPBank">VPBank (VPB)</SelectItem>
+                                            <SelectItem value="Agribank">Agribank (VBA)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-[#666666] uppercase">
+                                            Số tài khoản <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            placeholder="Nhập số tài khoản"
+                                            value={accountNumber}
+                                            onChange={(e) => setAccountNumber(e.target.value.replace(/\s/g, ''))}
+                                            className="h-10 border-[#eeeeee] bg-white focus:border-black rounded-none text-xs"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-[#666666] uppercase">
+                                            Tên chủ tài khoản <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            placeholder="TÊN CHỦ TÀI KHOẢN"
+                                            value={accountHolder}
+                                            onChange={(e) => setAccountHolder(e.target.value.toUpperCase())}
+                                            className="h-10 border-[#eeeeee] bg-white focus:border-black rounded-none text-xs"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="space-y-3">
                         <label className="text-xs font-bold uppercase tracking-wider text-[#504444] block">

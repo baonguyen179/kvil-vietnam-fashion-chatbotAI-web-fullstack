@@ -89,6 +89,22 @@ ${AI_INSTRUCTIONS.priceParsing.join('\n')}
 
 TRA CỨU ĐƠN HÀNG:
 ${AI_INSTRUCTIONS.orderTracking.join('\n')}
+
+VÍ DỤ MẪU VỀ Ý ĐỊNH VÀ GỌI HÀM:
+- Khách: "Có mẫu nào mới về không shop?"
+  -> Gọi hàm: getAllProducts({ sort: "newest" })
+- Khách: "Váy hoa bên mình mọi người đánh giá thế nào?"
+  -> Gọi hàm: getProductReviewSummary({ productName: "Váy hoa" })
+- Khách: "Sản phẩm nào của shop được thích nhất vậy?"
+  -> Gọi hàm: getTopRatedProducts({ minRating: 4.0 })
+- Khách: "Áo sơ mi lụa màu trắng size M còn không?"
+  -> Gọi hàm: checkProductAvailability({ keyword: "Áo sơ mi lụa", color: "trắng", size: "M" })
+- Khách: "Shop có đầm thun nào màu đỏ dưới 300k không?"
+  -> Gọi hàm: filterProductsAdvanced({ keyword: "Đầm thun đỏ", maxPrice: 300000 })
+- Khách: "Shop có mẫu nào dùng vải Kaki không?"
+  -> Gọi hàm: searchProducts({ keyword: "Kaki" })
+- Khách: "Bên mình còn mẫu nào màu hồng không shop?"
+  -> Gọi hàm: searchProducts({ keyword: "hồng" })
 `.trim();
 
 module.exports = {

@@ -49,19 +49,34 @@ const processChatbotMessage = async (userId, sessionId, message) => {
         console.error(">>> Lỗi lấy context cache:", cacheError);
     }
 
+    let userContext = "[HỆ THỐNG]: Khách hàng hiện tại chưa đăng nhập (Khách vãng lai). Cần yêu cầu Số điện thoại + Mã đơn hàng nếu họ muốn tra cứu đơn hàng.";
+    if (userId) {
+        try {
+            const userDetail = await db.User.findByPk(userId, { attributes: ['fullName', 'email'] });
+            if (userDetail) {
+                userContext = `[HỆ THỐNG]: Khách hàng hiện tại ĐÃ ĐĂNG NHẬP. Tên: ${userDetail.fullName}, Email: ${userDetail.email}, ID: ${userId}. Bạn có thể chủ động chào hỏi thân mật theo tên khách hàng và tự động tra cứu đơn hàng cho họ mà không cần hỏi lại thông tin cá nhân.`;
+            }
+        } catch (err) {
+            console.error(">>> Lỗi lấy thông tin user cho chatbot context:", err);
+        }
+    }
+
     const messages = [
         {
             role: "system",
             content: SYSTEM_PROMPT
+        },
+        {
+            role: "system",
+            content: userContext
         },
         ...aiMessages,
         { role: "user", content: message } // Thêm tin nhắn hiện tại
     ];
 
     try {
-        // Gọi AI xử lý
         const response = await client.chat.completions.create({
-            model: "openai/gpt-4o-mini", // Hoặc gpt-3.5-turbo/gpt-4o
+            model: "openai/gpt-4o-mini",
             messages: messages,
             tools: aiFunctionDeclarations,
             tool_choice: "auto"
@@ -71,24 +86,16 @@ const processChatbotMessage = async (userId, sessionId, message) => {
         const toolCalls = choice.message.tool_calls;
 
         if (toolCalls && toolCalls.length > 0) {
-            // Xử lý gọi hàm (Chỉ lấy call đầu tiên cho đơn giản, hoặc loop nếu cần)
+            // Xử lý gọi hàm (Chỉ lấy call đầu tiên cho đơn giản)
             const call = toolCalls[0];
             const functionName = call.function.name;
             const args = JSON.parse(call.function.arguments || "{}");
-            console.log("------------------------------------------");
-            console.log("AI quyết định gọi hàm:", functionName);
-            console.log("Tham số AI bóc tách được:", args);
-            console.log("------------------------------------------");
-            // Thực thi action từ handler (File 2)
             const actionResult = await executeAiAction(functionName, args, userId);
             finalReply = actionResult.finalReply;
             finalProducts = actionResult.finalProducts;
-
         } else {
-            // Trả lời bình thường nếu không cần gọi tool
             finalReply = choice.message.content || "Dạ, shop có thể giúp gì thêm cho bạn không ạ?";
         }
-
     } catch (error) {
         console.error(">>> Lỗi AI Service:", error);
         finalReply = "Dạ, hệ thống đang bận một chút, bạn đợi mình vài giây nhé!";

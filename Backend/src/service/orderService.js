@@ -1081,7 +1081,7 @@ const updateReturnStatus = async (id, status, adminId) => {
             include: [{ 
                 model: db.Order, 
                 as: 'order', 
-                include: [{ model: db.OrderItem, as: 'orderItems' }] // Sửa lại thành as: 'orderItems' cho đúng model
+                include: [{ model: db.OrderItem, as: 'orderItems' }]
             }],
             transaction: t,
             lock: t.LOCK.UPDATE
@@ -1097,55 +1097,16 @@ const updateReturnStatus = async (id, status, adminId) => {
             return { EM: 'Yêu cầu này đã được xử lý trước đó!', EC: errorCode.VALIDATION_ERROR, DT: '' };
         }
 
-        // Cập nhập trạng thái yêu cầu
+        // Cập nhật trạng thái yêu cầu
         await request.update({ status: status }, { transaction: t });
 
-        // Nếu DUYỆT (APPROVED) -> Đổi trạng thái Đơn hàng thành 'returned' và HOÀN KHO
+        // [REFACTORED] Bước 1: CSKH duyệt → Chỉ đổi trạng thái, KHÔNG cộng kho, KHÔNG hoàn tiền
+        // Chờ Thủ kho nhận hàng vật lý và xác nhận ở Bước 2 (confirmReturnReceived)
         if (status === 'APPROVED') {
-            await db.Order.update({ status: 'returned' }, { where: { id: request.orderId }, transaction: t });
-
-            // Hoàn kho cho từng sản phẩm trong đơn hàng
-            if (request.order && request.order.orderItems) {
-                for (const item of request.order.orderItems) {
-                    await db.ProductVariant.increment('stock', { by: item.quantity, where: { id: item.variantId }, transaction: t });
-                    
-                    // Ghi log kho (RETURN)
-                    await db.InventoryLog.create({
-                        variantId: item.variantId,
-                        userId: adminId, 
-                        type: 'RETURN',
-                        quantity: item.quantity,
-                        costPrice: item.costPrice || 0,
-                        note: `Hoàn kho do duyệt trả hàng đơn #${request.orderId}`
-                    }, { transaction: t });
-                }
-            }
-
-            // [SENIOR OPTIMIZATION] - Tự động hoàn tiền qua VNPAY nếu đơn thanh toán qua cổng này
-            if (request.order && request.order.paymentMethod === 'VNPAY' && request.order.paymentStatus === true) {
-                const lastSuccessTrans = await db.PaymentTransaction.findOne({
-                    where: { orderId: request.orderId, status: 'SUCCESS' },
-                    order: [['createdAt', 'DESC']]
-                });
-
-                if (lastSuccessTrans) {
-                    const refundRes = await vnpayService.refundTransaction({
-                        orderId: request.orderId,
-                        amount: lastSuccessTrans.amount,
-                        transDate: lastSuccessTrans.createdAt.toISOString().slice(0, 19).replace(/[-T:]/g, ""),
-                        user: 'SYSTEM_ADMIN_REFUND',
-                        vnp_TransactionNo: lastSuccessTrans.transactionId
-                    });
-
-                    await db.PaymentTransaction.create({
-                        orderId: request.orderId,
-                        provider: 'VNPAY',
-                        transactionId: refundRes.vnp_TransactionNo || 'REFUND_REQ',
-                        amount: lastSuccessTrans.amount,
-                        status: refundRes.vnp_ResponseCode === '00' ? 'REFUNDED' : 'REFUND_FAILED'
-                    }, { transaction: t });
-                }
-            }
+            await db.Order.update(
+                { status: 'return_approved' }, 
+                { where: { id: request.orderId }, transaction: t }
+            );
         } 
         else if (status === 'REJECTED') {
             await db.Order.update({ status: 'delivered' }, { where: { id: request.orderId }, transaction: t });
@@ -1158,12 +1119,157 @@ const updateReturnStatus = async (id, status, adminId) => {
             redisHelper.delCache(`order:detail:user:${request.userId}:${request.orderId}`)
         ]);
 
-        return { EM: `Đã ${status === 'APPROVED' ? 'chấp nhận' : 'từ chối'} yêu cầu trả hàng!`, EC: errorCode.SUCCESS, DT: '' };
+        const statusLabel = status === 'APPROVED' ? 'chấp nhận (Chờ nhận hàng hoàn)' : 'từ chối';
+        return { EM: `Đã ${statusLabel} yêu cầu trả hàng!`, EC: errorCode.SUCCESS, DT: '' };
 
     } catch (error) {
         await t.rollback();
         console.error(">>> Lỗi updateReturnStatus:", error);
         return { EM: 'Lỗi server khi cập nhật trạng thái trả hàng', EC: errorCode.OTHER_ERROR, DT: '' };
+    }
+};
+
+// Phí ship ngược cố định khi khách trả hàng
+const RETURN_SHIPPING_FEE = 15000;
+
+/**
+ * [Bước 2] Thủ kho xác nhận đã nhận hàng hoàn trả vật lý
+ * - stockCondition = 'good': Hàng nguyên vẹn → Cộng kho bán lẻ
+ * - stockCondition = 'defective': Hàng lỗi/hỏng → Ghi log kho phế phẩm, KHÔNG cộng kho bán lẻ
+ * - Sau khi xác nhận → Kích hoạt hoàn tiền (VNPay Partial Refund hoặc ghi nhận chờ hoàn COD)
+ */
+const confirmReturnReceived = async (returnRequestId, warehouseUserId, stockCondition) => {
+    const t = await db.sequelize.transaction();
+    try {
+        const request = await db.ReturnRequest.findOne({
+            where: { id: returnRequestId },
+            include: [{ 
+                model: db.Order, 
+                as: 'order', 
+                include: [{ model: db.OrderItem, as: 'orderItems' }]
+            }],
+            transaction: t,
+            lock: t.LOCK.UPDATE
+        });
+
+        if (!request) {
+            await t.rollback();
+            return { EM: 'Yêu cầu trả hàng không tồn tại!', EC: errorCode.NOT_FOUND, DT: '' };
+        }
+
+        if (request.status !== 'APPROVED') {
+            await t.rollback();
+            return { EM: 'Yêu cầu này chưa được CSKH duyệt hoặc đã xử lý!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        const order = request.order;
+        if (!order || order.status !== 'return_approved') {
+            await t.rollback();
+            return { EM: 'Đơn hàng không ở trạng thái chờ nhận hàng hoàn!', EC: errorCode.VALIDATION_ERROR, DT: '' };
+        }
+
+        // Xử lý tồn kho dựa trên tình trạng hàng vật lý
+        if (order.orderItems && order.orderItems.length > 0) {
+            for (const item of order.orderItems) {
+                if (stockCondition === 'good') {
+                    // Hàng nguyên vẹn → Cộng lại kho bán lẻ (stock trực tuyến)
+                    await db.ProductVariant.increment('stock', { 
+                        by: item.quantity, 
+                        where: { id: item.variantId }, 
+                        transaction: t 
+                    });
+
+                    await db.InventoryLog.create({
+                        variantId: item.variantId,
+                        userId: warehouseUserId,
+                        type: 'RETURN',
+                        quantity: item.quantity,
+                        costPrice: item.costPrice || 0,
+                        note: `Hoàn kho bán lẻ (hàng nguyên vẹn) — Đơn #${request.orderId}`
+                    }, { transaction: t });
+                } else {
+                    // Hàng lỗi/hỏng → Ghi log kho phế phẩm, KHÔNG cộng kho bán lẻ
+                    await db.InventoryLog.create({
+                        variantId: item.variantId,
+                        userId: warehouseUserId,
+                        type: 'RETURN_DEFECTIVE',
+                        quantity: item.quantity,
+                        costPrice: item.costPrice || 0,
+                        note: `Nhập kho phế phẩm (hàng lỗi/hỏng) — Đơn #${request.orderId}`
+                    }, { transaction: t });
+                }
+            }
+        }
+
+        // Chuyển trạng thái đơn hàng sang 'returned' (hoàn tất quy trình trả hàng)
+        await order.update({ status: 'returned' }, { transaction: t });
+
+        // Xử lý hoàn tiền dựa trên phương thức thanh toán
+        if (order.paymentMethod === 'VNPAY' && order.paymentStatus === true) {
+            // [PARTIAL REFUND] Hoàn tiền VNPay trừ phí ship ngược 15.000đ
+            const lastSuccessTrans = await db.PaymentTransaction.findOne({
+                where: { orderId: request.orderId, status: 'SUCCESS' },
+                order: [['createdAt', 'DESC']]
+            });
+
+            if (lastSuccessTrans) {
+                const refundAmount = Math.max(0, Number(order.finalAmount) - RETURN_SHIPPING_FEE);
+
+                const refundRes = await vnpayService.refundTransaction({
+                    orderId: request.orderId,
+                    amount: refundAmount,
+                    transDate: lastSuccessTrans.createdAt.toISOString().slice(0, 19).replace(/[-T:]/g, ""),
+                    user: 'SYSTEM_ADMIN_REFUND',
+                    vnp_TransactionNo: lastSuccessTrans.transactionId
+                });
+
+                await db.PaymentTransaction.create({
+                    orderId: request.orderId,
+                    provider: 'VNPAY',
+                    transactionId: refundRes.vnp_TransactionNo || 'REFUND_REQ',
+                    amount: refundRes.vnp_ResponseCode === '00' ? refundAmount : 0,
+                    status: refundRes.vnp_ResponseCode === '00' ? 'REFUNDED' : 'REFUND_FAILED'
+                }, { transaction: t });
+            }
+        } else if (order.paymentMethod === 'COD' && order.paymentStatus === true) {
+            // [COD REFUND] Ghi nhận giao dịch hoàn tiền (Kế toán chuyển khoản thủ công)
+            const refundAmount = Math.max(0, Number(order.finalAmount) - RETURN_SHIPPING_FEE);
+            await db.PaymentTransaction.create({
+                orderId: request.orderId,
+                provider: 'COD_REFUND',
+                transactionId: `COD_REFUND_${request.orderId}_${Date.now()}`,
+                amount: -refundAmount, // Số âm = tiền ra (hoàn trả cho khách)
+                status: 'PENDING' // Chờ Kế toán xác nhận đã chuyển khoản
+            }, { transaction: t });
+        }
+
+        // Cập nhật trạng thái ReturnRequest
+        await request.update({ status: 'REFUNDED' }, { transaction: t });
+
+        await t.commit();
+
+        // Xóa cache liên quan
+        await Promise.all([
+            redisHelper.delByPattern('order:list:admin:*'),
+            redisHelper.delByPattern(`order:list:user:${request.userId}:*`),
+            redisHelper.delCache(`order:detail:user:${request.userId}:${request.orderId}`),
+            redisHelper.delByPattern('product:detail:*'),
+            redisHelper.delByPattern('products:list:*'),
+            redisHelper.delByPattern('product:inventory:logs:*'),
+            redisHelper.delByPattern('order:payment:transactions:*')
+        ]);
+
+        const conditionLabel = stockCondition === 'good' ? 'nguyên vẹn (đã cộng kho)' : 'lỗi/hỏng (kho phế phẩm)';
+        return { 
+            EM: `Xác nhận nhận hàng hoàn thành công! Tình trạng: ${conditionLabel}`, 
+            EC: errorCode.SUCCESS, 
+            DT: '' 
+        };
+
+    } catch (error) {
+        await t.rollback();
+        console.error(">>> Lỗi confirmReturnReceived:", error);
+        return { EM: 'Lỗi server khi xác nhận nhận hàng hoàn', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 };
 
@@ -1367,7 +1473,7 @@ module.exports = {
     createOrder, cancelOrder, getUserOrders, getUserOrderDetail,
     getAdminOrders, updateOrderStatus, updatePaymentStatus, getBestSellerProductIds,
     requestReturnOrder, createPaymentTransaction, processVNPayPayment,
-    getPaymentTransactionsAdmin, getReturnRequestsAdmin, updateReturnStatus,
+    getPaymentTransactionsAdmin, getReturnRequestsAdmin, updateReturnStatus, confirmReturnReceived,
     getVNPayPaymentUrl, syncOrderWithVNPay, getGuestVNPayPaymentUrl, getGuestOrderDetail, recoverGuestOrderIds,
     getUserOrdersShort
 };

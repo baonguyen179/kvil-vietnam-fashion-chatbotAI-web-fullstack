@@ -8,6 +8,7 @@ const configCORS = require('./middleware/CORS')
 const cookieParser = require('cookie-parser')
 const apiRouter = require('./routes/api')//CSR
 const { startEmailWorker } = require('./workers/email.worker');
+const { startHoldStockScheduler } = require('./helpers/holdStockScheduler');
 
 const app = express()
 const port = process.env.PORT || 8081
@@ -44,6 +45,7 @@ if (process.env.NODE_ENV !== 'test') {
             app.listen(port, () => {
                 console.log(`>>> Server chạy trên port ${port}.`);
                 startEmailWorker();
+                startHoldStockScheduler();
             });
         } catch (error) {
             console.error('>>> App hỏng:', error);

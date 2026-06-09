@@ -53,6 +53,7 @@ router.get('/admin/payments/transactions', JWTAction.checkUserPermission([], ['p
 // [RETURN REQUESTS]-X
 router.get('/admin/orders/returns', JWTAction.checkUserPermission([], ['orders.read']), orderController.handleGetReturnRequests);
 router.patch('/admin/orders/returns/:id/status', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdateReturnRequestStatus);
+router.patch('/admin/orders/returns/:id/confirm-received', JWTAction.checkUserPermission([], ['inventory.update']), orderController.handleConfirmReturnReceived);
 
 // [ADMIN - CATEGORIES]-X
 router.post('/admin/categories', JWTAction.checkUserPermission([], ['categories.manage']), categoryController.handleCreateCategory);
