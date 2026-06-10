@@ -308,6 +308,17 @@ const handleGetAllVariantSkus = async (req, res) => {
     }
 };
 
+const handleGetLowStockVariants = async (req, res) => {
+    try {
+        const threshold = parseInt(req.query.threshold) || 10;
+        const data = await productService.getLowStockVariants(threshold);
+        return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
+    } catch (error) {
+        console.error(">>> Lỗi handleGetLowStockVariants:", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: [] });
+    }
+};
+
 module.exports = {
     handleGetAllProducts, handleCreateProduct, handleUpdateProduct,
     handleDeleteProduct,
@@ -323,5 +334,6 @@ module.exports = {
     handleGetInventoryTemplate,
     handleAdjustInventory,
     handleImportInventoryManual,
-    handleGetAllVariantSkus
+    handleGetAllVariantSkus,
+    handleGetLowStockVariants
 }

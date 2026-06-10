@@ -689,7 +689,7 @@ const getAdminOrders = async (queryParams) => {
         return { EM: 'Lỗi server khi lấy danh sách đơn hàng', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 }
-const updateOrderStatus = async (orderId, newStatus) => {
+const updateOrderStatus = async (orderId, newStatus, adminId = null) => {
     const t = await db.sequelize.transaction();
     let currentStep = 'Khởi tạo updateOrderStatus';
 
@@ -735,7 +735,7 @@ const updateOrderStatus = async (orderId, newStatus) => {
                     // [IMPROVED LOG] Ghi log hoàn trả kho do Admin hủy đơn kèm mã đơn
                     await db.InventoryLog.create({
                         variantId: item.variantId,
-                        userId: null,
+                        userId: adminId,
                         type: 'RETURN',
                         quantity: item.quantity,
                         note: `Hoàn kho do Admin/Hệ thống hủy đơn hàng #${orderId}`

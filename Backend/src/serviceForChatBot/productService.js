@@ -848,7 +848,19 @@ const getInventoryLogs = async (query) => {
                     attributes: ['sku', 'productId'],
                     include: [{ model: db.Product, as: 'product', attributes: ['name'] }]
                 },
-                { model: db.User, as: 'user', attributes: ['fullName', 'email'] }
+                { 
+                    model: db.User, 
+                    as: 'user', 
+                    attributes: ['fullName', 'email'],
+                    include: [
+                        {
+                            model: db.Role,
+                            as: 'roles',
+                            attributes: ['name', 'description'],
+                            through: { attributes: [] }
+                        }
+                    ]
+                }
             ]
         });
 

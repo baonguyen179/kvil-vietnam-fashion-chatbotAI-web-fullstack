@@ -23,6 +23,16 @@ const connection = async () => {
     try {
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
+        
+        // Tự động kiểm tra và nâng cấp phân quyền khi kết nối thành công
+        setTimeout(async () => {
+            try {
+                const { upgradePermissions } = require('./upgradePermissions');
+                await upgradePermissions();
+            } catch (err) {
+                console.error('>>> Lỗi khi di cư nâng cấp phân quyền:', err);
+            }
+        }, 1000);
     } catch (error) {
         console.error('Unable to connect to the database:', error);
     }

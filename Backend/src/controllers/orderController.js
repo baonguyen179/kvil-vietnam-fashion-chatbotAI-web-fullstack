@@ -100,15 +100,56 @@ const handleUpdateOrderStatus = async (req, res) => {
 
         const { error } = orderValidation.updateOrderStatusSchema.validate(req.body);
         if (error) {
-            return res.status(200).json(
-                {
-                    EM: error.details[0].message,
-                    EC: errorCode.VALIDATION_ERROR,
-                    DT: ''
-                });
+            return res.status(200).json({
+                EM: error.details[0].message,
+                EC: errorCode.VALIDATION_ERROR,
+                DT: ''
+            });
         }
 
-        const data = await orderService.updateOrderStatus(orderId, req.body.status);
+        const newStatus = req.body.status;
+        const db = require('../models/index');
+
+        // 1. Lấy trạng thái hiện tại của đơn hàng
+        const order = await db.Order.findOne({ where: { id: orderId } });
+        if (!order) {
+            return res.status(200).json({
+                EM: 'Đơn hàng không tồn tại!',
+                EC: errorCode.NOT_FOUND,
+                DT: ''
+            });
+        }
+
+        // 2. Xác định quyền tương ứng dựa trên sự thay đổi trạng thái
+        let requiredPermission = null;
+
+        if (order.status === 'pending' && newStatus === 'confirmed') {
+            requiredPermission = 'orders.update_confirm';
+        } else if (order.status === 'confirmed' && (newStatus === 'shipping' || newStatus === 'delivered')) {
+            requiredPermission = 'orders.update_ship';
+        } else if (order.status === 'shipping' && newStatus === 'delivered') {
+            requiredPermission = 'orders.update_complete';
+        } else if (newStatus === 'cancelled') {
+            requiredPermission = 'orders.update_cancel';
+        } else if (newStatus === 'returned') {
+            requiredPermission = 'orders.update_receive_return';
+        }
+
+        // 3. Kiểm tra quyền của người dùng (Bypass nếu là SUPER_ADMIN)
+        const userRoles = req.user?.roles || [req.user?.role];
+        const userPermissions = req.user?.permissions || [];
+
+        if (requiredPermission && !userRoles.includes('SUPER_ADMIN')) {
+            if (!userPermissions.includes(requiredPermission)) {
+                return res.status(403).json({
+                    EC: errorCode.UNAUTHORIZED,
+                    EM: `Bạn không có quyền chuyển trạng thái đơn hàng từ "${order.status}" sang "${newStatus}". Yêu cầu quyền: ${requiredPermission}`,
+                    DT: ''
+                });
+            }
+        }
+
+        const data = await orderService.updateOrderStatus(orderId, newStatus, req.user?.id);
         return res.status(200).json({ EM: data.EM, EC: data.EC, DT: data.DT });
 
     } catch (error) {

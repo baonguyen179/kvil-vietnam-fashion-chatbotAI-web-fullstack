@@ -8,7 +8,7 @@ import {
     ShoppingCartOutlined, 
     TagOutlined,
     RobotOutlined,
-    HistoryOutlined,
+    InboxOutlined,
     TransactionOutlined,
     SafetyCertificateOutlined,
     StarOutlined,
@@ -74,12 +74,13 @@ const AdminSideBar = React.memo(({collapseMenu, setCollapseMenu}) => {
                         key: 'attributes',
                         label: <Link to={"/admin/attributes"}>Thuộc tính</Link>,
                     },
-                    {
-                        key: 'inventory',
-                        label: <Link to={"/admin/inventory"}>Nhật ký kho</Link>,
-                        icon: <HistoryOutlined />,
-                    },
                 ],
+            },
+            {
+                key: 'inventory',
+                label: <Link to={"/admin/inventory"}>Quản lý kho</Link>,
+                icon: <InboxOutlined />,
+                permission: 'inventory.read'
             },
             {
                 key: 'orders_parent',

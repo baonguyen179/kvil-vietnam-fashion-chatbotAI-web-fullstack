@@ -80,7 +80,8 @@ const getAdminOrderListSchema = Joi.object({
     status: Joi.string().valid('pending', 'confirmed', 'shipping', 'delivered', 'cancelled', 'returning', 'returned').allow('', null),
     paymentStatus: Joi.boolean().allow('', null), // true: Đã thanh toán, false: Chưa thanh toán
     paymentMethod: Joi.string().valid('COD', 'VNPAY').allow('', null),
-    deliveryMethod: Joi.string().valid('store_pickup', 'home_delivery').allow('', null)
+    deliveryMethod: Joi.string().valid('store_pickup', 'home_delivery').allow('', null),
+    includeItems: Joi.any().optional()
 });
 const updateOrderStatusSchema = Joi.object({
     status: Joi.string().valid('pending', 'confirmed', 'shipping', 'delivered', 'cancelled', 'returning', 'returned').required().messages({

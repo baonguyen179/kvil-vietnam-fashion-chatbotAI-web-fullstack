@@ -11,8 +11,8 @@ updatedAt datetime
 }
 Permissions [icon: key, color: red] {
 id int pk
-name string unique // Ví dụ: 'products.update', 'orders.read', 'users.manage'
-module string // Để gom nhóm: 'Products', 'Orders', 'Chatbot'
+name string unique // Ví dụ: 'products.update', 'orders.read', 'orders.update_confirm', 'orders.update_ship', 'orders.update_complete', 'orders.update_cancel', 'orders.update_payment', 'orders.update_approve_return', 'orders.update_receive_return', 'reviews.update_status', 'users.manage'
+module string // Để gom nhóm: 'Products', 'Orders', 'Reviews', 'Chatbot'
 description string
 createdAt datetime
 }

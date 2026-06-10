@@ -13,7 +13,16 @@ module.exports = {
 
       // Module: Đơn hàng
       { name: 'orders.read', module: 'Orders', description: 'Xem danh sách đơn hàng', createdAt: new Date(), updatedAt: new Date() },
-      { name: 'orders.update', module: 'Orders', description: 'Cập nhật trạng thái đơn hàng', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'orders.update_confirm', module: 'Orders', description: 'Xác nhận đơn hàng (Pending -> Confirmed)', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'orders.update_ship', module: 'Orders', description: 'Bàn giao vận chuyển / nhận tại quầy (Confirmed -> Shipping/Delivered)', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'orders.update_complete', module: 'Orders', description: 'Hoàn thành giao hàng (Shipping -> Delivered)', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'orders.update_cancel', module: 'Orders', description: 'Hủy đơn hàng', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'orders.update_payment', module: 'Orders', description: 'Cập nhật thanh toán & Đồng bộ VNPay', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'orders.update_approve_return', module: 'Orders', description: 'Duyệt/Từ chối yêu cầu đổi trả (CSKH)', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'orders.update_receive_return', module: 'Orders', description: 'Xác nhận nhận hàng hoàn vật lý (Thủ kho)', createdAt: new Date(), updatedAt: new Date() },
+
+      // Module: Đánh giá
+      { name: 'reviews.update_status', module: 'Reviews', description: 'Cập nhật trạng thái đánh giá (Hiện/Ẩn)', createdAt: new Date(), updatedAt: new Date() },
 
       // Module: Chatbot
       { name: 'chatbot.read', module: 'Chatbot', description: 'Xem lịch sử chat', createdAt: new Date(), updatedAt: new Date() },
@@ -50,7 +59,12 @@ module.exports = {
 
     // Gán quyền cho SALES
     if (salesId) {
-      const salesPerms = ['products.read', 'products.update', 'orders.read', 'orders.update', 'chatbot.read'];
+      const salesPerms = [
+        'products.read', 'products.update', 'orders.read', 
+        'orders.update_confirm', 'orders.update_ship', 'orders.update_complete', 
+        'orders.update_cancel', 'orders.update_payment', 'orders.update_approve_return', 
+        'orders.update_receive_return', 'reviews.update_status', 'chatbot.read'
+      ];
       salesPerms.forEach(name => {
         const id = getPermId(name);
         if (id) rolePerms.push({ roleId: salesId, permissionId: id, createdAt: new Date(), updatedAt: new Date() });

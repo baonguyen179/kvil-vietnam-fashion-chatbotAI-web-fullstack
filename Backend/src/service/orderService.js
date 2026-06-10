@@ -672,19 +672,42 @@ const getAdminOrders = async (queryParams) => {
         if (queryParams.deliveryMethod) whereCondition.deliveryMethod = queryParams.deliveryMethod;
 
         currentStep = 'Query DB lấy danh sách Orders kèm thông tin User';
+        const include = [
+            {
+                model: db.User,
+                as: 'user',
+                attributes: ['id', 'fullName', 'phone', 'email']
+            }
+        ];
+
+        if (queryParams.includeItems === 'true' || queryParams.includeItems === true) {
+            include.push({
+                model: db.OrderItem,
+                as: 'orderItems',
+                attributes: ['id', 'quantity', 'price'],
+                include: [
+                    {
+                        model: db.ProductVariant,
+                        as: 'variant',
+                        attributes: ['sku', 'productId'],
+                        include: [
+                            { model: db.Product, as: 'product', attributes: ['name'] },
+                            { model: db.Color, as: 'color', attributes: ['name'] },
+                            { model: db.Size, as: 'size', attributes: ['name'] }
+                        ]
+                    }
+                ]
+            });
+        }
+
         const { count, rows } = await db.Order.findAndCountAll({
             where: whereCondition,
             order: [['createdAt', 'DESC']],
             limit: limit,
             offset: offset,
             attributes: ['id', 'totalBeforeDiscount', 'shippingFee','shippingAddress', 'discountAmount', 'finalAmount', 'paymentMethod', 'paymentStatus', 'deliveryMethod', 'status', 'createdAt'],
-            include: [
-                {
-                    model: db.User,
-                    as: 'user',
-                    attributes: ['id', 'fullName', 'phone', 'email']
-                }
-            ]
+            include: include,
+            distinct: true
         });
 
         currentStep = 'Tính toán phân trang';
@@ -709,7 +732,7 @@ const getAdminOrders = async (queryParams) => {
         return { EM: 'Lỗi server khi lấy danh sách đơn hàng', EC: errorCode.OTHER_ERROR, DT: '' };
     }
 }
-const updateOrderStatus = async (orderId, newStatus) => {
+const updateOrderStatus = async (orderId, newStatus, adminId = null) => {
     const t = await db.sequelize.transaction();
     let currentStep = 'Khởi tạo updateOrderStatus';
     let needLogOut = false;
@@ -764,7 +787,7 @@ const updateOrderStatus = async (orderId, newStatus) => {
                     // Ghi log hoàn trả kho do Admin hủy đơn kèm mã đơn
                     await db.InventoryLog.create({
                         variantId: item.variantId,
-                        userId: null, 
+                        userId: adminId, 
                         type: logType,
                         quantity: item.quantity,
                         costPrice: logType === 'RETURN' ? item.costPrice : 0,
@@ -798,7 +821,7 @@ const updateOrderStatus = async (orderId, newStatus) => {
                 for (let item of orderItems) {
                     await db.InventoryLog.create({
                         variantId: item.variantId,
-                        userId: null,
+                        userId: adminId,
                         type: 'OUT',
                         quantity: item.quantity,
                         note: order.deliveryMethod === 'store_pickup'

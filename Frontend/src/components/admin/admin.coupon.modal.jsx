@@ -86,7 +86,7 @@ const AdminCouponModal = ({ open, onClose, onSuccess, editingCoupon }) => {
             okText={isEdit ? 'Lưu thay đổi' : 'Tạo mới'}
             cancelText="Hủy"
             width={660}
-            destroyOnClose
+            destroyOnHidden
         >
             <Form form={form} layout="vertical" className="mt-4">
                 {/* Hàng 1: Code + Loại */}

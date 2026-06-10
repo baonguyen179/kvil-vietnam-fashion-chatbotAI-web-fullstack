@@ -99,7 +99,7 @@ Các API này nằm trong `src/routes/admin.js`. Yêu cầu đăng nhập (`chec
 | 14 | Inventory | `/admin/inventory/adjust` | POST | `inventory.update` | Điều chỉnh tồn kho thủ công |
 | 15 | Payments | `/admin/payments/transactions` | GET | `payments.read` | Xem danh sách giao dịch VNPay |
 | 16 | Returns | `/admin/orders/returns` | GET | `orders.read` | Lấy danh sách các yêu cầu trả hàng |
-| 17 | Returns | `/admin/orders/returns/:id/status`| PATCH | `orders.update` | Duyệt/Từ chối yêu cầu trả hàng |
+| 17 | Returns | `/admin/orders/returns/:id/status`| PATCH | `orders.update_approve_return` | Duyệt/Từ chối yêu cầu trả hàng |
 | 18 | Categories | `/admin/categories` | POST | `categories.manage` | Tạo danh mục mới |
 | 19 | Categories | `/admin/categories/:id` | PUT | `categories.manage` | Cập nhật danh mục |
 | 20 | Categories | `/admin/categories/:id` | DELETE | `categories.manage` | Xóa danh mục |
@@ -121,11 +121,11 @@ Các API này nằm trong `src/routes/admin.js`. Yêu cầu đăng nhập (`chec
 | 36 | Collections | `/admin/collections/:id/products`| POST | `collections.manage` | Thêm các sản phẩm vào bộ sưu tập |
 | 37 | Collections | `/admin/collections/:id/products`| DELETE| `collections.manage` | Bỏ các sản phẩm ra khỏi bộ sưu tập |
 | 38 | Orders | `/admin/orders` | GET | `orders.read` | Lấy danh sách toàn bộ đơn hàng |
-| 39 | Orders | `/admin/orders/:id/status` | PATCH | `orders.update` | Cập nhật trạng thái đơn hàng (duyệt, giao...) |
-| 40 | Orders | `/admin/orders/:id/payment` | PATCH | `orders.update` | Cập nhật trạng thái thanh toán |
+| 39 | Orders | `/admin/orders/:id/status` | PATCH | Quyền theo trạng thái: `orders.update_confirm`/`update_ship`/`update_complete`/`update_cancel` | Cập nhật trạng thái đơn hàng (duyệt, giao...) |
+| 40 | Orders | `/admin/orders/:id/payment` | PATCH | `orders.update_payment` | Cập nhật trạng thái thanh toán |
 | 41 | Reviews | `/admin/reviews` | GET | `orders.read` | Xem danh sách đánh giá của KH |
-| 42 | Reviews | `/admin/reviews/:id/status` | PATCH | `orders.update` | Đổi trạng thái đánh giá (hiện/ẩn) |
-| 43 | VNPay | `/admin/orders/:id/vnpay-sync` | PATCH | `orders.update` | QueryDR VNPay để đồng bộ kết quả thanh toán |
+| 42 | Reviews | `/admin/reviews/:id/status` | PATCH | `reviews.update_status` | Đổi trạng thái đánh giá (hiện/ẩn) |
+| 43 | VNPay | `/admin/orders/:id/vnpay-sync` | PATCH | `orders.update_payment` | QueryDR VNPay để đồng bộ kết quả thanh toán |
 | 44 | Coupons | `/admin/coupons` | POST | `coupons.manage` | Tạo mã giảm giá mới |
 | 45 | Coupons | `/admin/coupons` | GET | `coupons.manage` | Lấy danh sách tất cả mã giảm giá |
 | 46 | Coupons | `/admin/coupons/:id` | PUT | `coupons.manage` | Sửa mã giảm giá |

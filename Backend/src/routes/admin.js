@@ -43,6 +43,7 @@ const uploadMemory = multer({
 });
 
 router.get('/admin/inventory/logs', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryLogs);
+router.get('/admin/inventory/low-stock', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetLowStockVariants);
 router.get('/admin/inventory/import/template', JWTAction.checkUserPermission([], ['inventory.read']), productController.handleGetInventoryTemplate);
 router.post('/admin/inventory/import', JWTAction.checkUserPermission([], ['inventory.update', 'products.update']), uploadMemory.single('file'), productController.handleImportInventory);
 router.post('/admin/inventory/import-manual', JWTAction.checkUserPermission([], ['inventory.update', 'products.update']), productController.handleImportInventoryManual);
@@ -52,8 +53,8 @@ router.get('/admin/payments/transactions', JWTAction.checkUserPermission([], ['p
 
 // [RETURN REQUESTS]-X
 router.get('/admin/orders/returns', JWTAction.checkUserPermission([], ['orders.read']), orderController.handleGetReturnRequests);
-router.patch('/admin/orders/returns/:id/status', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdateReturnRequestStatus);
-router.patch('/admin/orders/returns/:id/confirm-received', JWTAction.checkUserPermission([], ['inventory.update']), orderController.handleConfirmReturnReceived);
+router.patch('/admin/orders/returns/:id/status', JWTAction.checkUserPermission([], ['orders.update_approve_return']), orderController.handleUpdateReturnRequestStatus);
+router.patch('/admin/orders/returns/:id/confirm-received', JWTAction.checkUserPermission([], ['orders.update_receive_return']), orderController.handleConfirmReturnReceived);
 
 // [ADMIN - CATEGORIES]-X
 router.post('/admin/categories', JWTAction.checkUserPermission([], ['categories.manage']), categoryController.handleCreateCategory);
@@ -86,15 +87,15 @@ router.delete('/admin/collections/:id/products', JWTAction.checkUserPermission([
 
 // [ADMIN - ORDERS]-X
 router.get('/admin/orders', JWTAction.checkUserPermission([], ['orders.read']), orderController.handleGetAdminOrders);
-router.patch('/admin/orders/:id/status', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdateOrderStatus);
-router.patch('/admin/orders/:id/payment', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleUpdatePaymentStatus);
+router.patch('/admin/orders/:id/status', JWTAction.checkUserPermission([], []), orderController.handleUpdateOrderStatus);
+router.patch('/admin/orders/:id/payment', JWTAction.checkUserPermission([], ['orders.update_payment']), orderController.handleUpdatePaymentStatus);
 
 // [ADMIN - REVIEWS]
 router.get('/admin/reviews', JWTAction.checkUserPermission([], ['orders.read']), reviewController.handleGetAdminReviews);
-router.patch('/admin/reviews/:id/status', JWTAction.checkUserPermission([], ['orders.update']), reviewController.handleUpdateReviewStatus);
+router.patch('/admin/reviews/:id/status', JWTAction.checkUserPermission([], ['reviews.update_status']), reviewController.handleUpdateReviewStatus);
 
 // [ADMIN - VNPAY]
-router.patch('/admin/orders/:id/vnpay-sync', JWTAction.checkUserPermission([], ['orders.update']), orderController.handleSyncVNPayStatus);
+router.patch('/admin/orders/:id/vnpay-sync', JWTAction.checkUserPermission([], ['orders.update_payment']), orderController.handleSyncVNPayStatus);
 
 // [ADMIN - COUPONS]-X
 router.post('/admin/coupons', JWTAction.checkUserPermission([], ['coupons.manage']), couponController.handleCreateCoupon);

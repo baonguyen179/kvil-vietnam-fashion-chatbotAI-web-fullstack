@@ -30,10 +30,17 @@ const adjustInventory = (variantId, delta, note) => {
     return axios.post(`/api/v1/admin/inventory/adjust`, { variantId, delta, note });
 };
 
+const getLowStockVariants = (threshold) => {
+    return axios.get(`/api/v1/admin/inventory/low-stock`, {
+        params: { threshold }
+    });
+};
+
 export default {
     getInventoryLogs,
     importInventory,
     importInventoryManual,
     getInventoryTemplate,
-    adjustInventory
+    adjustInventory,
+    getLowStockVariants
 };

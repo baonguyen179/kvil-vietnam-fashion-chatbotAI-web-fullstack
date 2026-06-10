@@ -131,7 +131,7 @@ const AdjustInventoryModal = ({ open, record, onClose, onSuccess }) => {
             confirmLoading={submitting}
             okButtonProps={{ danger: isNegative }}
             width={600}
-            destroyOnClose
+            destroyOnHidden
         >
             <Form form={form} layout="vertical" requiredMark="optional">
                 {record && (
@@ -145,7 +145,7 @@ const AdjustInventoryModal = ({ open, record, onClose, onSuccess }) => {
 
                         {hasPredefinedVariant ? (
                             <div className="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-100">
-                                <Space direction="vertical" size={2}>
+                                <Space orientation="vertical" size={2}>
                                     <Text><Text strong>Sản phẩm:</Text> {record.variant?.product?.name || 'N/A'}</Text>
                                     <Text><Text strong>SKU:</Text> <Tag color="blue">{record.variant?.sku}</Tag></Text>
                                     <Text><Text strong>Phân loại:</Text> {record.variant?.color?.name} - {record.variant?.size?.name}</Text>

@@ -101,6 +101,13 @@ const checkUserPermission = (...args) => {
             });
         }
 
+        const userRoles = req.user.roles || [req.user.role];
+        
+        // [SUPER ADMIN BYPASS] Super Admin luôn có tất cả quyền
+        if (userRoles.includes('SUPER_ADMIN')) {
+            return next();
+        }
+
         let allowedRoles = [];
         let requiredPermissions = [];
 
@@ -114,7 +121,6 @@ const checkUserPermission = (...args) => {
             allowedRoles = args;
         }
 
-        const userRoles = req.user.roles || [req.user.role];
         const userPermissions = req.user.permissions || [];
         const currentPath = req.baseUrl + req.path;
 

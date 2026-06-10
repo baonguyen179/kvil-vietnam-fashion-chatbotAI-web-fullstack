@@ -971,7 +971,19 @@ const getInventoryLogs = async (query) => {
                     attributes: ['sku', 'productId'],
                     include: [{ model: db.Product, as: 'product', attributes: ['name'] }]
                 },
-                { model: db.User, as: 'user', attributes: ['fullName', 'email'] }
+                { 
+                    model: db.User, 
+                    as: 'user', 
+                    attributes: ['fullName', 'email'],
+                    include: [
+                        {
+                            model: db.Role,
+                            as: 'roles',
+                            attributes: ['name', 'description'],
+                            through: { attributes: [] }
+                        }
+                    ]
+                }
             ]
         });
 
@@ -1312,10 +1324,44 @@ const getAllVariantSkus = async () => {
     }
 };
 
+const getLowStockVariants = async (threshold = 10) => {
+    try {
+        const variants = await db.ProductVariant.findAll({
+            where: {
+                stock: {
+                    [Op.lte]: threshold
+                }
+            },
+            include: [
+                {
+                    model: db.Product,
+                    as: 'product',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: db.Color,
+                    as: 'color',
+                    attributes: ['name']
+                },
+                {
+                    model: db.Size,
+                    as: 'size',
+                    attributes: ['name']
+                }
+            ],
+            order: [['stock', 'ASC']]
+        });
+        return { EM: 'Lấy danh sách biến thể sắp hết hàng thành công', EC: errorCode.SUCCESS, DT: variants };
+    } catch (error) {
+        console.error(">>> Lỗi getLowStockVariants:", error);
+        return { EM: 'Lỗi server khi lấy danh sách sắp hết hàng', EC: errorCode.OTHER_ERROR, DT: [] };
+    }
+};
+
 module.exports = {
     getAllProducts, getProductById, createProduct, updateProduct, deleteProduct, searchProducts,
     addProductVariant, updateProductVariant,
     addMultipleProductImages, deleteProductImage, getBestDiscountProducts,
     getBestSellerProducts, checkProductAvailability, filterProductsAdvanced, getInventoryLogs,
-    importInventory, adjustInventory, importInventoryManual, getAllVariantSkus
+    importInventory, adjustInventory, importInventoryManual, getAllVariantSkus, getLowStockVariants
 }
