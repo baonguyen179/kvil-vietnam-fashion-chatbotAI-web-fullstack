@@ -1208,12 +1208,35 @@ const confirmReturnReceived = async (returnRequestId, warehouseUserId, stockCond
         if (order.orderItems && order.orderItems.length > 0) {
             for (const item of order.orderItems) {
                 if (stockCondition === 'good') {
-                    // Hàng nguyên vẹn → Cộng lại kho bán lẻ (stock trực tuyến)
-                    await db.ProductVariant.increment('stock', { 
-                        by: item.quantity, 
-                        where: { id: item.variantId }, 
-                        transaction: t 
+                    // [MOVING AVG] Hàng nguyên vẹn → Cộng lại kho + tính lại giá vốn bình quân
+                    const variant = await db.ProductVariant.findOne({
+                        where: { id: item.variantId },
+                        attributes: ['id', 'stock', 'avgCostPrice'],
+                        transaction: t,
+                        lock: t.LOCK.UPDATE
                     });
+
+                    if (variant) {
+                        const returnCost = parseFloat(item.costPrice) || 0;
+                        const currentStock = variant.stock;
+                        const currentAvg = parseFloat(variant.avgCostPrice) || 0;
+                        const returnQty = item.quantity;
+
+                        // Tính Moving AVG: coi hàng hoàn như 1 lô nhập mới với giá = giá vốn lúc bán
+                        let newAvgCost = currentAvg;
+                        if (currentStock <= 0) {
+                            newAvgCost = returnCost;
+                        } else {
+                            const totalValue = (currentStock * currentAvg) + (returnQty * returnCost);
+                            const totalQty = currentStock + returnQty;
+                            newAvgCost = parseFloat((totalValue / totalQty).toFixed(2));
+                        }
+
+                        await variant.update({
+                            stock: currentStock + returnQty,
+                            avgCostPrice: newAvgCost
+                        }, { transaction: t });
+                    }
 
                     await db.InventoryLog.create({
                         variantId: item.variantId,

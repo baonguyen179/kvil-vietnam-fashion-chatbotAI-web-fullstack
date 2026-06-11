@@ -902,7 +902,7 @@ const importInventory = async (fileBuffer, adminId) => {
         const skusInExcel = data.map(item => item.sku);
         const variantsInDb = await db.ProductVariant.findAll({
             where: { sku: { [Op.in]: skusInExcel } },
-            attributes: ['id', 'sku', 'stock', 'productId']
+            attributes: ['id', 'sku', 'stock', 'avgCostPrice', 'productId']
         });
 
         const variantMap = new Map();
@@ -931,27 +931,50 @@ const importInventory = async (fileBuffer, adminId) => {
         t = await db.sequelize.transaction();
 
         const logTasks = [];
-        const updateTasks = [];
-        const updatedProductIds = new Set(); // Dùng để xóa cache
+        const updatedProductIds = new Set();
 
+        // [MOVING AVG] Xử lý tuần tự từng SKU, tính lại Moving AVG cho mỗi lần nhập
         for (const item of data) {
             const variant = variantMap.get(item.sku);
+            const costPrice = item.costPrice || 0;
 
-            // Increment an toàn với Transaction, tự động lock row (Race Condition Prevention)
-            updateTasks.push(variant.increment('stock', { by: item.quantity, transaction: t }));
+            const freshVariant = await db.ProductVariant.findOne({
+                where: { id: variant.id },
+                attributes: ['id', 'stock', 'avgCostPrice'],
+                transaction: t,
+                lock: true
+            });
+
+            // Tính Moving AVG
+            let newAvgCost = parseFloat(freshVariant.avgCostPrice) || 0;
+            if (costPrice > 0) {
+                const currentStock = Math.max(0, freshVariant.stock);
+                if (currentStock <= 0) {
+                    newAvgCost = costPrice;
+                } else {
+                    const totalValue = (currentStock * newAvgCost) + (item.quantity * costPrice);
+                    const totalQty = currentStock + item.quantity;
+                    newAvgCost = parseFloat((totalValue / totalQty).toFixed(2));
+                }
+            }
+
+            await freshVariant.update({
+                stock: freshVariant.stock + item.quantity,
+                avgCostPrice: newAvgCost
+            }, { transaction: t });
+
             updatedProductIds.add(variant.productId);
 
-            // Gom array để bulkCreate
             logTasks.push({
                 variantId: variant.id,
                 userId: adminId,
-                type: 'IN', // Option: Cộng dồn
+                type: 'IN',
                 quantity: item.quantity,
+                costPrice: costPrice,
                 note: `Nhập kho hàng loạt qua file Excel.`
             });
         }
 
-        await Promise.all(updateTasks);
         await db.InventoryLog.bulkCreate(logTasks, { transaction: t });
 
         await t.commit();

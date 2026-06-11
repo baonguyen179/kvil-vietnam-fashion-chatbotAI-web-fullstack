@@ -26,6 +26,10 @@ module.exports = (sequelize, DataTypes) => {
     colorId: DataTypes.INTEGER,
     stock: DataTypes.INTEGER,
     price: DataTypes.DECIMAL,
+    avgCostPrice: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0.00
+    },
     sku: {
       type: DataTypes.STRING,
       unique: true

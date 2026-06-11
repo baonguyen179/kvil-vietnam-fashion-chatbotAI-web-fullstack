@@ -95,6 +95,7 @@ sizeId int [ref: > Sizes.id]
  colorId int [ref: > Colors.id]  
  stock int // Chú ý: Cột này giờ sẽ được tự động cộng/trừ dựa vào bảng InventoryLogs bên dưới
 price decimal // Giá riêng (nếu size to hơn thì đắt hơn)
+avgCostPrice DECIMAL(15,2) // Giá vốn bình quân liên hoàn (Moving AVG) — tự động cập nhật mỗi khi nhập kho
 sku string
 }
 
