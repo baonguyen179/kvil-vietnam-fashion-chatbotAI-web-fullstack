@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Table, Tag, Statistic, Spin, Alert, Progress } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, UserOutlined, ShoppingCartOutlined, DollarOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Table, Tag, Statistic, Spin, Alert, Progress, Button } from 'antd';
+import { ArrowUpOutlined, ArrowDownOutlined, UserOutlined, ShoppingCartOutlined, DollarOutlined, FileExcelOutlined } from '@ant-design/icons';
 import reportService from '@/services/reportService';
+import { exportMultiTablesToExcel } from '@/utils/excelExport';
 
 const OverviewTab = ({ dateRange, refresh, onRefreshComplete, showCustomers }) => {
     const [loading, setLoading] = useState(false);
@@ -76,8 +77,83 @@ const OverviewTab = ({ dateRange, refresh, onRefreshComplete, showCustomers }) =
         { title: 'Tổng chi tiêu', dataIndex: 'totalSpent', key: 'totalSpent', render: (val) => <span className="font-semibold text-green-600">{Number(val).toLocaleString('vi-VN')}đ</span> }
     ];
 
+    const handleExportExcel = () => {
+        const tables = [
+            {
+                title: '📊 Chỉ số Tổng quan',
+                columns: [
+                    { header: 'Chỉ số', key: 'metric', width: 25 },
+                    { header: 'Giá trị', key: 'value', width: 20 }
+                ],
+                data: [
+                    { metric: 'Doanh thu hôm nay', value: `${Number(rev.today || 0).toLocaleString('vi-VN')}đ` },
+                    { metric: 'Doanh thu tuần này', value: `${Number(rev.thisWeek || 0).toLocaleString('vi-VN')}đ` },
+                    { metric: 'Doanh thu tháng này', value: `${Number(rev.thisMonth || 0).toLocaleString('vi-VN')}đ` },
+                    { metric: 'Doanh thu tháng trước', value: `${Number(rev.lastMonth || 0).toLocaleString('vi-VN')}đ` },
+                    { metric: 'Tăng trưởng tháng này vs tháng trước', value: `${rev.growthPercent || 0}%` },
+                    { metric: 'AOV (Giá trị đơn trung bình)', value: `${Number(cust.aov || 0).toLocaleString('vi-VN')}đ` }
+                ]
+            },
+            {
+                title: '📈 Thống kê Đơn hàng & Khách hàng',
+                columns: [
+                    { header: 'Thông số', key: 'metric', width: 25 },
+                    { header: 'Số lượng / Giá trị', key: 'value', width: 20 }
+                ],
+                data: [
+                    { metric: 'Đơn hàng thành công', value: `${ord.success || 0} đơn` },
+                    { metric: 'Đơn hàng đã hủy', value: `${ord.cancelled || 0} đơn` },
+                    { metric: 'Đơn hàng bị hoàn trả', value: `${ord.returned || 0} đơn` },
+                    { metric: 'Tổng số đơn hàng', value: `${ord.total || 0} đơn` },
+                    { metric: 'Khách hàng mới', value: `${cust.newCustomers || 0} khách` },
+                    { metric: 'Khách hàng quay lại', value: `${cust.returningCustomers || 0} khách` }
+                ]
+            },
+            {
+                title: '🎟️ Hiệu quả mã giảm giá',
+                columns: [
+                    { header: 'Mã Coupon', key: 'code', width: 15 },
+                    { header: 'Lượt sử dụng', key: 'usedCount', width: 15, align: 'right', style: { numFmt: '#,##0' } },
+                    { header: 'Tổng tiền giảm giá', key: 'totalDiscounted', width: 20, align: 'right', style: { numFmt: '#,##0"đ"' } },
+                    { header: 'Doanh thu tạo ra', key: 'revenueGenerated', width: 20, align: 'right', style: { numFmt: '#,##0"đ"' } }
+                ],
+                data: data.coupons
+            }
+        ];
+
+        if (showCustomers && data.customers.length > 0) {
+            tables.push({
+                title: '👑 Top 5 khách hàng chi tiêu nhiều nhất',
+                columns: [
+                    { header: 'Tên Khách hàng', key: 'fullName', width: 25 },
+                    { header: 'Email', key: 'email', width: 30 },
+                    { header: 'Số đơn hàng', key: 'orderCount', width: 15, align: 'right', style: { numFmt: '#,##0' } },
+                    { header: 'Tổng chi tiêu', key: 'totalSpent', width: 20, align: 'right', style: { numFmt: '#,##0"đ"' } }
+                ],
+                data: data.customers
+            });
+        }
+
+        exportMultiTablesToExcel({
+            fileName: 'bao-cao-tong-quan-kinh-doanh',
+            title: 'BÁO CÁO TỔNG QUAN KINH DOANH & KHÁCH HÀNG',
+            subTitle: `Khoảng thời gian: ${dateRange[0]?.format('DD/MM/YYYY')} - ${dateRange[1]?.format('DD/MM/YYYY')}`,
+            tables
+        });
+    };
+
     return (
         <div className="space-y-6">
+            <div className="flex justify-end">
+                <Button 
+                    type="primary" 
+                    icon={<FileExcelOutlined />} 
+                    onClick={handleExportExcel}
+                    style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
+                >
+                    Xuất Excel tổng quan
+                </Button>
+            </div>
             <Row gutter={[16, 16]}>
                 <Col xs={24} sm={12} md={6}>
                     <Card variant="borderless" className="shadow-sm">

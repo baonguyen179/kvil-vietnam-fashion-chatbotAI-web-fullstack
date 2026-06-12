@@ -216,6 +216,7 @@ const getSlowProductsReport = async (queryParams) => {
                 SELECT id FROM Orders WHERE status='delivered'
                   AND createdAt BETWEEN :startDate AND :endDate
               )
+            WHERE p.deletedAt IS NULL
             GROUP BY p.id
             HAVING currentStock > 0
             ORDER BY totalSold ASC
@@ -262,6 +263,7 @@ const getLowStockReport = async (queryParams) => {
             JOIN Sizes s ON s.id = pv.sizeId
             JOIN Colors c ON c.id = pv.colorId
             WHERE pv.stock < 10 AND pv.stock > 0
+              AND p.deletedAt IS NULL
             ORDER BY pv.stock ASC;
         `, {
             type: QueryTypes.SELECT
@@ -308,6 +310,7 @@ const getOverstockReport = async (queryParams) => {
               FROM InventoryLogs WHERE type='IN' AND costPrice > 0
               GROUP BY variantId
             ) il_avg ON il_avg.variantId = pv.id
+            WHERE p.deletedAt IS NULL
             GROUP BY p.id
             HAVING totalStock > 100
             ORDER BY totalStock DESC
@@ -361,6 +364,7 @@ const getSellThroughReport = async (queryParams) => {
                 SELECT id FROM Orders WHERE status='delivered'
                   AND createdAt BETWEEN :startDate AND :endDate
               )
+            WHERE p.deletedAt IS NULL
             GROUP BY p.id
             ORDER BY sellThroughRate DESC;
         `, {
@@ -574,6 +578,113 @@ const getCouponPerformanceReport = async (queryParams) => {
     }
 };
 
+const getTopProfitProductsReport = async (queryParams) => {
+    try {
+        const { startDate, endDate } = processDateParams(queryParams);
+        const limit = queryParams.limit || 10;
+        const refresh = queryParams.refresh === 'true' || queryParams.refresh === true;
+
+        const cacheKey = `admin:report:top-profit:${startDate.toISOString()}:${endDate.toISOString()}:${limit}`;
+        if (!refresh) {
+            const cached = await redisHelper.getCache(cacheKey);
+            if (cached) return { EC: errorCode.SUCCESS, EM: 'Lấy báo cáo top lợi nhuận (cache) thành công', DT: cached };
+        }
+
+        const data = await db.sequelize.query(`
+            SELECT
+              p.id,
+              p.name,
+              SUM(oi.quantity) AS totalSold,
+              SUM(oi.price * oi.quantity) AS revenue,
+              SUM(oi.costPrice * oi.quantity) AS cogs,
+              SUM((oi.price - oi.costPrice) * oi.quantity) AS profit
+            FROM OrderItems oi
+            JOIN ProductVariants pv ON pv.id = oi.variantId
+            JOIN Products p ON p.id = pv.productId
+            JOIN Orders o ON o.id = oi.orderId
+            WHERE o.status = 'delivered'
+              AND o.createdAt BETWEEN :startDate AND :endDate
+              AND p.deletedAt IS NULL
+            GROUP BY p.id
+            ORDER BY profit DESC
+            LIMIT ${parseInt(limit, 10)};
+        `, {
+            replacements: { startDate, endDate },
+            type: QueryTypes.SELECT
+        });
+
+        const formatted = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            totalSold: parseInt(item.totalSold || 0, 10),
+            revenue: parseFloat(item.revenue || 0),
+            cogs: parseFloat(item.cogs || 0),
+            profit: parseFloat(item.profit || 0)
+        }));
+
+        await redisHelper.setCache(cacheKey, formatted, REPORT_CACHE_TTL);
+        return { EC: errorCode.SUCCESS, EM: 'Lấy báo cáo top lợi nhuận thành công', DT: formatted };
+    } catch (error) {
+        console.error('>>> getTopProfitProductsReport Error:', error);
+        return { EC: errorCode.OTHER_ERROR, EM: 'Lỗi máy chủ khi lấy báo cáo top lợi nhuận', DT: null };
+    }
+};
+
+const getTopReturnedProductsReport = async (queryParams) => {
+    try {
+        const { startDate, endDate } = processDateParams(queryParams);
+        const limit = queryParams.limit || 10;
+        const refresh = queryParams.refresh === 'true' || queryParams.refresh === true;
+
+        const cacheKey = `admin:report:top-returned:${startDate.toISOString()}:${endDate.toISOString()}:${limit}`;
+        if (!refresh) {
+            const cached = await redisHelper.getCache(cacheKey);
+            if (cached) return { EC: errorCode.SUCCESS, EM: 'Lấy báo cáo tỉ lệ hoàn trả (cache) thành công', DT: cached };
+        }
+
+        const data = await db.sequelize.query(`
+            SELECT
+              p.id,
+              p.name,
+              COALESCE(SUM(CASE WHEN o.status = 'returned' THEN oi.quantity ELSE 0 END), 0) AS returnedQty,
+              COALESCE(SUM(CASE WHEN o.status IN ('delivered', 'returned') THEN oi.quantity ELSE 0 END), 0) AS soldQty,
+              ROUND(
+                COALESCE(SUM(CASE WHEN o.status = 'returned' THEN oi.quantity ELSE 0 END), 0) /
+                NULLIF(COALESCE(SUM(CASE WHEN o.status IN ('delivered', 'returned') THEN oi.quantity ELSE 0 END), 0), 0) * 100,
+                1
+              ) AS returnRate
+            FROM OrderItems oi
+            JOIN ProductVariants pv ON pv.id = oi.variantId
+            JOIN Products p ON p.id = pv.productId
+            JOIN Orders o ON o.id = oi.orderId
+            WHERE o.status IN ('delivered', 'returned')
+              AND o.createdAt BETWEEN :startDate AND :endDate
+              AND p.deletedAt IS NULL
+            GROUP BY p.id
+            HAVING soldQty > 0
+            ORDER BY returnRate DESC, returnedQty DESC
+            LIMIT ${parseInt(limit, 10)};
+        `, {
+            replacements: { startDate, endDate },
+            type: QueryTypes.SELECT
+        });
+
+        const formatted = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            returnedQty: parseInt(item.returnedQty || 0, 10),
+            soldQty: parseInt(item.soldQty || 0, 10),
+            returnRate: parseFloat(item.returnRate || 0)
+        }));
+
+        await redisHelper.setCache(cacheKey, formatted, REPORT_CACHE_TTL);
+        return { EC: errorCode.SUCCESS, EM: 'Lấy báo cáo tỉ lệ hoàn trả thành công', DT: formatted };
+    } catch (error) {
+        console.error('>>> getTopReturnedProductsReport Error:', error);
+        return { EC: errorCode.OTHER_ERROR, EM: 'Lỗi máy chủ khi lấy báo cáo tỉ lệ hoàn trả', DT: null };
+    }
+};
+
 module.exports = {
     getOverviewReport,
     getTopProductsReport,
@@ -584,5 +695,7 @@ module.exports = {
     getRevenueByCategoryReport,
     getProfitReport,
     getTopCustomersReport,
-    getCouponPerformanceReport
+    getCouponPerformanceReport,
+    getTopProfitProductsReport,
+    getTopReturnedProductsReport
 };

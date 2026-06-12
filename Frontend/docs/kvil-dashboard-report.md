@@ -95,6 +95,7 @@ LEFT JOIN OrderItems oi ON oi.variantId = pv.id
     SELECT id FROM Orders WHERE status='delivered'
       AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
   )
+WHERE p.deletedAt IS NULL -- Lọc bỏ sản phẩm đã xóa mềm
 GROUP BY p.id
 HAVING currentStock > 0
 ORDER BY totalSold ASC
@@ -111,12 +112,14 @@ SELECT
   p.name AS product,
   s.name AS size,
   c.name AS color,
-  pv.stock
+  pv.stock,
+  pv.sku
 FROM ProductVariants pv
 JOIN Products p ON p.id = pv.productId
 JOIN Sizes s ON s.id = pv.sizeId
 JOIN Colors c ON c.id = pv.colorId
 WHERE pv.stock < 10 AND pv.stock > 0
+  AND p.deletedAt IS NULL -- Lọc bỏ sản phẩm đã xóa mềm
 ORDER BY pv.stock ASC;
 ```
 **Ngưỡng:** `stock < 10` → cảnh báo vàng | `stock < 3` → cảnh báo đỏ.  
@@ -130,7 +133,7 @@ ORDER BY pv.stock ASC;
 SELECT
   p.name,
   SUM(pv.stock) AS totalStock,
-  SUM(pv.stock * il_avg.avgCost) AS estimatedValue -- giá trị vốn bị chôn
+  COALESCE(SUM(pv.stock * il_avg.avgCost), 0) AS estimatedValue -- giá trị vốn bị chôn
 FROM Products p
 JOIN ProductVariants pv ON pv.productId = p.id
 LEFT JOIN (
@@ -139,6 +142,7 @@ LEFT JOIN (
   FROM InventoryLogs WHERE type='IN' AND costPrice > 0
   GROUP BY variantId
 ) il_avg ON il_avg.variantId = pv.id
+WHERE p.deletedAt IS NULL -- Lọc bỏ sản phẩm đã xóa mềm
 GROUP BY p.id
 HAVING totalStock > 100   -- ngưỡng tùy chỉnh
 ORDER BY totalStock DESC
@@ -153,9 +157,9 @@ LIMIT 10;
 ```sql
 SELECT
   p.name,
-  SUM(oi.quantity)                               AS sold30d,
-  SUM(il_in.totalIn)                             AS imported30d,
-  ROUND(SUM(oi.quantity) / NULLIF(SUM(il_in.totalIn),0) * 100, 1) AS sellThroughRate
+  COALESCE(SUM(oi.quantity), 0)                               AS sold30d,
+  COALESCE(SUM(il_in.totalIn), 0)                             AS imported30d,
+  ROUND(COALESCE(SUM(oi.quantity), 0) / NULLIF(COALESCE(SUM(il_in.totalIn),0),0) * 100, 1) AS sellThroughRate
 FROM Products p
 JOIN ProductVariants pv ON pv.productId = p.id
 LEFT JOIN (
@@ -168,6 +172,7 @@ LEFT JOIN OrderItems oi ON oi.variantId = pv.id
     SELECT id FROM Orders WHERE status='delivered'
       AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
   )
+WHERE p.deletedAt IS NULL -- Lọc bỏ sản phẩm đã xóa mềm
 GROUP BY p.id
 ORDER BY sellThroughRate DESC;
 ```
@@ -262,19 +267,75 @@ ORDER BY usedCount DESC;
 
 ---
 
+## NHÓM 11 — TOP SẢN PHẨM LỢI NHUẬN CAO NHẤT (TÍNH LÃI)
+
+```sql
+SELECT
+  p.id,
+  p.name,
+  SUM(oi.quantity) AS totalSold,
+  SUM(oi.price * oi.quantity) AS revenue,
+  SUM(oi.costPrice * oi.quantity) AS cogs,
+  SUM((oi.price - oi.costPrice) * oi.quantity) AS profit
+FROM OrderItems oi
+JOIN ProductVariants pv ON pv.id = oi.variantId
+JOIN Products p ON p.id = pv.productId
+JOIN Orders o ON o.id = oi.orderId
+WHERE o.status = 'delivered'
+  AND o.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+  AND p.deletedAt IS NULL -- Chỉ xem xét các sản phẩm đang bán
+GROUP BY p.id
+ORDER BY profit DESC
+LIMIT 10;
+```
+**Dùng để:** Xác định sản phẩm mang lại giá trị gia tăng và biên lợi nhuận tốt nhất để đẩy mạnh bán hàng hoặc sản xuất.
+
+---
+
+## NHÓM 12 — TOP SẢN PHẨM TỈ LỆ HOÀN TRẢ CAO NHẤT
+
+```sql
+SELECT
+  p.id,
+  p.name,
+  COALESCE(SUM(CASE WHEN o.status = 'returned' THEN oi.quantity ELSE 0 END), 0) AS returnedQty,
+  COALESCE(SUM(CASE WHEN o.status IN ('delivered', 'returned') THEN oi.quantity ELSE 0 END), 0) AS soldQty,
+  ROUND(
+    COALESCE(SUM(CASE WHEN o.status = 'returned' THEN oi.quantity ELSE 0 END), 0) /
+    NULLIF(COALESCE(SUM(CASE WHEN o.status IN ('delivered', 'returned') THEN oi.quantity ELSE 0 END), 0), 0) * 100,
+    1
+  ) AS returnRate
+FROM OrderItems oi
+JOIN ProductVariants pv ON pv.id = oi.variantId
+JOIN Products p ON p.id = pv.productId
+JOIN Orders o ON o.id = oi.orderId
+WHERE o.status IN ('delivered', 'returned')
+  AND o.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+  AND p.deletedAt IS NULL
+GROUP BY p.id
+HAVING soldQty > 0
+ORDER BY returnRate DESC, returnedQty DESC
+LIMIT 10;
+```
+**Dùng để:** Phát hiện các sản phẩm bị lỗi thiết kế, lỗi form dáng, hoặc chất liệu kém dẫn đến tỉ lệ đổi trả cao, cần thu hồi hoặc nâng cấp chất lượng.
+
+---
+
 ## API ENDPOINTS — ĐỀ XUẤT
 
 ```
-GET /api/reports/overview          → Nhóm 1 (doanh thu + đơn + khách)
-GET /api/reports/top-products      → Nhóm 2 (bán chạy)
-GET /api/reports/slow-products     → Nhóm 3 (bán chậm)
-GET /api/reports/low-stock         → Nhóm 4 (sắp hết)
-GET /api/reports/overstock         → Nhóm 5 (tồn nhiều)
-GET /api/reports/sell-through      → Nhóm 6 (tốc độ bán)
-GET /api/reports/revenue-by-category → Nhóm 7
-GET /api/reports/profit            → Nhóm 8 (lợi nhuận gộp)
-GET /api/reports/top-customers     → Nhóm 9
-GET /api/reports/coupon-performance → Nhóm 10
+GET /api/reports/overview             → Nhóm 1 (doanh thu + đơn + khách)
+GET /api/reports/top-products         → Nhóm 2 (bán chạy)
+GET /api/reports/slow-products        → Nhóm 3 (bán chậm)
+GET /api/reports/low-stock            → Nhóm 4 (sắp hết)
+GET /api/reports/overstock            → Nhóm 5 (tồn nhiều)
+GET /api/reports/sell-through         → Nhóm 6 (tốc độ bán)
+GET /api/reports/revenue-by-category  → Nhóm 7
+GET /api/reports/profit               → Nhóm 8 (lợi nhuận gộp)
+GET /api/reports/top-customers        → Nhóm 9
+GET /api/reports/coupon-performance   → Nhóm 10
+GET /api/reports/top-profit-products  → Nhóm 11 (Top sản phẩm theo lợi nhuận)
+GET /api/reports/top-returned-products→ Nhóm 12 (Top sản phẩm có tỉ lệ hoàn trả)
 
 -- Query params chung:
 ?from=2025-06-01&to=2025-06-30   -- lọc theo khoảng thời gian
@@ -282,16 +343,16 @@ GET /api/reports/coupon-performance → Nhóm 10
 ```
 
 **Phân quyền:**
-- `SALES` → được truy cập nhóm 1,2,3,4,5,6,7,10
-- `ACCOUNTANT` → được truy cập nhóm 1,7,8,9,10
+- `SALES` → được truy cập nhóm 1,2,3,4,5,6,7,10,11,12
+- `ACCOUNTANT` → được truy cập nhóm 1,7,8,9,10,11
 - `SUPER_ADMIN` → toàn bộ
 
 ---
 
 ## SCHEMA DELTA — KHÔNG CẦN GÌ THÊM
 
-Tất cả 10 nhóm báo cáo đều dùng schema hiện có.  
-Điều kiện duy nhất: `OrderItems.costPrice` đã được implement (xem kvil-fifo-costing.md).
+Tất cả 12 nhóm báo cáo đều dùng schema hiện có.  
+Điều kiện duy nhất: `OrderItems.costPrice` đã được lưu trữ và giá vốn bình quân gia quyền liên hoàn được tính khi nhập kho.
 
 ---
 

@@ -117,6 +117,8 @@ router.get('/admin/reports/revenue-by-category', JWTAction.checkUserPermission(R
 router.get('/admin/reports/profit', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.ACCOUNTANT), reportController.handleGetProfit);
 router.get('/admin/reports/top-customers', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.ACCOUNTANT), reportController.handleGetTopCustomers);
 router.get('/admin/reports/coupon-performance', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES, ROLES.ACCOUNTANT), reportController.handleGetCouponPerformance);
+router.get('/admin/reports/top-profit-products', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES, ROLES.ACCOUNTANT), reportController.handleGetTopProfitProducts);
+router.get('/admin/reports/top-returned-products', JWTAction.checkUserPermission(ROLES.SUPER_ADMIN, ROLES.SALES), reportController.handleGetTopReturnedProducts);
 
 
 // [ADMIN - CHATBOT] QUẢN LÝ & GIÁM SÁT CHATBOT-X

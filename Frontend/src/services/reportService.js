@@ -13,6 +13,8 @@ const reportService = {
     getProfit: (params) => axios.get(`${BASE}/profit`, { params }),
     getTopCustomers: (params) => axios.get(`${BASE}/top-customers`, { params }),
     getCouponPerformance: (params) => axios.get(`${BASE}/coupon-performance`, { params }),
+    getTopProfitProducts: (params) => axios.get(`${BASE}/top-profit-products`, { params }),
+    getTopReturnedProducts: (params) => axios.get(`${BASE}/top-returned-products`, { params }),
 };
 
 export default reportService;

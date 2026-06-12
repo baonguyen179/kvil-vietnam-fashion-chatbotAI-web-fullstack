@@ -75,7 +75,7 @@ const sendOrderIdListEmail = async (userEmail, orders) => {
         await transporter.sendMail(mailOptions);
     } catch (error) {
         console.error(">>> Lỗi Gửi Email recovery:", error);
-        throw error;
+        // [FIX] Xử lý kín, không throw lỗi ra ngoài để tránh báo lỗi server (500) lên giao diện
     }
 };
 
@@ -194,4 +194,4 @@ const sendReviewRequestEmail = async (userEmail, order, itemsWithTokens) => {
 };
 
 module.exports = { sendOtpEmail, sendOrderIdListEmail, sendOrderConfirmationEmail, sendReviewRequestEmail };
-
+

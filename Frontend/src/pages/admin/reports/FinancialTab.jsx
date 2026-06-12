@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Spin, Alert, Table } from 'antd';
+import { Card, Row, Col, Spin, Alert, Table, Button } from 'antd';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { FileExcelOutlined } from '@ant-design/icons';
 import reportService from '@/services/reportService';
+import { exportMultiTablesToExcel } from '@/utils/excelExport';
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
 
@@ -64,8 +66,54 @@ const FinancialTab = ({ dateRange, refresh, onRefreshComplete, showProfit }) => 
         return val;
     };
 
+    const handleExportExcel = () => {
+        const tables = [
+            {
+                title: '🍕 Doanh thu theo danh mục',
+                columns: [
+                    { header: 'ID Danh mục', key: 'id', width: 12 },
+                    { header: 'Danh mục', key: 'category', width: 25 },
+                    { header: 'Doanh thu', key: 'revenue', width: 22, align: 'right', style: { numFmt: '#,##0"đ"' } }
+                ],
+                data: data.categoryRevenue
+            }
+        ];
+
+        if (showProfit && data.profit.length > 0) {
+            tables.push({
+                title: '💵 Thống kê Doanh thu & Lợi nhuận hàng tháng',
+                columns: [
+                    { header: 'Tháng', key: 'month', width: 10 },
+                    { header: 'Năm', key: 'year', width: 10 },
+                    { header: 'Doanh thu', key: 'revenue', width: 22, align: 'right', style: { numFmt: '#,##0"đ"' } },
+                    { header: 'Giá vốn (COGS)', key: 'cogs', width: 22, align: 'right', style: { numFmt: '#,##0"đ"' } },
+                    { header: 'Lợi nhuận gộp', key: 'grossProfit', width: 22, align: 'right', style: { numFmt: '#,##0"đ"' } },
+                    { header: 'Biên lợi nhuận', key: 'marginPercent', width: 18, align: 'right', style: { numFmt: '0.0"%"' } }
+                ],
+                data: data.profit
+            });
+        }
+
+        exportMultiTablesToExcel({
+            fileName: 'bao-cao-tai-chinh',
+            title: 'BÁO CÁO TÀI CHÍNH & DOANH THU',
+            subTitle: `Khoảng thời gian: ${dateRange[0]?.format('DD/MM/YYYY')} - ${dateRange[1]?.format('DD/MM/YYYY')}`,
+            tables
+        });
+    };
+
     return (
         <div className="space-y-6">
+            <div className="flex justify-end">
+                <Button 
+                    type="primary" 
+                    icon={<FileExcelOutlined />} 
+                    onClick={handleExportExcel}
+                    style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
+                >
+                    Xuất Excel tài chính
+                </Button>
+            </div>
             <Row gutter={[16, 16]}>
                 <Col xs={24} lg={10}>
                     <Card title="🍕 Doanh thu theo danh mục" className="shadow-sm border-none h-full">

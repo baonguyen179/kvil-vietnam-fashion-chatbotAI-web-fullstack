@@ -142,6 +142,34 @@ const handleGetCouponPerformance = async (req, res) => {
     }
 };
 
+const handleGetTopProfitProducts = async (req, res) => {
+    try {
+        const { error, value } = reportValidation.getReportSchema.validate(req.query);
+        if (error) {
+            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+        const data = await reportService.getTopProfitProductsReport(value);
+        return res.status(200).json(data);
+    } catch (error) {
+        console.error(">>> Lỗi controller (handleGetTopProfitProducts):", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
+const handleGetTopReturnedProducts = async (req, res) => {
+    try {
+        const { error, value } = reportValidation.getReportSchema.validate(req.query);
+        if (error) {
+            return res.status(200).json({ EM: error.details[0].message, EC: errorCode.VALIDATION_ERROR, DT: '' });
+        }
+        const data = await reportService.getTopReturnedProductsReport(value);
+        return res.status(200).json(data);
+    } catch (error) {
+        console.error(">>> Lỗi controller (handleGetTopReturnedProducts):", error);
+        return res.status(500).json({ EM: 'Lỗi server nội bộ', EC: errorCode.OTHER_ERROR, DT: '' });
+    }
+};
+
 module.exports = {
     handleGetOverview,
     handleGetTopProducts,
@@ -152,5 +180,7 @@ module.exports = {
     handleGetRevenueByCategory,
     handleGetProfit,
     handleGetTopCustomers,
-    handleGetCouponPerformance
+    handleGetCouponPerformance,
+    handleGetTopProfitProducts,
+    handleGetTopReturnedProducts
 };
