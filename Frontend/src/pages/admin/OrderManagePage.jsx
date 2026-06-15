@@ -56,7 +56,7 @@ const OrderManagePage = () => {
     const fetchOrders = useCallback(async (page = 1, limit = 10, activeFilters = filters) => {
         setLoading(true);
         try {
-            const params = { page, limit, ...activeFilters };
+            const params = { page, limit, includeItems: true, ...activeFilters };
             if (params.paymentStatus === 'true')  params.paymentStatus = true;
             if (params.paymentStatus === 'false') params.paymentStatus = false;
 

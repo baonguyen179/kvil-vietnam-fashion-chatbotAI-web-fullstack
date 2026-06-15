@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Drawer, Descriptions, Tag, Badge, Divider, Space, Typography, Button, Popconfirm, Select, App, Alert } from 'antd';
+import { Drawer, Descriptions, Tag, Badge, Divider, Space, Typography, Button, Popconfirm, Select, App, Alert, Table } from 'antd';
 import { UserOutlined, PhoneOutlined, MailOutlined, EnvironmentOutlined, SyncOutlined } from '@ant-design/icons';
 import { ORDER_STATUS_CONFIG, PAYMENT_METHOD_LABELS, DELIVERY_METHOD_LABELS, ALLOWED_NEXT_STATUS, getAllowedNextStatus } from '@/constants/orderConstants';
 import orderService from '@/services/orderService';
@@ -159,6 +159,63 @@ const AdminOrderDetailDrawer = ({ open, onClose, order, onUpdateStatus, onUpdate
                     <Text style={{ whiteSpace: 'pre-line' }}>{order.shippingAddress || '—'}</Text>
                 </Descriptions.Item>
             </Descriptions>
+
+            {/* === Danh sách sản phẩm === */}
+            <Title level={5} className="mb-2">📦 Sản phẩm trong đơn</Title>
+            <div className="border rounded-lg overflow-hidden mb-4 bg-white">
+                <Table
+                    dataSource={order.orderItems || []}
+                    columns={[
+                        {
+                            title: 'Sản phẩm',
+                            key: 'product',
+                            render: (_, item) => {
+                                const variant = item.variant || {};
+                                const product = variant.product || {};
+                                return (
+                                    <div>
+                                        <div className="font-semibold text-sm">{product.name || 'N/A'}</div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            SKU: <Tag color="blue" className="text-[10px] py-0 px-1 font-mono">{variant.sku}</Tag>
+                                            <span className="mx-1">·</span>
+                                            Màu: {variant.color?.name || 'N/A'}
+                                            <span className="mx-1">·</span>
+                                            Size: {variant.size?.name || 'N/A'}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                        },
+                        {
+                            title: 'Đơn giá',
+                            dataIndex: 'price',
+                            key: 'price',
+                            width: 110,
+                            align: 'right',
+                            render: (price) => formatCurrency(price)
+                        },
+                        {
+                            title: 'SL',
+                            dataIndex: 'quantity',
+                            key: 'quantity',
+                            width: 50,
+                            align: 'center',
+                            render: (qty) => <span className="font-semibold">x{qty}</span>
+                        },
+                        {
+                            title: 'Thành tiền',
+                            key: 'total',
+                            width: 120,
+                            align: 'right',
+                            render: (_, item) => formatCurrency(parseFloat(item.price) * item.quantity)
+                        }
+                    ]}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    className="custom-order-items-table"
+                />
+            </div>
 
             {/* === Thanh toán === */}
             <Title level={5} className="mb-2">💰 Chi tiết thanh toán</Title>

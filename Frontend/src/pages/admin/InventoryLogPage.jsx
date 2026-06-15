@@ -192,7 +192,7 @@ const InventoryLogPage = () => {
                 headerRow.height = 25;
 
                 exportData.forEach((log, index) => {
-                    const isPositive = log.type === 'IN' || log.type === 'RETURN' || log.type === 'UNHOLD';
+                    const isPositive = log.type === 'IN' || log.type === 'RETURN' || log.type === 'UNHOLD' || (log.type === 'ADJUST' && log.note?.includes('[TĂNG'));
                     const quantityText = `${isPositive ? '+' : '-'}${log.quantity}`;
                     
                     const typeLabels = {
@@ -349,7 +349,7 @@ const InventoryLogPage = () => {
             key: 'quantity',
             align: 'center',
             render: (qty, record) => {
-                const isPositive = record.type === 'IN' || record.type === 'RETURN' || record.type === 'UNHOLD';
+                const isPositive = record.type === 'IN' || record.type === 'RETURN' || record.type === 'UNHOLD' || (record.type === 'ADJUST' && record.note?.includes('[TĂNG'));
                 return (
                     <Text strong style={{ color: isPositive ? '#52c41a' : '#f5222d' }}>
                         {isPositive ? '+' : '-'}{qty}
