@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Table, Tag, Statistic, Spin, Alert, Progress, Button } from 'antd';
+import { Card, Row, Col, Table, Tag, Statistic, Spin, Alert, Progress, Button, Radio, DatePicker, Select, App, Space } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, UserOutlined, ShoppingCartOutlined, DollarOutlined, FileExcelOutlined } from '@ant-design/icons';
 import reportService from '@/services/reportService';
 import { exportMultiTablesToExcel } from '@/utils/excelExport';
+import dayjs from 'dayjs';
 
 const OverviewTab = ({ dateRange, refresh, onRefreshComplete, showCustomers }) => {
+    const { message } = App.useApp();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [data, setData] = useState({ overview: null, coupons: [], customers: [] });
+    const [data, setData] = useState({ overview: null, coupons: [] });
+
+    // Customer filters and state
+    const [customerLoading, setCustomerLoading] = useState(false);
+    const [customerData, setCustomerData] = useState([]);
+    const [customerCycle, setCustomerCycle] = useState('default'); // 'default' | 'month' | 'year'
+    const [customerMonth, setCustomerMonth] = useState(dayjs());
+    const [customerYear, setCustomerYear] = useState(dayjs());
+    const [customerLimit, setCustomerLimit] = useState(5);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,21 +35,15 @@ const OverviewTab = ({ dateRange, refresh, onRefreshComplete, showCustomers }) =
                     reportService.getCouponPerformance(params)
                 ];
 
-                if (showCustomers) {
-                    promises.push(reportService.getTopCustomers({ ...params, limit: 5 }));
-                }
-
                 const results = await Promise.all(promises);
 
                 const overviewRes = results[0];
                 const couponsRes = results[1];
-                const customersRes = showCustomers ? results[2] : { EC: 0, DT: [] };
 
-                if (overviewRes.EC === 0 && couponsRes.EC === 0 && customersRes.EC === 0) {
+                if (overviewRes.EC === 0 && couponsRes.EC === 0) {
                     setData({
                         overview: overviewRes.DT,
-                        coupons: couponsRes.DT || [],
-                        customers: customersRes.DT || []
+                        coupons: couponsRes.DT || []
                     });
                 } else {
                     setError('Không tải được một số dữ liệu báo cáo');
@@ -54,7 +58,50 @@ const OverviewTab = ({ dateRange, refresh, onRefreshComplete, showCustomers }) =
         };
 
         fetchData();
-    }, [dateRange, refresh, showCustomers]);
+    }, [dateRange, refresh]);
+
+    useEffect(() => {
+        if (!showCustomers) return;
+
+        const fetchCustomers = async () => {
+            setCustomerLoading(true);
+            try {
+                let start, end;
+                if (customerCycle === 'month') {
+                    start = customerMonth.startOf('month').toISOString();
+                    end = customerMonth.endOf('month').toISOString();
+                } else if (customerCycle === 'year') {
+                    start = customerYear.startOf('year').toISOString();
+                    end = customerYear.endOf('year').toISOString();
+                } else {
+                    // default
+                    start = dateRange[0]?.toISOString();
+                    end = dateRange[1]?.toISOString();
+                }
+
+                const params = {
+                    startDate: start,
+                    endDate: end,
+                    limit: customerLimit,
+                    refresh: refresh ? true : undefined
+                };
+
+                const res = await reportService.getTopCustomers(params);
+                if (res && res.EC === 0) {
+                    setCustomerData(res.DT || []);
+                } else {
+                    message.error(res.EM || 'Không tải được danh sách khách hàng tiêu biểu');
+                }
+            } catch (err) {
+                console.error(err);
+                message.error('Lỗi kết nối khi tải danh sách khách hàng tiêu biểu');
+            } finally {
+                setCustomerLoading(false);
+            }
+        };
+
+        fetchCustomers();
+    }, [dateRange, refresh, showCustomers, customerCycle, customerMonth, customerYear, customerLimit]);
 
     if (loading) return <div className="py-10 text-center"><Spin size="large" description="Đang tải dữ liệu tổng quan..." /></div>;
     if (error) return <Alert message={error} type="error" showIcon className="my-5" />;
@@ -121,16 +168,25 @@ const OverviewTab = ({ dateRange, refresh, onRefreshComplete, showCustomers }) =
             }
         ];
 
-        if (showCustomers && data.customers.length > 0) {
+        if (showCustomers && customerData.length > 0) {
+            let excelTitle = `👑 Top ${customerLimit} khách hàng chi tiêu nhiều nhất`;
+            if (customerCycle === 'month') {
+                excelTitle += ` (Tháng ${customerMonth.format('MM/YYYY')})`;
+            } else if (customerCycle === 'year') {
+                excelTitle += ` (Năm ${customerYear.format('YYYY')})`;
+            } else {
+                excelTitle += ` (Theo khoảng ngày chung)`;
+            }
+
             tables.push({
-                title: '👑 Top 5 khách hàng chi tiêu nhiều nhất',
+                title: excelTitle,
                 columns: [
                     { header: 'Tên Khách hàng', key: 'fullName', width: 25 },
                     { header: 'Email', key: 'email', width: 30 },
                     { header: 'Số đơn hàng', key: 'orderCount', width: 15, align: 'right', style: { numFmt: '#,##0' } },
                     { header: 'Tổng chi tiêu', key: 'totalSpent', width: 20, align: 'right', style: { numFmt: '#,##0"đ"' } }
                 ],
-                data: data.customers
+                data: customerData
             });
         }
 
@@ -264,13 +320,79 @@ const OverviewTab = ({ dateRange, refresh, onRefreshComplete, showCustomers }) =
             </Row>
 
             {showCustomers && (
-                <Card title="👑 Top 5 khách hàng chi tiêu nhiều nhất" className="shadow-sm border-none">
+                <Card 
+                    title={
+                        <Space>
+                            <span>👑 Top {customerLimit} khách hàng chi tiêu nhiều nhất</span>
+                        </Space>
+                    } 
+                    className="shadow-sm border-none"
+                    extra={
+                        <Space wrap size="middle">
+                            <Space size="small">
+                                <span className="text-xs text-gray-500 font-medium">Chu kỳ:</span>
+                                <Radio.Group 
+                                    size="small" 
+                                    buttonStyle="solid"
+                                    value={customerCycle}
+                                    onChange={(e) => setCustomerCycle(e.target.value)}
+                                >
+                                    <Radio.Button value="default">Mặc định</Radio.Button>
+                                    <Radio.Button value="month">Theo tháng</Radio.Button>
+                                    <Radio.Button value="year">Theo năm</Radio.Button>
+                                </Radio.Group>
+                            </Space>
+
+                            {customerCycle === 'month' && (
+                                <DatePicker 
+                                    picker="month" 
+                                    size="small" 
+                                    format="MM/YYYY" 
+                                    value={customerMonth}
+                                    allowClear={false}
+                                    onChange={(date) => date && setCustomerMonth(date)}
+                                    disabledDate={(current) => current && current > dayjs().endOf('month')}
+                                    style={{ width: 110 }}
+                                />
+                            )}
+
+                            {customerCycle === 'year' && (
+                                <DatePicker 
+                                    picker="year" 
+                                    size="small" 
+                                    format="YYYY" 
+                                    value={customerYear}
+                                    allowClear={false}
+                                    onChange={(date) => date && setCustomerYear(date)}
+                                    disabledDate={(current) => current && current > dayjs().endOf('year')}
+                                    style={{ width: 90 }}
+                                />
+                            )}
+
+                            <Space size="small">
+                                <span className="text-xs text-gray-500 font-medium">Hiển thị:</span>
+                                <Select
+                                    size="small"
+                                    value={customerLimit}
+                                    onChange={(val) => setCustomerLimit(val)}
+                                    options={[
+                                        { value: 5, label: '5' },
+                                        { value: 10, label: '10' },
+                                        { value: 20, label: '20' }
+                                    ]}
+                                    style={{ width: 65 }}
+                                />
+                            </Space>
+                        </Space>
+                    }
+                >
                     <Table
-                        dataSource={data.customers}
+                        dataSource={customerData}
                         columns={customerColumns}
                         rowKey="id"
                         pagination={false}
                         size="small"
+                        loading={customerLoading}
                     />
                 </Card>
             )}
