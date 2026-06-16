@@ -205,7 +205,7 @@ const ProductManagePage = () => {
                 if (variants.length === 0) {
                     return (
                         <Tooltip title="Sản phẩm chưa có biến thể. Vui lòng bấm &quot;Quản lý Biến thể&quot; để thêm.">
-                            <Tag color="default" style={{ cursor: 'help' }}>⚠️ Chưa có BT</Tag>
+                            <Tag color="default" style={{ cursor: 'help' }}>0</Tag>
                         </Tooltip>
                     );
                 }

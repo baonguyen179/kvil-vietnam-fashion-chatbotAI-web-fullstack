@@ -61,7 +61,7 @@ instance.interceptors.response.use(function (response) {
 
     const originalRequest = error.config;
     
-    // Xác định trường hợp Token hết hạn (Thường status backend trả ra là 401)
+    // Xác định trường hợp Token hết hạn (status backend trả ra là 401)
     if (error.response?.status === 401 && !originalRequest._retry) {
         if (isRefreshing) {
             return new Promise(function(resolve, reject) {

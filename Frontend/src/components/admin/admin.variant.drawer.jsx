@@ -180,7 +180,7 @@ const AdminVariantDrawer = ({
             render: (val) => val ? val.toLocaleString() + 'đ' : <Text type="secondary">0đ</Text>
         },
         {
-            title: 'Giá riêng (VNĐ)',
+            title: 'Giá bán (VNĐ)',
             dataIndex: 'price',
             key: 'price',
             render: (val) => val ? val.toLocaleString() + 'đ' : <Text type="secondary">Mặc định</Text>
@@ -336,7 +336,7 @@ const AdminVariantDrawer = ({
 
                         <Form.Item
                             name="price"
-                            label="Giá tùy chỉnh (nếu có khác gốc)"
+                            label="Giá bán"
                         >
                             <InputNumber 
                                 min={0} 
