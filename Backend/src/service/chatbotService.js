@@ -150,11 +150,16 @@ const processChatbotMessage = async (userId, sessionId, message) => {
     ].slice(-10); // Chỉ giữ 10 tin cuối
     
     // Lưu cache đồng thời với lưu log BOT
-    const productIds = finalProducts.map(p => p.id);
+    // Lưu thông tin sản phẩm thu gọn (bao gồm id, name, images) vào metadata để lịch sử chat hiển thị được ảnh và tên
+    const productMetadata = finalProducts.map(p => ({
+        id: p.id,
+        name: p.name,
+        images: p.images ? p.images.map(img => ({ imageUrl: img.imageUrl || img })) : []
+    }));
     await Promise.all([
         db.ChatLog.create({
             userId, sessionId, sender: 'BOT', message: finalReply,
-            metadata: productIds.length > 0 ? JSON.stringify(productIds) : null
+            metadata: productMetadata.length > 0 ? JSON.stringify(productMetadata) : null
         }),
         redisHelper.setCache(contextCacheKey, newContext, 1800), // Cache 30 phút
         redisHelper.delByPattern(`chat:history:${identifier}:*`) // Clear history list cache

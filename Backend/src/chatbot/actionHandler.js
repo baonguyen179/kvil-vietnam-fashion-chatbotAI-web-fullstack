@@ -218,17 +218,38 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                 );
 
                 const isAvailable = stockRes.DT?.available;
+                const variants = stockRes.DT?.variants || [];
 
-                finalReply = isAvailable
-                    ? `Dạ còn hàng${size ? ` size ${size}` : ""}${color ? ` màu ${color}` : ""} ạ!`
-                    : `Dạ hiện tại sản phẩm này đang hết hàng rồi ạ.`;
+                if (isAvailable && variants.length > 0) {
+                    // Kịch bản 1: Chỉ khớp đúng 1 biến thể duy nhất (khách hỏi chi tiết size + màu)
+                    if (variants.length === 1) {
+                        const variant = variants[0];
+                        const variantPrice = variant.price ? variant.price.toLocaleString('vi-VN') : '';
+                        finalReply = `Dạ còn hàng ạ! Hiện tại sản phẩm "${variant.product?.name || keyword}"${variant.size?.name ? ` size ${variant.size.name}` : ""}${variant.color?.name ? ` màu ${variant.color.name}` : ""} đang còn **${variant.stock}** sản phẩm trong kho với giá là **${variantPrice}đ** ạ.`;
+                    } else {
+                        // Kịch bản 2: Khớp nhiều biến thể (khách hỏi chung chung hoặc chỉ hỏi size hoặc chỉ hỏi màu)
+                        const availableVariants = variants.filter(v => v.stock > 0);
+                        if (availableVariants.length > 0) {
+                            const variantLines = availableVariants.map(v => {
+                                const priceStr = v.price ? ` - giá ${v.price.toLocaleString('vi-VN')}đ` : '';
+                                return `- Size ${v.size?.name || 'N/A'} màu ${v.color?.name || 'N/A'}: còn **${v.stock}** sản phẩm${priceStr}`;
+                            }).join('\n');
+                            
+                            finalReply = `Dạ còn hàng ạ! Sản phẩm "${variants[0].product?.name || keyword}" hiện đang còn các biến thể sau trong kho:\n${variantLines}\n\nBạn cần đặt size hay màu nào nhắn mình hỗ trợ nhé!`;
+                        } else {
+                            finalReply = `Dạ sản phẩm "${variants[0].product?.name || keyword}" hiện đang tạm hết hàng các biến thể bạn yêu cầu rồi ạ.`;
+                        }
+                    }
+                } else {
+                    finalReply = `Dạ tiếc quá, hiện tại sản phẩm này đang hết hàng hoặc không tìm thấy biến thể phù hợp với yêu cầu của bạn rồi ạ.`;
+                }
 
                 rawResult = {
                     keyword,
                     size,
                     color,
                     available: isAvailable,
-                    variants: (stockRes.DT?.variants || []).map(v => ({
+                    variants: variants.map(v => ({
                         sku: v.sku,
                         stock: v.stock,
                         price: v.price,
@@ -273,7 +294,7 @@ const executeAiAction = async (functionName, functionArgs = {}, userId = null) =
                 finalProducts = res.DT?.products || [];
 
                 if (finalProducts.length > 0) {
-                    // 2. Logic tạo câu trả lời linh hoạt dựa trên các khoảng giá
+                    //  Logic tạo câu trả lời linh hoạt dựa trên các khoảng giá
                     let priceContext = "";
 
                     if (minPrice && maxPrice) {

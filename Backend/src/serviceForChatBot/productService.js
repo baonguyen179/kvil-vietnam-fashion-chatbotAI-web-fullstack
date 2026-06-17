@@ -591,8 +591,31 @@ const getBestDiscountProducts = async (keyword, limit = 5) => {
         }
         const products = await db.Product.findAll({
             where: whereCondition,
+            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],
+            include: [
+                {
+                    model: db.ProductImage,
+                    as: 'images',
+                    attributes: ['imageUrl', 'isMain'],
+                    required: false
+                }
+            ],
             order: [['discountPercent', 'DESC']],
-            limit: limit
+            limit: limit,
+            distinct: true
+        });
+
+        // Xử lý ảnh chính/phụ
+        products.forEach(product => {
+            if (product.images && product.images.length > 0) {
+                let mainImg = product.images.find(img => img.isMain) || product.images[0];
+                let secondImg = product.images.find(img => !img.isMain && img !== mainImg);
+
+                const finalImages = [];
+                if (mainImg) finalImages.push(mainImg);
+                if (secondImg) finalImages.push(secondImg);
+                product.dataValues.images = finalImages;
+            }
         });
 
         const result = { products };
@@ -790,14 +813,35 @@ const filterProductsAdvanced = async (keyword, minPrice, maxPrice, limit = 5) =>
 
         const products = await db.Product.findAll({
             where: productWhere,
+            attributes: ['id', 'name', 'basePrice', 'discountPercent', 'createdAt'],
             include: [
                 {
                     model: db.ProductVariant,
                     as: "variants",
                     where: variantWhere
+                },
+                {
+                    model: db.ProductImage,
+                    as: 'images',
+                    attributes: ['imageUrl', 'isMain'],
+                    required: false
                 }
             ],
-            limit: limit
+            limit: limit,
+            distinct: true
+        });
+
+        // Xử lý ảnh chính/phụ
+        products.forEach(product => {
+            if (product.images && product.images.length > 0) {
+                let mainImg = product.images.find(img => img.isMain) || product.images[0];
+                let secondImg = product.images.find(img => !img.isMain && img !== mainImg);
+
+                const finalImages = [];
+                if (mainImg) finalImages.push(mainImg);
+                if (secondImg) finalImages.push(secondImg);
+                product.dataValues.images = finalImages;
+            }
         });
 
         const result = { products };
