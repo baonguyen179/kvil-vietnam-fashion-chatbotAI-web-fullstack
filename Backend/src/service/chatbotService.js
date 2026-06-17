@@ -6,6 +6,7 @@ const { aiFunctionDeclarations } = require('../chatbot/chatbotTools');
 const { SYSTEM_PROMPT } = require('../chatbot/chatbotPrompt');
 //config AI 
 const client = require('../config/openai.config');
+const geminiClient = require('../config/gemini.config');
 
 const redisHelper = require('../helpers/redis.helper');
 const CHAT_CACHE_TTL = process.env.CHAT_CACHE_TTL || 600; // Cache lịch sử chat ngắn hạn (10 phút)
@@ -13,6 +14,51 @@ const CHAT_CACHE_TTL = process.env.CHAT_CACHE_TTL || 600; // Cache lịch sử c
 const ADMIN_STATS_TTL = 120;    // 2 phút - stats có thể sai lệch ít
 const ADMIN_SESSIONS_TTL = 60;  // 1 phút - dữ liệu thay đổi nhanh hơn
 const ADMIN_DETAIL_TTL = 180;   // 3 phút - chi tiết session ít thay đổi hơn
+
+const callAiWithRetryAndFallback = async (messages) => {
+    const maxRetries = 3;
+    const providers = [
+        {
+            name: "OpenRouter (GPT-4o-mini)",
+            client: client,
+            model: "openai/gpt-4o-mini"
+        },
+        {
+            name: "Gemini Direct (gemini-2.5-flash)",
+            client: geminiClient,
+            model: "gemini-2.5-flash"
+        }
+    ];
+
+    for (let provider of providers) {
+        let attempt = 0;
+        while (attempt < maxRetries) {
+            try {
+                console.log(`>>> [AI Call] Đang gọi ${provider.name} (Lần thử ${attempt + 1})...`);
+                const response = await provider.client.chat.completions.create({
+                    model: provider.model,
+                    messages: messages,
+                    tools: aiFunctionDeclarations,
+                    tool_choice: "auto"
+                });
+                console.log(`>>> [AI Call] Gọi thành công ${provider.name}`);
+                return response;
+            } catch (error) {
+                attempt++;
+                console.error(`>>> [AI Call] Lỗi gọi ${provider.name} (Lần ${attempt}/${maxRetries}):`, error.message || error);
+                
+                if (attempt < maxRetries) {
+                    const delayMs = Math.pow(2, attempt - 1) * 1000;
+                    console.log(`>>> [AI Call] Đợi ${delayMs}ms trước khi thử lại...`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                }
+            }
+        }
+        console.warn(`>>> [AI Call] Thất bại toàn bộ ${maxRetries} lần thử với ${provider.name}. Chuyển sang provider dự phòng...`);
+    }
+    
+    throw new Error("Tất cả các AI providers và lần thử lại đều thất bại.");
+};
 
 const processChatbotMessage = async (userId, sessionId, message) => {
     //  [PERFORMANCE] Lưu log USER song song, không await để giảm latency
@@ -75,12 +121,7 @@ const processChatbotMessage = async (userId, sessionId, message) => {
     ];
 
     try {
-        const response = await client.chat.completions.create({
-            model: "openai/gpt-4o-mini",
-            messages: messages,
-            tools: aiFunctionDeclarations,
-            tool_choice: "auto"
-        });
+        const response = await callAiWithRetryAndFallback(messages);
 
         const choice = response.choices[0];
         const toolCalls = choice.message.tool_calls;

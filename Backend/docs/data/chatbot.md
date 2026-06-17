@@ -174,3 +174,56 @@ Trong tương lai, nếu số lượng hàm nghiệp vụ của shop tăng lên 
 1. **Vector hóa**: Sử dụng một Embedding model (như `text-embedding-3-small`) để chuyển đổi tất cả mô tả hàm (`description`) thành các vector số học (Embeddings).
 2. **Lưu trữ**: Lưu các vector này kèm theo schema JSON của hàm vào một Vector Database (như PGVector, Pinecone, hoặc ChromaDB).
 3. **Tìm kiếm ngữ nghĩa (Semantic Search)**: Khi khách hỏi, ta sẽ vector hóa câu hỏi đó, tính toán độ tương đồng Cosine (Cosine Similarity) với các vector mô tả hàm, lọc ra Top 3-5 hàm phù hợp nhất và chỉ gửi các hàm này lên LLM.
+
+---
+
+## 7. Cơ chế Xử lý lỗi & Khắc phục sự cố kết nối AI (Error Handling & Fallback)
+
+Trong môi trường Production, kết nối tới bên thứ ba (OpenRouter API) có thể bị gián đoạn do nhiều nguyên nhân khách quan. Dưới đây là phân tích các trường hợp mất kết nối và cách hệ thống tự động xử lý để đảm bảo độ bền vững (Resilience) và trải nghiệm người dùng (UX) liền mạch.
+
+### 7.1. Các kịch bản mất kết nối / Lỗi API khả dĩ
+1. **Lỗi mạng (Network Outages / Timeout):** Máy chủ backend mất kết nối Internet tạm thời hoặc request gửi tới OpenRouter (`https://openrouter.ai/api/v1`) bị quá hạn phản hồi (timeout).
+2. **OpenRouter quá tải / Sập diện rộng (Service Downtime / Rate Limiting - HTTP 429/500/502/503):** 
+   - Vượt quá giới hạn request trên phút (Rate limits) do lưu lượng chat tăng đột biến.
+   - Tài khoản OpenRouter hết số dư (Credits) để tiếp tục thực hiện API calls.
+3. **Lỗi xác thực (Authentication Errors - HTTP 401/403):** API Key (`OPENROUTER_API_KEY` trong file `.env`) bị thay đổi, bị thu hồi hoặc hết hạn.
+4. **Lỗi Model chỉ định không khả dụng:** Model `openai/gpt-4o-mini` tạm thời ngưng hoạt động hoặc không được OpenRouter định tuyến thành công.
+
+### 7.2. Luồng xử lý tự động của Hệ thống (Active Logic)
+Khi xảy ra bất kỳ lỗi nào trong quá trình gọi API của OpenRouter, hệ thống tự động kích hoạt cơ chế bảo vệ và xử lý lỗi được tích hợp tại [chatbotService.js](file:///d:/Hoc_code/Hoc_JS/NEW_kvil-vietnam-fashion-chatbotAI-web-fullstack/Backend/src/service/chatbotService.js):
+
+1. **Cơ chế Auto-Retry (Thử lại tự động):**
+   Trước khi báo lỗi, hệ thống sẽ tự động thử lại tối đa 3 lần với khoảng trễ tăng dần (Exponential Backoff: lần 1 chờ 1s, lần 2 chờ 2s, lần 3 chờ 4s) để tự phục hồi từ các lỗi mạng nhất thời hoặc quá tải nhẹ.
+
+2. **Cơ chế Multi-Provider Fallback (Dự phòng nhà cung cấp):**
+   Nếu OpenRouter sập hoàn toàn (hoặc thất bại cả 3 lần thử lại), hệ thống sẽ tự động chuyển hướng request sang **Google Gemini API trực tiếp** qua model `gemini-2.5-flash` sử dụng SDK tương thích, giúp chatbot tiếp tục hoạt động mà không bị gián đoạn dịch vụ.
+
+3. **Bắt lỗi cấp độ Function (Safe Catch):**
+   Nếu cả OpenRouter và Gemini Direct đều thất bại, tiến trình sẽ được bắt lại ở khối `catch (error)` đảm bảo **không gây crash Server Backend**, giữ cho các API khác hoạt động bình thường.
+   
+4. **Ghi nhật ký sự cố (Error Logging):**
+   Chi tiết lỗi được in ra màn hình máy chủ qua console log dạng:
+   `>>> Lỗi AI Service: [Chi tiết Exception]`
+   giúp đội ngũ kỹ thuật nhanh chóng phát hiện và chẩn đoán nguyên nhân.
+
+5. **Phản hồi dự phòng thân thiện (UX Fallback Response):**
+   Thay vì báo lỗi kỹ thuật thô cứng như "Connection failed" hay "Internal Server Error", Chatbot sẽ gán nội dung phản hồi mặc định lịch sự:
+   `finalReply = "Dạ, hệ thống đang bận một chút, bạn đợi mình vài giây nhé!"`
+   Điều này duy trì tính liền mạch trong giao diện hội thoại và mang lại cảm giác dễ chịu cho khách hàng.
+
+6. **Xử lý mảng sản phẩm dự phòng:**
+   Biến `finalProducts` sẽ giữ nguyên trạng thái khởi tạo là mảng rỗng `[]`, Frontend nhận được mảng rỗng này sẽ ẩn vùng hiển thị các Card sản phẩm gợi ý để tránh giao diện bị lỗi/trống.
+
+7. **Đồng bộ hóa Trạng thái & Cache:**
+   Mặc dù lỗi xảy ra, hệ thống vẫn thực hiện đồng thời các tác vụ:
+   - Lưu log tin nhắn BOT kèm nội dung fallback vào DB (`ChatLog`).
+   - Cập nhật Context Cache trong Redis (giữ tối đa 10 tin nhắn gần nhất) để giữ tính nhất quán của cuộc trò chuyện.
+   - Xóa Cache danh sách lịch sử để đảm bảo dữ liệu mới nhất được cập nhật ngay khi người dùng refresh trang.
+
+8. **Chuẩn hóa API Payload (HTTP 200):**
+   API Chatbot vẫn trả về mã trạng thái HTTP 200 cùng mã lỗi thành công `EC: 0` (`errorCode.SUCCESS`). Frontend xử lý response một cách an toàn mà không cần viết thêm các khối catch lỗi API phức tạp, chỉ cần hiển thị text phản hồi của BOT.
+
+### 7.3. Định hướng cải tiến trong tương lai (Roadmap)
+Để tăng cường khả năng chịu lỗi (Fault Tolerance) của hệ thống chatbot:
+- **Hệ thống Cảnh báo tự động (Alerting):** Tự động gửi cảnh báo lên Slack/Telegram khi số lượng lỗi gọi OpenRouter vượt ngưỡng 5 lỗi/phút để đội ngũ vận hành kịp thời xử lý.
+
