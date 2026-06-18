@@ -20,31 +20,49 @@ const UserChatbotBody = ({ messages, isTyping, isFetching, onLoadMore, hasMore }
         const currentLength = messages.length;
         const prevLength = prevMessagesLengthRef.current;
 
-        // If it's the initial load, scroll to bottom
-        if (prevLength === 0 && currentLength > 0) {
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        } else if (currentLength > prevLength) {
-            const lastMsg = messages[currentLength - 1];
-            const prevLastMsgId = prevLastMessageIdRef.current;
+        const performScroll = () => {
+            // If it's the initial load, scroll to bottom immediately (behavior: auto)
+            if (prevLength === 0 && currentLength > 0) {
+                scrollContainer.scrollTo({
+                    top: scrollContainer.scrollHeight,
+                    behavior: 'auto'
+                });
+            } else if (currentLength > prevLength) {
+                const lastMsg = messages[currentLength - 1];
+                const prevLastMsgId = prevLastMessageIdRef.current;
 
-            // If a new message was appended to the bottom (last message ID changed)
-            if (lastMsg && lastMsg.id !== prevLastMsgId) {
-                scrollContainer.scrollTop = scrollContainer.scrollHeight;
-            } else {
-                // Older messages were prepended to the top
-                const newScrollHeight = scrollContainer.scrollHeight;
-                const heightDiff = newScrollHeight - prevScrollHeightRef.current;
-                scrollContainer.scrollTop = heightDiff;
+                // If a new message was appended to the bottom (last message ID changed)
+                if (lastMsg && lastMsg.id !== prevLastMsgId) {
+                    scrollContainer.scrollTo({
+                        top: scrollContainer.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    // Older messages were prepended to the top (preserve position immediately)
+                    const newScrollHeight = scrollContainer.scrollHeight;
+                    const heightDiff = newScrollHeight - prevScrollHeightRef.current;
+                    scrollContainer.scrollTo({
+                        top: heightDiff,
+                        behavior: 'auto'
+                    });
+                }
+            } else if (isTyping) {
+                // Scroll to bottom when bot is typing
+                scrollContainer.scrollTo({
+                    top: scrollContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
             }
-        } else if (isTyping) {
-            // Scroll to bottom when bot is typing
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        }
 
-        // Save current measurements for the next update
-        prevScrollHeightRef.current = scrollContainer.scrollHeight;
-        prevMessagesLengthRef.current = currentLength;
-        prevLastMessageIdRef.current = messages[currentLength - 1]?.id || null;
+            // Save current measurements for the next update
+            prevScrollHeightRef.current = scrollContainer.scrollHeight;
+            prevMessagesLengthRef.current = currentLength;
+            prevLastMessageIdRef.current = messages[currentLength - 1]?.id || null;
+        };
+
+        // Using a tiny timeout allows the DOM to render components (like image cards) and calculate height accurately
+        const timer = setTimeout(performScroll, 50);
+        return () => clearTimeout(timer);
     }, [messages, isTyping]);
 
     // Handle scroll event to trigger loading older messages
@@ -65,7 +83,7 @@ const UserChatbotBody = ({ messages, isTyping, isFetching, onLoadMore, hasMore }
         <div 
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth scrollbar-hide"
+            className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
             {isFetching && messages.length === 0 ? (

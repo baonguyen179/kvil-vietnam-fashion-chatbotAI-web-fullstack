@@ -990,7 +990,7 @@ const getInventoryLogs = async (query) => {
                 {
                     model: db.ProductVariant,
                     as: 'variant',
-                    attributes: ['sku', 'productId'],
+                    attributes: ['sku', 'productId', 'price'],
                     include: [{ model: db.Product, as: 'product', attributes: ['name'] }]
                 },
                 { 
@@ -1007,6 +1007,51 @@ const getInventoryLogs = async (query) => {
                     ]
                 }
             ]
+        });
+
+        // Trích xuất orderId từ note của log để lấy giá bán thực tế từ OrderItem
+        const orderIds = [];
+        rows.forEach(log => {
+            if (log.note) {
+                const match = log.note.match(/#(\d+)/);
+                if (match) {
+                    orderIds.push(parseInt(match[1]));
+                }
+            }
+        });
+
+        let orderItemMap = new Map();
+        if (orderIds.length > 0) {
+            const orderItems = await db.OrderItem.findAll({
+                where: { orderId: orderIds },
+                attributes: ['orderId', 'variantId', 'price', 'costPrice']
+            });
+            orderItems.forEach(item => {
+                orderItemMap.set(`${item.orderId}_${item.variantId}`, {
+                    price: item.price,
+                    costPrice: item.costPrice
+                });
+            });
+        }
+
+        // Gán orderItemPrice và orderItemCostPrice vào log
+        rows.forEach(log => {
+            let orderItemPrice = null;
+            let orderItemCostPrice = null;
+            if (log.note) {
+                const match = log.note.match(/#(\d+)/);
+                if (match) {
+                    const orderId = parseInt(match[1]);
+                    const key = `${orderId}_${log.variantId}`;
+                    if (orderItemMap.has(key)) {
+                        const item = orderItemMap.get(key);
+                        orderItemPrice = item.price;
+                        orderItemCostPrice = item.costPrice;
+                    }
+                }
+            }
+            log.setDataValue('orderItemPrice', orderItemPrice);
+            log.setDataValue('orderItemCostPrice', orderItemCostPrice);
         });
 
         const totalPages = Math.ceil(count / limit);

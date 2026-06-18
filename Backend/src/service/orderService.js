@@ -824,6 +824,7 @@ const updateOrderStatus = async (orderId, newStatus, adminId = null) => {
                         userId: adminId,
                         type: 'OUT',
                         quantity: item.quantity,
+                        costPrice: item.price, // Lưu giá bán tại thời điểm giao dịch
                         note: order.deliveryMethod === 'store_pickup'
                             ? `Xuất kho trực tiếp (Khách nhận tại cửa hàng) cho đơn hàng #${orderId}`
                             : `Xuất kho bàn giao ĐVVC cho đơn hàng #${orderId}`

@@ -305,6 +305,7 @@ const createOrder = async (userId, data) => {
                 userId: userId,
                 type: 'OUT',
                 quantity: item.quantity,
+                costPrice: item.price, // Lưu giá bán tại thời điểm giao dịch
                 note: `Xuất kho cho đơn hàng #${newOrder.id} - ${userId ? 'KH đăng nhập' : 'Khách vãng lai'}`
             }, { transaction: t });
         });

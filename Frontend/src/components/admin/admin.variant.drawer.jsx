@@ -29,6 +29,7 @@ const AdminVariantDrawer = ({
     const [selectedVariantForHistory, setSelectedVariantForHistory] = useState(null);
     const [historyLogs, setHistoryLogs] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyType, setHistoryType] = useState('IN');
 
     const fetchProductVariants = async () => {
         if (!manageVariantProduct?.id) return;
@@ -128,17 +129,18 @@ const AdminVariantDrawer = ({
         }
     };
 
-    const handleShowHistoryLogs = async (record) => {
+    const handleShowHistoryLogs = async (record, type = 'IN') => {
         setSelectedVariantForHistory(record);
+        setHistoryType(type);
         setIsHistoryModalVisible(true);
         setHistoryLoading(true);
         try {
-            // Lấy tối đa 50 log nhập (type = 'IN') của biến thể này
-            const res = await inventoryService.getInventoryLogs(1, 50, 'IN', record.id);
+            // Lấy tối đa 50 log của biến thể này theo loại (IN/OUT)
+            const res = await inventoryService.getInventoryLogs(1, 50, type, record.id);
             if (res && res.EC === 0) {
                 setHistoryLogs(res.DT.logs || []);
             } else {
-                message.error(res.EM || "Không thể tải lịch sử nhập hàng!");
+                message.error(res.EM || `Không thể tải lịch sử ${type === 'IN' ? 'nhập' : 'xuất'} hàng!`);
             }
         } catch (error) {
             console.error(">>> Error fetching variant inventory logs:", error);
@@ -205,10 +207,17 @@ const AdminVariantDrawer = ({
                     </Button>
                     <Button 
                         type="link" 
-                        onClick={() => handleShowHistoryLogs(record)}
+                        onClick={() => handleShowHistoryLogs(record, 'IN')}
                         style={{ color: '#107c41' }}
                     >
                         Lịch sử nhập
+                    </Button>
+                    <Button 
+                        type="link" 
+                        onClick={() => handleShowHistoryLogs(record, 'OUT')}
+                        style={{ color: '#d9363e' }}
+                    >
+                        Lịch sử xuất
                     </Button>
                 </Space>
             )
@@ -237,6 +246,45 @@ const AdminVariantDrawer = ({
             key: 'costPrice',
             render: (val) => val ? parseFloat(val).toLocaleString('vi-VN') + 'đ' : '0đ',
             width: 130
+        },
+        {
+            title: 'Ghi chú',
+            dataIndex: 'note',
+            key: 'note',
+            render: (val) => <span className="text-gray-500 text-xs">{val || '---'}</span>
+        }
+    ];
+
+    // Các cột cho bảng lịch sử xuất hàng trong Modal (định dạng giá X xuất Y sản phẩm)
+    const exportHistoryColumns = [
+        {
+            title: 'Ngày xuất',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: (val) => dayjs(val).format('DD/MM/YYYY HH:mm'),
+            width: 150
+        },
+        {
+            title: 'Chi tiết xuất',
+            key: 'detail',
+            render: (_, record) => {
+                const rawPrice = record.orderItemPrice && parseFloat(record.orderItemPrice) > 0
+                    ? parseFloat(record.orderItemPrice)
+                    : (record.costPrice && parseFloat(record.costPrice) > 0
+                        ? parseFloat(record.costPrice)
+                        : (record.variant?.price 
+                            ? parseFloat(record.variant.price) 
+                            : (selectedVariantForHistory?.price 
+                                ? parseFloat(selectedVariantForHistory.price) 
+                                : 0)));
+                const priceStr = rawPrice > 0 ? rawPrice.toLocaleString('vi-VN') + 'đ' : '0đ';
+                return (
+                    <span>
+                        Giá bán <Text strong>{priceStr}</Text> xuất <Text type="danger" strong>{record.quantity}</Text> sản phẩm
+                    </span>
+                );
+            },
+            width: 300
         },
         {
             title: 'Ghi chú',
@@ -388,9 +436,12 @@ const AdminVariantDrawer = ({
                 />
             </Spin>
 
-            {/* Modal hiển thị lịch sử nhập kho của biến thể */}
+            {/* Modal hiển thị lịch sử nhập/xuất kho của biến thể */}
             <Modal
-                title={`Lịch sử giá nhập hàng - SKU: ${selectedVariantForHistory?.sku || 'N/A'}`}
+                title={historyType === 'IN' 
+                    ? `Lịch sử giá nhập hàng - SKU: ${selectedVariantForHistory?.sku || 'N/A'}`
+                    : `Lịch sử xuất hàng - SKU: ${selectedVariantForHistory?.sku || 'N/A'}`
+                }
                 open={isHistoryModalVisible}
                 onCancel={() => {
                     setIsHistoryModalVisible(false);
@@ -413,14 +464,18 @@ const AdminVariantDrawer = ({
                 centered
             >
                 <Table
-                    columns={historyColumns}
+                    columns={historyType === 'IN' ? historyColumns : exportHistoryColumns}
                     dataSource={historyLogs}
                     rowKey="id"
                     loading={historyLoading}
                     size="small"
                     bordered
                     pagination={{ pageSize: 5 }}
-                    locale={{ emptyText: 'Chưa có lịch sử nhập hàng cho biến thể này.' }}
+                    locale={{ 
+                        emptyText: historyType === 'IN' 
+                            ? 'Chưa có lịch sử nhập hàng cho biến thể này.' 
+                            : 'Chưa có lịch sử xuất hàng cho biến thể này.' 
+                    }}
                 />
             </Modal>
         </Drawer>
