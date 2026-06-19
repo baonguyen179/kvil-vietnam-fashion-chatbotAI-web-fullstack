@@ -111,11 +111,17 @@ const ChatbotSessionDetailDrawer = ({ open, sessionId, onClose }) => {
 
                         {hasHints && (
                             <div className="flex flex-wrap gap-1">
-                                {log.suggestedProductIds.map((pid) => (
-                                    <Tag key={pid} color="purple" className="text-xs rounded-full">
-                                        SP #{pid}
-                                    </Tag>
-                                ))}
+                                {log.suggestedProductIds.map((product) => {
+                                    const id = typeof product === 'object' && product !== null ? product.id : product;
+                                    const name = typeof product === 'object' && product !== null ? product.name : '';
+                                    return (
+                                        <Tooltip key={id} title={name || `Sản phẩm #${id}`}>
+                                            <Tag color="purple" className="text-xs rounded-full cursor-pointer">
+                                                SP #{id}
+                                            </Tag>
+                                        </Tooltip>
+                                    );
+                                })}
                             </div>
                         )}
 
